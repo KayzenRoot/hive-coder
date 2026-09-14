@@ -11,6 +11,11 @@ class DoctorTests(unittest.TestCase):
         self.assertEqual(report["status"], "LOCKED")
         self.assertEqual(report["sideEffects"], "NONE")
 
+    def test_normal_doctor_discloses_external_probe(self) -> None:
+        with patch("tools.foundations.doctor._locate", return_value=None):
+            report = inspect(load_lock())
+        self.assertEqual(report["sideEffects"], "EXTERNAL_VERSION_PROBE")
+
     def test_exact_version_match_rejects_lookalikes(self) -> None:
         self.assertTrue(_reports_exact_version("interpreter 0.0.43", "0.0.43"))
         self.assertFalse(_reports_exact_version("interpreter 0.0.430", "0.0.43"))

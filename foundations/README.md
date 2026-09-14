@@ -5,9 +5,9 @@ Hive Coder keeps Open Interpreter and Cua Driver outside the product source tree
 ## Locked foundations
 
 - Open Interpreter `0.0.43`, tag `rust-v0.0.43`, ACP over stdio as the primary boundary.
-- Cua Driver `0.28.1`, tag `cua-driver-rs-v0.28.1`, JSON-RPC 2.0 as the primary boundary.
+- Cua Driver `0.28.1`, tag `cua-driver-rs-v0.28.1`, MCP / JSON-RPC 2.0 over stdio as the primary boundary.
 
-Full upstream repositories and binaries are not vendored by this increment. The doctor only discovers binaries and probes versions. It never downloads, installs, elevates privileges, clicks, types, or performs computer-control actions.
+Full upstream repositories and binaries are not vendored by this increment. `--inventory-only` performs no external process execution. Normal doctor mode may execute only each discovered binary's pinned version command; it never downloads, installs, elevates privileges, clicks, types, or invokes computer-control tools.
 
 ```bash
 python tools/foundations/verify_lock.py

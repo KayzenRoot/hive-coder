@@ -58,6 +58,7 @@ def _probe(path: str, discovery: dict[str, Any]) -> dict[str, Any]:
 
 def inspect(lock: dict[str, Any], inventory_only: bool = False) -> dict[str, Any]:
     errors = validate_lock(lock)
+    side_effects = "NONE" if inventory_only else "EXTERNAL_VERSION_PROBE"
     if errors:
         return {"schemaVersion": "hive-foundation-doctor-v1", "status": "INVALID_LOCK", "errors": errors, "sideEffects": "NONE"}
     results: dict[str, Any] = {}
@@ -69,13 +70,13 @@ def inspect(lock: dict[str, Any], inventory_only: bool = False) -> dict[str, Any
         results[name] = {"status": "MISSING"} if path is None else _probe(path, item["discovery"])
     statuses = {item["status"] for item in results.values()}
     overall = "LOCKED" if inventory_only else ("READY" if statuses == {"READY"} else "NOT_READY")
-    return {"schemaVersion": "hive-foundation-doctor-v1", "status": overall, "foundations": results, "sideEffects": "NONE"}
+    return {"schemaVersion": "hive-foundation-doctor-v1", "status": overall, "foundations": results, "sideEffects": side_effects}
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Hive Coder non-invasive foundation doctor")
+    parser = argparse.ArgumentParser(description="Hive Coder non-installing foundation doctor")
     parser.add_argument("--lock", type=Path, default=DEFAULT_LOCK)
-    parser.add_argument("--inventory-only", action="store_true")
+    parser.add_argument("--inventory-only", action="store_true", help="Do not execute external foundation binaries")
     args = parser.parse_args()
     report = inspect(load_lock(args.lock), inventory_only=args.inventory_only)
     print(json.dumps(report, indent=2, sort_keys=True))

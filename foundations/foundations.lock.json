@@ -25,8 +25,8 @@
       "release": "0.28.1",
       "tag": "cua-driver-rs-v0.28.1",
       "commit": "d8028a7943087ee258dc1b4d19dc12a7cd27669c",
-      "protocol": {"primary": "json-rpc-2.0", "optional": "mcp"},
-      "discovery": {"env": "HIVE_CUA_BIN", "executables": ["cua-driver", "cua-driver.exe", "cua", "cua.exe"], "versionArgs": ["--version"], "expectedVersion": "0.28.1"},
+      "protocol": {"primary": "mcp-jsonrpc-2.0-stdio"},
+      "discovery": {"env": "HIVE_CUA_BIN", "executables": ["cua-driver", "cua-driver.exe"], "versionArgs": ["--version"], "expectedVersion": "0.28.1"},
       "artifacts": {
         "windows-x64": {
           "name": "cua-driver-rs-0.28.1-windows-x86_64-binary.zip",
