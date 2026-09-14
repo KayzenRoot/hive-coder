@@ -1,34 +1,36 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** HCODER-CP-0002  
+**Checkpoint:** HCODER-CP-0003  
 **Status:** APPROVED  
 **Date:** 2026-09-14  
 **Repository:** `KayzenRoot/hive-coder`  
-**Approved Work Order:** `HCODER-WO-0002`  
-**PR:** `#4`
+**Approved Work Order:** `HCODER-WO-0003`  
+**PR:** `#7`
 
 ## Proven canonical state
-- The initial Source Pack and GEF/HEDS governance from HCODER-CP-0001 remain authoritative.
-- Open Interpreter `0.0.43` is pinned to tag `rust-v0.0.43`, commit `6e7c4bb78bb1c349b82f584f7e21a529ec39a74f`, Apache-2.0.
-- Cua Driver `0.28.1` is pinned to tag `cua-driver-rs-v0.28.1`, commit `d8028a7943087ee258dc1b4d19dc12a7cd27669c`, MIT.
-- Official Windows x64 artifact names and SHA-256 digests for both foundations are frozen in `foundations/foundations.lock.json`.
-- Interpreter primary boundary is ACP / JSON-RPC over stdio; exec JSONL is fallback.
-- Cua Driver primary boundary is MCP / JSON-RPC 2.0 over stdio.
-- `tools/foundations/verify_lock.py` validates the foundation contract fail-closed.
-- `tools/foundations/doctor.py --inventory-only` inventories locked foundations without executing external processes.
-- Normal doctor mode is non-installing and explicitly reports `EXTERNAL_VERSION_PROBE` when it may execute pinned `--version` commands.
-- Unit tests cover invalid licenses/policies, missing binaries, exact version matching, version mismatch and inventory side-effect classification.
-- `HCODER-WO-0002-CR-001` and `HCODER-WO-0002-CR-002` were resolved in the same Work Order/PR.
-- Exact-head Governance passed on the reviewed implementation candidate before this checkpoint promotion.
+- HCODER-CP-0002 foundation pins and provenance remain authoritative.
+- A Hive-owned shell-free stdio child-process lifecycle exists for external foundations.
+- A strict newline-delimited JSON-RPC 2.0 peer exists with correlated request IDs, bounded timeouts, notifications, remote errors, maximum line size, fail-closed malformed/unknown responses and bounded shutdown.
+- Unsupported inbound JSON-RPC requests are denied by default.
+- Runtime production constructors derive expected versions from canonical `foundations/foundations.lock.json` and run exact-version preflight before launching ACP/MCP mode.
+- Child processes and version probes receive a least-privilege environment allowlist; ambient provider/API secrets are not inherited implicitly. Cua telemetry is forced off in the current production constructor.
+- Open Interpreter ACP v1 initialize, session create, session cancellation notification, session-update collection and session close are implemented and mock-contract tested without model/prompt execution.
+- Cua Driver modern MCP `2026-07-28` `server/discover` is implemented and mock-contract tested as inventory only.
+- `CuaAdapter` exposes no `tools/call` surface in this checkpoint.
+- Governance now explicitly checks out and verifies the exact PR/push SHA instead of relying on GitHub's synthetic PR merge ref.
+- `HCODER-WO-0003-CR-001`, `CR-002` and `CR-003` were resolved in the same Work Order.
+- HEDS approved implementation head `95058d820d9ee330a4b89d0a935e32689f008b98` after Governance run `34910600726` proved `EXACT_HEAD_OK` and 26/26 passing tests with `ResourceWarning` treated as error.
 
 ## Product state
-The foundation discovery/verification layer is functional. No proven Hive Desktop shell, OpenCode Go provider integration, live Open Interpreter session bridge, live Cua computer-use session, permission engine, packaging or production deployment exists yet.
+Foundation process/protocol lifecycle is now implemented behind Hive-owned adapters. No proven Open Interpreter prompt execution, model/provider integration, Cua desktop action execution, permission engine, emergency-stop runtime, user-takeover runtime, desktop UI, packaging or production deployment exists yet.
 
 ## Safety state
-- No foundation repository or binary is vendored.
-- Automatic foundation download/install is disabled.
-- OmniParser/Ultralytics are excluded from the approved first foundation set.
-- Live mouse/keyboard/desktop control remains unimplemented and requires HIGH_ASSURANCE proof obligations, explicit permission mediation, emergency stop/user takeover, bounded scopes and rollback/containment.
+- No foundation source repository or binary is vendored.
+- Automatic dependency installation remains disabled.
+- OmniParser/Ultralytics remain excluded from the approved foundation set.
+- Cua tool names may be inventoried but cannot be invoked through the approved adapter.
+- Real mouse/keyboard/screen/window/browser/clipboard control remains forbidden and HIGH_ASSURANCE.
+- Ambient credentials are not implicitly forwarded to foundation subprocesses.
 
 ## Next necessary increment
-Implement the smallest Hive-owned runtime bridge for Open Interpreter ACP and Cua MCP process lifecycle with mocked/contract-tested transports first. Do not enable real desktop actions until permission policy, emergency stop, user takeover and audit semantics are proven in the same HIGH_ASSURANCE increment or an earlier approved prerequisite.
+Implement the Hive Permission & Control Plane as a HIGH_ASSURANCE prerequisite before any real Cua action: capability taxonomy/policy, default-deny action authorization, application/workspace allowlists, emergency stop, user takeover, bounded sessions, audit trail/redaction, replay-resistant approvals, cancellation propagation, adversarial prompt-injection tests and deterministic mocked action gates. Keep real desktop mutation disabled until that control plane itself is approved.
