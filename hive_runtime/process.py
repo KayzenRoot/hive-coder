@@ -10,6 +10,38 @@ from typing import Mapping, Sequence, TextIO
 
 from .errors import AdapterStateError, ProcessExitedError, ProcessLaunchError
 
+_SAFE_ENV_KEYS = frozenset(
+    {
+        "PATH",
+        "SYSTEMROOT",
+        "WINDIR",
+        "COMSPEC",
+        "PATHEXT",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "HOME",
+        "USERPROFILE",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_STATE_HOME",
+        "XDG_CACHE_HOME",
+        "LANG",
+        "LC_ALL",
+    }
+)
+
+
+def safe_child_environment(overrides: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Build a least-privilege child environment without ambient API keys/tokens."""
+    env = {key: value for key, value in os.environ.items() if key.upper() in _SAFE_ENV_KEYS}
+    env["PYTHONIOENCODING"] = "utf-8"
+    if overrides:
+        env.update({str(key): str(value) for key, value in overrides.items()})
+    return env
+
 
 @dataclass(frozen=True)
 class ProcessSpec:
@@ -63,8 +95,7 @@ class ManagedStdioProcess:
         if not command or any(not isinstance(item, str) or not item for item in command):
             raise ProcessLaunchError("process command must contain non-empty string arguments")
         cwd = None if self.spec.cwd is None else str(Path(self.spec.cwd).expanduser())
-        env = os.environ.copy()
-        env.update({str(key): str(value) for key, value in self.spec.env_overrides.items()})
+        env = safe_child_environment(self.spec.env_overrides)
         try:
             self._process = subprocess.Popen(
                 list(command),

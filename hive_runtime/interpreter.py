@@ -60,7 +60,11 @@ class InterpreterAdapter:
         if self.preflight_binary is not None:
             if self.foundation_key is None:
                 raise AdapterStateError("production preflight requires a foundation key")
-            verify_binary_version(self.preflight_binary, expected_foundation_version(self.foundation_key))
+            verify_binary_version(
+                self.preflight_binary,
+                expected_foundation_version(self.foundation_key),
+                env_overrides=self.env_overrides,
+            )
         process = ManagedStdioProcess(ProcessSpec(self.command, cwd=self.cwd, env_overrides=self.env_overrides, name="open-interpreter-acp")).start()
         peer = JsonRpcPeer(process, notification_handler=self._on_notification).start()
         self.process = process

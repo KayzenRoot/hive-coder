@@ -49,7 +49,7 @@ class CuaAdapter:
 
     @classmethod
     def from_binary(cls, binary: str, **kwargs) -> "CuaAdapter":
-        env = {"CUA_DRIVER_RS_TELEMETRY_ENABLED": "false", **dict(kwargs.pop("env_overrides", {}) or {})}
+        env = {**dict(kwargs.pop("env_overrides", {}) or {}), "CUA_DRIVER_RS_TELEMETRY_ENABLED": "false"}
         return cls((binary, "mcp"), env_overrides=env, preflight_binary=binary, foundation_key="cuaDriver", **kwargs)
 
     @staticmethod
@@ -65,7 +65,11 @@ class CuaAdapter:
         if self.preflight_binary is not None:
             if self.foundation_key is None:
                 raise AdapterStateError("production preflight requires a foundation key")
-            verify_binary_version(self.preflight_binary, expected_foundation_version(self.foundation_key))
+            verify_binary_version(
+                self.preflight_binary,
+                expected_foundation_version(self.foundation_key),
+                env_overrides=self.env_overrides,
+            )
         process = ManagedStdioProcess(ProcessSpec(self.command, cwd=self.cwd, env_overrides=self.env_overrides, name="cua-driver-mcp")).start()
         peer = JsonRpcPeer(process).start()
         self.process = process

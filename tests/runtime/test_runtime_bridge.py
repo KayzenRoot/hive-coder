@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from hive_runtime.cua import CAPABILITIES_META_KEY, CUA_MCP_PROTOCOL_VERSION, VERSION_META_KEY, CuaAdapter
 from hive_runtime.errors import ProcessExitedError, RpcProtocolError, RpcTimeoutError
 from hive_runtime.interpreter import ACP_PROTOCOL_VERSION, InterpreterAdapter
 from hive_runtime.jsonrpc import JsonRpcPeer
-from hive_runtime.process import ManagedStdioProcess, ProcessSpec
+from hive_runtime.process import ManagedStdioProcess, ProcessSpec, safe_child_environment
 
 
 def python_server(source: str) -> tuple[str, ...]:
@@ -23,6 +25,21 @@ for line in sys.stdin:
     if "id" in msg:
         print(json.dumps({"jsonrpc":"2.0","id":msg["id"],"result":{"method":msg["method"],"params":msg.get("params")}}), flush=True)
 '''
+
+
+class ProcessEnvironmentTests(unittest.TestCase):
+    def test_ambient_secret_is_not_inherited(self) -> None:
+        with patch.dict(os.environ, {"HIVE_TEST_SECRET": "do-not-leak"}, clear=False):
+            child = safe_child_environment()
+        self.assertNotIn("HIVE_TEST_SECRET", child)
+
+    def test_explicit_override_is_passed(self) -> None:
+        child = safe_child_environment({"HIVE_EXPLICIT_TEST": "allowed"})
+        self.assertEqual(child["HIVE_EXPLICIT_TEST"], "allowed")
+
+    def test_cua_telemetry_disable_cannot_be_overridden(self) -> None:
+        adapter = CuaAdapter.from_binary("cua-driver", env_overrides={"CUA_DRIVER_RS_TELEMETRY_ENABLED": "true"})
+        self.assertEqual(adapter.env_overrides["CUA_DRIVER_RS_TELEMETRY_ENABLED"], "false")
 
 
 class JsonRpcTests(unittest.TestCase):

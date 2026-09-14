@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 import subprocess
-from typing import Sequence
+from typing import Mapping, Sequence
 
 from .errors import RuntimePreflightError
+from .process import safe_child_environment
 
 
 def reports_exact_version(output: str, expected: str) -> bool:
@@ -17,6 +18,7 @@ def verify_binary_version(
     expected: str,
     *,
     version_args: Sequence[str] = ("--version",),
+    env_overrides: Mapping[str, str] | None = None,
     timeout: float = 5.0,
 ) -> str:
     try:
@@ -26,6 +28,7 @@ def verify_binary_version(
             text=True,
             encoding="utf-8",
             errors="strict",
+            env=safe_child_environment(env_overrides),
             timeout=timeout,
             check=False,
             shell=False,
