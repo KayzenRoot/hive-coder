@@ -1,0 +1,40 @@
+name: Governance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  source-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify canonical source pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            AGENTS.md
+            docs/project-brain/00-SOURCE-HIERARCHY.md
+            docs/project-brain/01-PROJECT-OVERVIEW.md
+            docs/project-brain/02-REQUIREMENTS.md
+            docs/project-brain/03-SCOPE.md
+            docs/project-brain/04-ARCHITECTURE.md
+            docs/project-brain/05-SECURITY.md
+            docs/project-brain/06-TEST-BENCHMARK-PLAN.md
+            docs/project-brain/07-DEPLOYMENT.md
+            docs/project-brain/08-BACKLOG.md
+            docs/project-brain/09-DEFINITION-OF-DONE.md
+            docs/project-brain/10-DECISIONS-LEDGER.md
+            docs/project-brain/11-CHECKPOINT.md
+            .engineering/gef/GEF-POLICY.md
+            .engineering/gef/GEF-EXECUTION-PROTOCOL.md
+            .engineering/gef/GEF-REVIEW-PROTOCOL.md
+            .engineering/gef/GEF-EVIDENCE-SPEC.md
+          )
+          for f in "${required[@]}"; do test -s "$f" || { echo "missing/empty: $f"; exit 1; }; done
+      - name: Validate JSON contracts
+        run: |
+          python -m json.tool .engineering/gef/GEF-PROJECT-PROFILE.json >/dev/null
+          python -m json.tool .engineering/templates/CONTEXT-LOCK-TEMPLATE.json >/dev/null
