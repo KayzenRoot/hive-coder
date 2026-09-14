@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "hive-coder-context-lock-v1",
+  "workOrder": "HCODER-WO-0000",
+  "repository": "KayzenRoot/hive-coder",
+  "baseSha": "UNKNOWN",
+  "expectedBranch": "UNKNOWN",
+  "canonicalSources": {
+    "checkpoint": {"path": "docs/project-brain/11-CHECKPOINT.md", "sha256": "UNKNOWN"},
+    "decisions": {"path": "docs/project-brain/10-DECISIONS-LEDGER.md", "sha256": "UNKNOWN"},
+    "scope": {"path": "docs/project-brain/03-SCOPE.md", "sha256": "UNKNOWN"},
+    "dod": {"path": "docs/project-brain/09-DEFINITION-OF-DONE.md", "sha256": "UNKNOWN"},
+    "architecture": {"path": "docs/project-brain/04-ARCHITECTURE.md", "sha256": "UNKNOWN"},
+    "requirements": {"path": "docs/project-brain/02-REQUIREMENTS.md", "sha256": "UNKNOWN"}
+  },
+  "status": "UNBOUND"
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "gef-project-profile-v1",
+  "gefVersion": "1.0",
+  "project": {
+    "repository": "KayzenRoot/hive-coder",
+    "repositoryId": 1370644068,
+    "defaultBranch": "main",
+    "mode": "NEW_PROJECT"
+  },
+  "sourceHierarchy": [
+    "docs/project-brain/11-CHECKPOINT.md",
+    "docs/project-brain/10-DECISIONS-LEDGER.md",
+    "docs/project-brain/03-SCOPE.md",
+    "docs/project-brain/09-DEFINITION-OF-DONE.md",
+    "docs/project-brain/04-ARCHITECTURE.md",
+    "docs/project-brain/02-REQUIREMENTS.md"
+  ],
+  "promptMode": "GEF_V1",
+  "reviewMode": "HEDS_DELTA",
+  "taskClasses": ["T0", "T1", "T2", "T3"],
+  "contextRadii": ["C0", "C1", "C2", "C3", "C4"],
+  "riskLevels": ["LOW", "STANDARD", "ELEVATED", "HIGH_ASSURANCE"],
+  "currentHostedGates": ["Governance"],
+  "plannedHostedGates": ["Validate", "Integration health", "Review Evidence"],
+  "proofCarryForwardAuthority": false,
+  "shadowAssurance": true
+}
