@@ -47,5 +47,9 @@ jobs:
         run: python tools/foundations/verify_lock.py
       - name: Foundation inventory doctor
         run: python tools/foundations/doctor.py --inventory-only
+      - name: Compile Python runtime and tools
+        run: python -m compileall -q hive_runtime tools
       - name: Unit tests
+        env:
+          PYTHONWARNINGS: error::ResourceWarning
         run: python -m unittest discover -s tests -p "test_*.py"

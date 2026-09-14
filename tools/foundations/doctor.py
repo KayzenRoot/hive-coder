@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -14,7 +13,12 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from hive_runtime.preflight import reports_exact_version
 from tools.foundations.verify_lock import DEFAULT_LOCK, load_lock, validate_lock
+
+# Compatibility alias for existing doctor tests and callers. Runtime and doctor
+# now share one exact-version implementation.
+_reports_exact_version = reports_exact_version
 
 
 def _locate(discovery: dict[str, Any]) -> str | None:
@@ -27,11 +31,6 @@ def _locate(discovery: dict[str, Any]) -> str | None:
         if found:
             return found
     return None
-
-
-def _reports_exact_version(output: str, expected: str) -> bool:
-    pattern = rf"(?<![0-9A-Za-z.+-]){re.escape(expected)}(?![0-9A-Za-z.+-])"
-    return re.search(pattern, output) is not None
 
 
 def _probe(path: str, discovery: dict[str, Any]) -> dict[str, Any]:
