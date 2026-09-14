@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
 from .errors import AdapterStateError, RpcProtocolError
+from .foundation_lock import expected_foundation_version
 from .jsonrpc import JsonRpcPeer
 from .process import ManagedStdioProcess, ProcessSpec
 from .preflight import verify_binary_version
@@ -34,14 +35,14 @@ class CuaAdapter:
         env_overrides: Mapping[str, str] | None = None,
         timeout: float = 5.0,
         preflight_binary: str | None = None,
-        expected_version: str | None = None,
+        foundation_key: str | None = None,
     ) -> None:
         self.command = tuple(command)
         self.cwd = cwd
         self.env_overrides = dict(env_overrides or {})
         self.timeout = timeout
         self.preflight_binary = preflight_binary
-        self.expected_version = expected_version
+        self.foundation_key = foundation_key
         self.process: ManagedStdioProcess | None = None
         self.peer: JsonRpcPeer | None = None
         self.discovery: CuaDiscovery | None = None
@@ -49,7 +50,7 @@ class CuaAdapter:
     @classmethod
     def from_binary(cls, binary: str, **kwargs) -> "CuaAdapter":
         env = {"CUA_DRIVER_RS_TELEMETRY_ENABLED": "false", **dict(kwargs.pop("env_overrides", {}) or {})}
-        return cls((binary, "mcp"), env_overrides=env, preflight_binary=binary, expected_version="0.28.1", **kwargs)
+        return cls((binary, "mcp"), env_overrides=env, preflight_binary=binary, foundation_key="cuaDriver", **kwargs)
 
     @staticmethod
     def _meta(capabilities: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -61,8 +62,10 @@ class CuaAdapter:
     def start(self) -> CuaDiscovery:
         if self.process is not None:
             raise AdapterStateError("Cua adapter already started")
-        if self.preflight_binary is not None and self.expected_version is not None:
-            verify_binary_version(self.preflight_binary, self.expected_version)
+        if self.preflight_binary is not None:
+            if self.foundation_key is None:
+                raise AdapterStateError("production preflight requires a foundation key")
+            verify_binary_version(self.preflight_binary, expected_foundation_version(self.foundation_key))
         process = ManagedStdioProcess(ProcessSpec(self.command, cwd=self.cwd, env_overrides=self.env_overrides, name="cua-driver-mcp")).start()
         peer = JsonRpcPeer(process).start()
         self.process = process

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .errors import AdapterStateError, RpcProtocolError
+from .foundation_lock import expected_foundation_version
 from .jsonrpc import JsonRpcPeer
 from .process import ManagedStdioProcess, ProcessSpec
 from .preflight import verify_binary_version
@@ -34,14 +35,14 @@ class InterpreterAdapter:
         env_overrides: Mapping[str, str] | None = None,
         timeout: float = 5.0,
         preflight_binary: str | None = None,
-        expected_version: str | None = None,
+        foundation_key: str | None = None,
     ) -> None:
         self.command = tuple(command)
         self.cwd = cwd
         self.env_overrides = dict(env_overrides or {})
         self.timeout = timeout
         self.preflight_binary = preflight_binary
-        self.expected_version = expected_version
+        self.foundation_key = foundation_key
         self.process: ManagedStdioProcess | None = None
         self.peer: JsonRpcPeer | None = None
         self.identity: InterpreterIdentity | None = None
@@ -51,13 +52,15 @@ class InterpreterAdapter:
 
     @classmethod
     def from_binary(cls, binary: str, **kwargs) -> "InterpreterAdapter":
-        return cls((binary, "acp"), preflight_binary=binary, expected_version="0.0.43", **kwargs)
+        return cls((binary, "acp"), preflight_binary=binary, foundation_key="openInterpreter", **kwargs)
 
     def start(self) -> InterpreterIdentity:
         if self.process is not None:
             raise AdapterStateError("Interpreter adapter already started")
-        if self.preflight_binary is not None and self.expected_version is not None:
-            verify_binary_version(self.preflight_binary, self.expected_version)
+        if self.preflight_binary is not None:
+            if self.foundation_key is None:
+                raise AdapterStateError("production preflight requires a foundation key")
+            verify_binary_version(self.preflight_binary, expected_foundation_version(self.foundation_key))
         process = ManagedStdioProcess(ProcessSpec(self.command, cwd=self.cwd, env_overrides=self.env_overrides, name="open-interpreter-acp")).start()
         peer = JsonRpcPeer(process, notification_handler=self._on_notification).start()
         self.process = process
