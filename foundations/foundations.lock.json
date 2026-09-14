@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "hive-foundations-lock-v1",
+  "generatedAt": "2026-09-14",
+  "foundations": {
+    "openInterpreter": {
+      "repository": "https://github.com/openinterpreter/openinterpreter",
+      "license": "Apache-2.0",
+      "release": "0.0.43",
+      "tag": "rust-v0.0.43",
+      "commit": "6e7c4bb78bb1c349b82f584f7e21a529ec39a74f",
+      "protocol": {"primary": "acp-jsonrpc-stdio", "fallback": "exec-jsonl-stdio"},
+      "discovery": {"env": "HIVE_INTERPRETER_BIN", "executables": ["interpreter", "interpreter.exe"], "versionArgs": ["--version"], "expectedVersion": "0.0.43"},
+      "artifacts": {
+        "windows-x64": {
+          "name": "open-interpreter-package-x86_64-pc-windows-msvc.tar.gz",
+          "url": "https://github.com/openinterpreter/openinterpreter/releases/download/rust-v0.0.43/open-interpreter-package-x86_64-pc-windows-msvc.tar.gz",
+          "sha256": "be317ff01c8730f9a3623cb2f807d80414923ddedf5e31a3012403a1f6ba67c5"
+        }
+      }
+    },
+    "cuaDriver": {
+      "repository": "https://github.com/trycua/cua",
+      "component": "libs/cua-driver/rust",
+      "license": "MIT",
+      "release": "0.28.1",
+      "tag": "cua-driver-rs-v0.28.1",
+      "commit": "d8028a7943087ee258dc1b4d19dc12a7cd27669c",
+      "protocol": {"primary": "json-rpc-2.0", "optional": "mcp"},
+      "discovery": {"env": "HIVE_CUA_BIN", "executables": ["cua-driver", "cua-driver.exe", "cua", "cua.exe"], "versionArgs": ["--version"], "expectedVersion": "0.28.1"},
+      "artifacts": {
+        "windows-x64": {
+          "name": "cua-driver-rs-0.28.1-windows-x86_64-binary.zip",
+          "url": "https://github.com/trycua/cua/releases/download/cua-driver-rs-v0.28.1/cua-driver-rs-0.28.1-windows-x86_64-binary.zip",
+          "sha256": "ab90418aa2efb5a48d6eea1481fb99ae6a93e3fe93c829ee5340d5c50fb5cb1a"
+        }
+      }
+    }
+  },
+  "excludedComponents": [
+    {"name": "OmniParser", "reason": "optional copyleft component; not required for first Cua Driver integration"},
+    {"name": "Ultralytics", "reason": "optional copyleft component; not required for first Cua Driver integration"}
+  ],
+  "policy": {"vendorBinaries": false, "autoInstall": false, "failOnUnknownVersion": true}
+}
