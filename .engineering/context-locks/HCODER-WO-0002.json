@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "hive-coder-context-lock-v1",
+  "workOrder": "HCODER-WO-0002",
+  "repository": "KayzenRoot/hive-coder",
+  "baseSha": "9aedea9f9705cf3206ed17ca42b160d8eae91c7c",
+  "expectedBranch": "feat/HCODER-WO-0002-foundation-runtime",
+  "canonicalSources": {
+    "checkpoint": {"path": "docs/project-brain/11-CHECKPOINT.md", "gitBlobSha": "67c4ba748759b92b19205ae485f64671664a19d0"},
+    "decisions": {"path": "docs/project-brain/10-DECISIONS-LEDGER.md", "gitBlobSha": "a1e23340f9cfd75c20bc1b315897752231b5481e"},
+    "scope": {"path": "docs/project-brain/03-SCOPE.md", "gitBlobSha": "330ce490cc29fc5f3ba4e612db8935dd982d745c"},
+    "dod": {"path": "docs/project-brain/09-DEFINITION-OF-DONE.md", "gitBlobSha": "9770301f87703ec9a24b6c17525c6b55a23da317"},
+    "architecture": {"path": "docs/project-brain/04-ARCHITECTURE.md", "gitBlobSha": "a7094c0fafdd808f38667b76c047b4b371e1c72e"},
+    "requirements": {"path": "docs/project-brain/02-REQUIREMENTS.md", "gitBlobSha": "35cb36929580e215a8fa3cc04b199f5e20b76dce"},
+    "integrationContracts": {"path": "docs/project-brain/13-INTEGRATION-CONTRACTS.md", "gitBlobSha": "41c81882937f645876dbebb3946930424fd40a5f"},
+    "licenseProvenance": {"path": "docs/project-brain/14-LICENSE-PROVENANCE.md", "gitBlobSha": "efb61f6764fc516d8db06b991e728102c0a3dee9"}
+  },
+  "status": "BOUND"
+}
