@@ -28,6 +28,9 @@ jobs:
             docs/project-brain/09-DEFINITION-OF-DONE.md
             docs/project-brain/10-DECISIONS-LEDGER.md
             docs/project-brain/11-CHECKPOINT.md
+            docs/project-brain/12-UI-UX.md
+            docs/project-brain/13-INTEGRATION-CONTRACTS.md
+            docs/project-brain/14-LICENSE-PROVENANCE.md
             .engineering/gef/GEF-POLICY.md
             .engineering/gef/GEF-EXECUTION-PROTOCOL.md
             .engineering/gef/GEF-REVIEW-PROTOCOL.md
@@ -38,3 +41,4 @@ jobs:
         run: |
           python -m json.tool .engineering/gef/GEF-PROJECT-PROFILE.json >/dev/null
           python -m json.tool .engineering/templates/CONTEXT-LOCK-TEMPLATE.json >/dev/null
+          python -m json.tool .engineering/context-locks/HCODER-WO-0001.json >/dev/null
