@@ -15,3 +15,7 @@ Premium desktop UX inspired by modern macOS qualities such as clarity, transluce
 ## DEC-004 — Engineering workflow
 **Status:** APPROVED  
 Prompt mode `GEF_V1`; review mode `HEDS_DELTA`; exact-head evidence; same-WO Correction Delta; canonical source hierarchy defined in `00-SOURCE-HIERARCHY.md`.
+
+## DEC-005 — First validated external foundations
+**Status:** APPROVED  
+`HCODER-WO-0002` validated Open Interpreter `0.0.43` and Cua Driver `0.28.1` as the first pinned external foundations behind Hive-owned boundaries. Open Interpreter uses ACP / JSON-RPC over stdio as the primary integration path with exec JSONL as fallback. Cua Driver uses MCP / JSON-RPC 2.0 over stdio. Full upstream repositories and binaries are not vendored by this decision; automatic installation remains disabled. Optional OmniParser/Ultralytics components remain excluded from the approved foundation set. Any live desktop-control action is a separate HIGH_ASSURANCE increment.

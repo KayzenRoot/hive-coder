@@ -1,31 +1,34 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** HCODER-CP-0001  
+**Checkpoint:** HCODER-CP-0002  
 **Status:** APPROVED  
 **Date:** 2026-09-14  
 **Repository:** `KayzenRoot/hive-coder`  
-**Approved Work Order:** `HCODER-WO-0001`  
-**PR:** `#2`
+**Approved Work Order:** `HCODER-WO-0002`  
+**PR:** `#4`
 
 ## Proven canonical state
-- The repository and governed Git history exist.
-- The initial Source Pack is established, including Source Hierarchy, Overview, Requirements, Scope, Architecture, Security, Test/Benchmark Plan, Deployment, Backlog, Definition of Done, Decisions Ledger, UI/UX, Integration Contracts and License/Provenance.
-- Prompt mode is `GEF_V1`.
-- Review mode is `HEDS_DELTA`.
-- Work Order, Context Lock, Correction Delta, Evidence Bundle and review templates exist.
-- Executor, reviewer and correction prompt templates exist.
-- GitHub issue/PR templates, CODEOWNERS and the `Governance` workflow exist.
-- `HCODER-WO-0001-CR-001` was resolved inside the same Work Order/PR.
-- Exact-head Governance evidence passed on the reviewed bootstrap candidate before checkpoint promotion.
+- The initial Source Pack and GEF/HEDS governance from HCODER-CP-0001 remain authoritative.
+- Open Interpreter `0.0.43` is pinned to tag `rust-v0.0.43`, commit `6e7c4bb78bb1c349b82f584f7e21a529ec39a74f`, Apache-2.0.
+- Cua Driver `0.28.1` is pinned to tag `cua-driver-rs-v0.28.1`, commit `d8028a7943087ee258dc1b4d19dc12a7cd27669c`, MIT.
+- Official Windows x64 artifact names and SHA-256 digests for both foundations are frozen in `foundations/foundations.lock.json`.
+- Interpreter primary boundary is ACP / JSON-RPC over stdio; exec JSONL is fallback.
+- Cua Driver primary boundary is MCP / JSON-RPC 2.0 over stdio.
+- `tools/foundations/verify_lock.py` validates the foundation contract fail-closed.
+- `tools/foundations/doctor.py --inventory-only` inventories locked foundations without executing external processes.
+- Normal doctor mode is non-installing and explicitly reports `EXTERNAL_VERSION_PROBE` when it may execute pinned `--version` commands.
+- Unit tests cover invalid licenses/policies, missing binaries, exact version matching, version mismatch and inventory side-effect classification.
+- `HCODER-WO-0002-CR-001` and `HCODER-WO-0002-CR-002` were resolved in the same Work Order/PR.
+- Exact-head Governance passed on the reviewed implementation candidate before this checkpoint promotion.
 
 ## Product state
-No Hive Coder product implementation has been proven yet. There is no proven desktop shell, OpenCode Go provider integration, Open Interpreter runtime adapter, Cua computer-use adapter, permission engine, product test suite, packaging or production deployment.
+The foundation discovery/verification layer is functional. No proven Hive Desktop shell, OpenCode Go provider integration, live Open Interpreter session bridge, live Cua computer-use session, permission engine, packaging or production deployment exists yet.
 
-## Approved product direction
-- Separate Hive Coder product/repository.
-- Open Interpreter + Cua are preferred foundation candidates behind Hive-owned adapters, subject to license/provenance and prototype validation.
-- Premium original Hive desktop UX, inspired by modern desktop qualities without copying proprietary Apple assets.
-- Safe computer use with permission gating, visible control state, emergency stop and user takeover.
+## Safety state
+- No foundation repository or binary is vendored.
+- Automatic foundation download/install is disabled.
+- OmniParser/Ultralytics are excluded from the approved first foundation set.
+- Live mouse/keyboard/desktop control remains unimplemented and requires HIGH_ASSURANCE proof obligations, explicit permission mediation, emergency stop/user takeover, bounded scopes and rollback/containment.
 
 ## Next necessary increment
-Perform the license/provenance and foundation-integration assessment for Open Interpreter and Cua, then compile the smallest architecture spike. Do not treat either foundation as locked until that assessment is approved.
+Implement the smallest Hive-owned runtime bridge for Open Interpreter ACP and Cua MCP process lifecycle with mocked/contract-tested transports first. Do not enable real desktop actions until permission policy, emergency stop, user takeover and audit semantics are proven in the same HIGH_ASSURANCE increment or an earlier approved prerequisite.
