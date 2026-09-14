@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -28,6 +29,11 @@ def _locate(discovery: dict[str, Any]) -> str | None:
     return None
 
 
+def _reports_exact_version(output: str, expected: str) -> bool:
+    pattern = rf"(?<![0-9A-Za-z.+-]){re.escape(expected)}(?![0-9A-Za-z.+-])"
+    return re.search(pattern, output) is not None
+
+
 def _probe(path: str, discovery: dict[str, Any]) -> dict[str, Any]:
     expected = str(discovery["expectedVersion"])
     try:
@@ -39,13 +45,12 @@ def _probe(path: str, discovery: dict[str, Any]) -> dict[str, Any]:
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        return {"status": "PROBE_FAILED", "path": path, "error": type(exc).__name__}
+        return {"status": "PROBE_FAILED", "error": type(exc).__name__}
     output = (result.stdout + "\n" + result.stderr).strip()
     if result.returncode != 0:
-        return {"status": "PROBE_FAILED", "path": path, "exitCode": result.returncode, "output": output[:500]}
+        return {"status": "PROBE_FAILED", "exitCode": result.returncode, "output": output[:500]}
     return {
-        "status": "READY" if expected in output else "VERSION_MISMATCH",
-        "path": path,
+        "status": "READY" if _reports_exact_version(output, expected) else "VERSION_MISMATCH",
         "expectedVersion": expected,
         "reported": output[:500],
     }

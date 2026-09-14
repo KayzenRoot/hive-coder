@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from tools.foundations.doctor import inspect
+from tools.foundations.doctor import _reports_exact_version, inspect
 from tools.foundations.verify_lock import load_lock
 
 
@@ -10,6 +10,12 @@ class DoctorTests(unittest.TestCase):
         report = inspect(load_lock(), inventory_only=True)
         self.assertEqual(report["status"], "LOCKED")
         self.assertEqual(report["sideEffects"], "NONE")
+
+    def test_exact_version_match_rejects_lookalikes(self) -> None:
+        self.assertTrue(_reports_exact_version("interpreter 0.0.43", "0.0.43"))
+        self.assertFalse(_reports_exact_version("interpreter 0.0.430", "0.0.43"))
+        self.assertFalse(_reports_exact_version("interpreter 0.0.43-beta.1", "0.0.43"))
+        self.assertFalse(_reports_exact_version("interpreter v0.0.43", "0.0.43"))
 
     @patch("tools.foundations.doctor._locate", return_value=None)
     def test_missing_binaries_fail_closed(self, _locate) -> None:
