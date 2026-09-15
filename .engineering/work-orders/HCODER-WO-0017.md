@@ -1,6 +1,6 @@
 # HCODER-WO-0017 — Runtime Observability Contract & Safe Status Export
 
-**Status:** APPROVED FOR EXECUTION  
+**Status:** PROMOTION CANDIDATE — NOT YET CANONICAL  
 **Risk:** ELEVATED  
 **Task class:** T3  
 **Context radius:** C4  
@@ -101,3 +101,8 @@ HEDS_DELTA exact-head. Treat secret disclosure, fake readiness, authority-bearin
 
 ## STOP CONDITION
 Exact-head Governance and Desktop Shell regressions green; runtime status tests green; HEDS APPROVED with no unresolved HIGH/CRITICAL. No desktop process spawn/provider call/model execution/permission mutation may be promoted under WO-0017. Squash merge only after all gates pass; post-merge validation required before CP-0017 becomes canonical.
+
+## PROMOTION RECORD
+Technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef` passed Governance #225 (`35015244682`) and Desktop Shell #61 (`35015244727`) on the exact SHA. Ubuntu Python was **273/273 PASS**, Windows HIGH_ASSURANCE **56/56 PASS**, frontend **12/12 PASS**, npm audit reported **0 vulnerabilities**, Windows Rust was **11/11 PASS**, `cargo check --locked`, Tauri release build and `DESKTOP_LAUNCH_SMOKE` all passed. HEDS technical review `5215028501` returned **APPROVED FOR PROMOTION CANDIDATE** with unresolved HIGH/CRITICAL findings **0**.
+
+`HCODER-WO-0017-CR-001` MEDIUM is resolved in the reviewed technical head. Promotion remains documentation/evidence/governance-only. This Work Order does **not** become complete/canonical until the promotion/final approval heads pass their own exact-head gates/HEDS, squash merge succeeds and post-merge validation succeeds on `main`.
