@@ -1,0 +1,10 @@
+{
+  "workOrderId": "HCODER-WO-0010",
+  "baseCheckpoint": "HCODER-CP-0009",
+  "baseSha": "f6f85b4825b739cdc7aae1a4ec3f2eeafea67147",
+  "risk": "ELEVATED",
+  "taskClass": "T3",
+  "contextRadius": "C4",
+  "allowed": ["deep-plan", "council", "plan-graph", "digital-twin", "change-radius", "evidence-graph", "stop-intelligence", "bounded-self-correction", "telemetry"],
+  "forbidden": ["planner-authority", "council-authority", "permission-expansion", "unbounded-self-modification", "remote-control-listener", "new-desktop-capability"]
+}

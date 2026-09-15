@@ -1,27 +1,27 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** HCODER-CP-0009  
-**Status:** APPROVED  
+**Checkpoint:** HCODER-CP-0010  
+**Status:** CANDIDATE  
 **Date:** 2026-09-14  
 **Repository:** `KayzenRoot/hive-coder`  
-**Approved Work Order:** `HCODER-WO-0009`  
-**PR:** `#19`
+**Work Order:** `HCODER-WO-0010`
 
-## Proven canonical state
-- CP-0005 permission authority and CP-0007/0008 capability truth remain authoritative.
-- Hive has a deterministic sequential Agent Task Runtime over model-prompt and governed-skill nodes.
-- Task plans are validated as acyclic DAGs and bound to checkpoints by canonical fingerprints.
-- Checkpoints are atomically persisted and HMAC-authenticated with a trusted host key.
-- Checkpoint payload contains workflow metadata only, not credentials, approvals, permits, capability grants, skill content, raw prompts or model output.
-- Model tasks route through CP-0008 verified capabilities; skill tasks execute only through a trusted host `SkillExecutionPort`.
-- Per-node attempts and authenticated global execution/failure budgets are bounded.
-- CR-001 HIGH resolved: restart cannot silently broaden budgets; changes require explicit monotonic paused-state `extend_budget()` and are evented.
-- CR-002 MEDIUM resolved: an in-flight scheduling pause remains PAUSED when the current call settles unless a terminal failure occurs; cancellation remains terminal.
-- Crash recovery never auto-replays an interrupted skill. Explicit trusted-host retry/fail disposition is required and remains attempt-budget bounded.
-- Task snapshots exposed to callers are immutable views rather than promotion/state authority.
-- Corrected implementation head `82266bf8087f526767878801259c47c644ffaa33` passed Governance `34917858327`: Ubuntu **128/128 PASS** and Windows HIGH_ASSURANCE **56/56 PASS**.
-- HEDS verdict: APPROVED, no unresolved HIGH/CRITICAL findings.
-- No remote-control listener, real provider credential, parallel scheduler or new desktop mutation capability is introduced.
+## Candidate canonical state
+- CP-0005 permission authority, CP-0007/0008 capability truth and CP-0009 durable execution remain authoritative.
+- Hive DeepPlan validates planner proposals against objective coverage, assumptions, graph structure and explicit change targets.
+- Confidence Matrix keeps VERIFIED / INFERRED / UNKNOWN distinct; critical UNKNOWN blocks, and HIGH_ASSURANCE critical assumptions require VERIFIED evidence references.
+- Hive Council requires independent Architect, Security, QA and Reviewer participation; HIGH/CRITICAL findings block MasterPlan creation.
+- Project Digital Twin foundation and Change Radius Engine provide bounded descriptive impact analysis. Truncated radius fails closed.
+- PlanGraph compiles an approved MasterPlan only into CP-0009 model-prompt/governed-skill TaskPlan nodes.
+- EvidenceGraph links SHA-256 identified evidence to acceptance criteria and STOP conditions. Untrusted evidence cannot satisfy completion.
+- STOP Intelligence completes only when every acceptance criterion has trusted evidence and every STOP condition has all required evidence kinds.
+- Bounded Self-Correction cannot expand approved step change targets and has explicit global/per-step correction budgets.
+- Specialist roles are explicit for Planner, Architect, Backend, Frontend, Data, Security, QA, Performance, DevOps, Reviewer and Documentation.
+- Orchestrator telemetry derives progress from immutable CP-0009 TaskSnapshot state and validates step identity against the MasterPlan.
+- No remote-control listener, new desktop mutation capability, real provider credential, automatic skill promotion or distributed scheduler is introduced.
 
-## Next necessary increment
-Implement the **Agent Orchestrator & Work Loop** over CP-0009: objective/decomposition contracts, validated TaskPlan creation, model/skill selection policy, bounded self-correction, repository/test evidence hooks, progress telemetry and explicit STOP CONDITION evaluation. It must continue to use CP-0009 for durable execution and CP-0005/0007/0008 for authority/capability truth. Remote Hive Control remains a separate HIGH_ASSURANCE subsystem.
+## Promotion gate
+Promote only after exact-head Governance and HEDS approval with no unresolved HIGH/CRITICAL findings.
+
+## Next direction after promotion
+Build the **Expert Agent Mesh & Context Intelligence**: ContextLens, Expertise Capsules, specialist execution profiles, Architectural Genome/Code Truth Map foundations, CounterPlan/Failure Oracle bounded challenge loops and measured Experience Routing. All remain subordinate to CP-0010 planning evidence and existing authority boundaries.
