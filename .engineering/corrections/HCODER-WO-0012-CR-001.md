@@ -1,7 +1,7 @@
 # HCODER-WO-0012-CR-001 — Certification freshness and repository-intelligence integrity hardening
 
 **Severity:** HIGH  
-**Status:** RESOLVED IN IMPLEMENTATION, awaiting final exact-head evidence  
+**Status:** RESOLVED  
 **Work Order:** `HCODER-WO-0012`
 
 ## Finding
@@ -27,5 +27,9 @@ The first WO-0012 candidate had strong functional tests but left several trust e
 ## Residual boundary
 ChronoSeal and Benchmark Novelty state are session-bounded in CP-0012. Durable cross-restart time/novelty attestation is intentionally deferred to a later governed persistence/certification-lab increment. This does not enable competence promotion because WO-0012 still has no provider-backed trusted benchmark runner/grader.
 
-## Closure gate
-This Correction Delta closes only after the corrected final head passes exact-head Governance and HEDS confirms no unresolved HIGH/CRITICAL finding.
+## Closure evidence
+Corrected exact head `fb90d330fab05df0d5b6cb8ef1dabee09c168f7f` passed Governance run `34927005524` with exact-head verification on both runners:
+- Ubuntu source-pack: **224/224 PASS**, `PYTHONWARNINGS=error::ResourceWarning`.
+- Windows Server 2025 HIGH_ASSURANCE: **56/56 PASS**.
+
+HEDS confirmed no unresolved HIGH/CRITICAL finding in the approved WO-0012 scope. CR-001 is closed.
