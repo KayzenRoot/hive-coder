@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "hive-context-lock-v1",
+  "workOrder": "HCODER-WO-0017",
+  "status": "LOCKED_FOR_EXECUTION_STACKED",
+  "repository": "KayzenRoot/hive-coder",
+  "base": {
+    "type": "stacked-promotion-head",
+    "workOrder": "HCODER-WO-0016",
+    "sha": "50c280004b0d869e32fda8f20806082654e63255",
+    "canonicalDependency": "HCODER-CP-0016 must be canonical before WO-0017 promotion"
+  },
+  "sourceBlobs": {
+    "checkpoint": "144fb9360c1e8824cfd3d8dc8ce1a2871a45a6c0",
+    "decisions": "d679af35bae00f7868f1b7965e96f1785f108a00",
+    "requirements": "35cb36929580e215a8fa3cc04b199f5e20b76dce",
+    "architecture": "703dc7db530df6385b61f74f0ed961443e62fc66",
+    "security": "2dec238575cc3162eb969fc09d57ea7a1f9d0cc7",
+    "testPlan": "9cbfe86bd9dc3f892265d388671136d99e63ff07",
+    "backlog": "a2d66969c48008e6689c4b71fbea9bbb8dfb39f7",
+    "definitionOfDone": "9770301f87703ec9a24b6c17525c6b55a23da317",
+    "uiUx": "3be6f160491a347a235a5db4ff7c33f8c81788a7",
+    "integrationContracts": "40ee2811fa88295e168316b266a5c99dfce362dd"
+  },
+  "authorityBoundary": {
+    "presentationOnly": true,
+    "providerCalls": false,
+    "modelExecution": false,
+    "runtimeSpawnFromDesktop": false,
+    "permissionMutation": false,
+    "taskMutation": false,
+    "filesystemMutation": false,
+    "gitMutation": false,
+    "computerUseMutation": false
+  },
+  "promotionBlockedUntil": [
+    "HCODER-CP-0016 canonical on main",
+    "exact-head Governance success",
+    "HEDS no unresolved HIGH/CRITICAL"
+  ]
+}
