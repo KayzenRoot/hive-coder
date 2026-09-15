@@ -15,37 +15,38 @@
 12. `HCODER-WO-0012` repository intelligence + continuous recertification — DONE.
 13. `HCODER-WO-0013` Provider Certification Lab + Semantic Repository Twin — DONE.
 14. `HCODER-WO-0014` Elite Specialist Forge + Autonomous Engineering Arena — DONE.
-15. `HCODER-WO-0015` Desktop Shell Foundation & Safe Workspace Read Model — DONE. Canonical checkpoint `HCODER-CP-0015`; PR `#32` squash-merged; post-merge Governance #191 and Desktop Shell #27 green on canonical `main`.
+15. `HCODER-WO-0015` Desktop Shell Foundation & Safe Workspace Read Model — DONE. Canonical `HCODER-CP-0015`.
+16. `HCODER-WO-0016` Trusted Workspace & Git Read Surface — **PROMOTION CANDIDATE**. Technical head `07dda00f7371bcb02158f0c26258b03fa0dec88d` passed Governance #203, Desktop Shell #39 and HEDS review `5213079423`; canonical merge/post-merge proof remains pending.
 
 ## Product capability roadmap
-- **Desktop Shell/UI:** first governed read-only substrate completed in WO-0015. Next layers must connect live runtime/provider/Git/evidence/permission state through typed Hive-owned adapters before enabling corresponding mutation surfaces.
+- **Desktop Shell/UI:** governed native substrate exists; WO-0016 adds explicit user-mediated workspace opening plus truthful bounded workspace/Git/evidence reads.
 - **Model Capability Negotiator:** normalize provider/model capabilities and expose only verified capability state.
-- **Hive Skills Engine:** discover, verify, install, version, activate, compose and learn reusable skills under the existing permission boundary.
-- **Skill Learning Loop:** candidate skill creation only after sanitization, deterministic replay/evaluation and governed promotion.
-- **Agent Runtime:** long-running task UX over the already-approved resumable runtime, including checkpoints, plans, subagents and evidence surfaces.
-- **Provider/Model Router:** OpenCode Go first-class plus replaceable providers, quality/cost/latency policy and per-task model selection.
-- **Git / Workspace / Shell surfaces:** integrate read models first; any mutation or command execution requires a later governed bridge through the Permission & Control Plane.
-- **Computer surface:** live view and privileged control remain separate capabilities; mutation must stay behind permit-gated Cua executors.
-- **Remote Hive Control:** future HIGH_ASSURANCE subsystem using authenticated encrypted device/session semantics, revocation, audit and emergency stop. Never expose raw RDP/VNC/Cua directly.
+- **Hive Skills Engine:** discover, verify, install, version, activate, compose and learn reusable skills under the permission boundary.
+- **Agent Runtime:** long-running task UX over the approved resumable runtime, checkpoints, plans, subagents and evidence.
+- **Provider/Model Router:** OpenCode Go first-class plus replaceable providers, quality/cost/latency policy and per-task selection.
+- **Git / Workspace / Shell:** read-only workspace/Git/evidence foundation is WO-0016; file mutation, Git mutation and terminal execution require later governed permit-aware capability adapters.
+- **Computer surface:** live view and privileged control remain separate; mutation stays behind permit-gated Cua executors.
+- **Remote Hive Control:** future HIGH_ASSURANCE authenticated/encrypted subsystem with revocation, audit and emergency stop; never expose raw RDP/VNC/Cua publicly.
 - **Integrated Build Loop:** code -> test -> launch -> observe -> computer-use validate -> repair -> evidence -> PR/review.
 - **Packaging/Updates:** signed Windows packaging, controlled acquisition, update channels, rollback and health diagnostics.
 
-## Next NECESSARY product increment after CP-0015
-Connect truthful live **read-only** desktop state to existing Hive-owned runtime/provider/task engines and introduce bounded workspace/Git/evidence/permission read adapters where concrete implementations are still absent.
+## Next NECESSARY product increment after canonical CP-0016
+Fresh source-check must prioritize truthful live **runtime/provider/permission read state** through existing Hive-owned adapters before enabling their corresponding mutation surfaces. It must reuse the already-approved Python runtime/provider/task engines rather than duplicate them.
 
-The next increment must:
-- keep desktop presentation state non-authoritative;
-- expose explicit provenance and UNKNOWN/DISCONNECTED/DEGRADED rather than fake readiness;
-- preserve `UI -> Application/Orchestrator -> Permission & Control Plane -> Capability Adapters`;
-- avoid generic shell execution, arbitrary filesystem mutation or desktop-input mutation;
-- keep all unavailable mutation controls disabled until a later governed permit-gated path exists.
+Any next increment must preserve:
+- presentation state as non-authoritative;
+- explicit provenance and UNKNOWN/DISCONNECTED/DEGRADED instead of fake readiness;
+- `UI -> Application/Orchestrator -> Permission & Control Plane -> Capability Adapters`;
+- no generic shell execution or arbitrary filesystem/desktop mutation;
+- disabled mutation controls until a later governed permit-gated path exists.
 
-## Open residual work after CP-0015
+## Open residual work
 - Rust dependency refresh/target-chain analysis for the 7 RustSec warning-class advisories.
 - Stricter desktop CSP than `style-src 'unsafe-inline'`.
-- Native visual screenshot/pixel validation and full desktop interaction E2E.
+- Native picker/full desktop interaction E2E, Windows reparse fixture, visual screenshot/pixel validation and accessibility automation.
+- Stronger handle-relative/no-follow workspace capability I/O before privileged file/Git mutation.
 - Installer/signing/updater/release packaging and rollback/roll-forward proof.
-- Live runtime/provider/Git/evidence/permission adapter integration.
+- Live runtime/provider/permission adapter integration.
 - Final project license and release attribution decision.
 
-Only the next NECESSARY increment enters automatically after source-check and a new governed Work Order/Context Lock are created. HIGH_ASSURANCE capabilities retain their dedicated safety gates.
+Only the next NECESSARY increment enters automatically after CP-0016 is canonical and a new governed Work Order/Context Lock are created.
