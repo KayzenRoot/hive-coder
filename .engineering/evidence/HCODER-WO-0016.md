@@ -5,7 +5,7 @@
 **PR:** `#35`  
 **Canonical base:** `330be799eedc3ea2478034039236d4a965f55274` (`HCODER-CP-0015`)  
 **Technical reviewed head:** `07dda00f7371bcb02158f0c26258b03fa0dec88d`  
-**Status:** TECHNICAL COMPLETE — PROMOTION CANDIDATE
+**Status:** APPROVED FOR SQUASH MERGE — FINAL GATES PENDING
 
 ## Objective evidence
 WO-0016 turns the static Workspace shell into a truthful live read surface without adding a privileged execution path. The user explicitly chooses a folder through the native picker. The frontend supplies no path argument. The trusted Rust application layer validates/canonicalizes the selected directory, retains application-owned workspace identity, and emits bounded presentation state through `DesktopSnapshot v2`.
@@ -69,6 +69,11 @@ Frontend/native validation:
 ## HEDS technical review
 PR review `5213079423`, anchored to exact head `07dda00f7371bcb02158f0c26258b03fa0dec88d`: **APPROVED FOR PROMOTION CANDIDATE**. Unresolved HIGH/CRITICAL findings: **0**.
 
+## Promotion evidence
+Exact promotion head `50c280004b0d869e32fda8f20806082654e63255` passed Governance `34997849021` (#204) and Desktop Shell `34997849241` (#40). Ubuntu remained **256/256 PASS**, Windows HIGH_ASSURANCE **56/56 PASS**, frontend **12/12 PASS**, Windows Rust **11/11 PASS**, npm audit **0 vulnerabilities**, RustSec had no blocking vulnerability with seven warning-class advisories, Tauri release build passed and `DESKTOP_LAUNCH_SMOKE=PASS`.
+
+HEDS promotion review `5213131975` verified that the promotion delta from technical head `07dda00f7371bcb02158f0c26258b03fa0dec88d` is documentation/evidence/governance-only and returned **APPROVED FOR FINAL APPROVAL MUTATION** with unresolved HIGH/CRITICAL findings **0**.
+
 ## Explicit residual boundaries
 - Native folder-picker click/select interaction is compile/launch proven but not physically automated E2E.
 - Two Unix-only symlink regressions do not execute in the Windows desktop job; Windows reparse detection is implemented but has no direct reparse fixture yet.
@@ -78,4 +83,4 @@ PR review `5213079423`, anchored to exact head `07dda00f7371bcb02158f0c26258b03f
 - Runtime/provider/permission live adapters, terminal/write paths, installer/signing/updater and full interaction/visual E2E remain outside WO-0016.
 
 ## STOP status
-Technical implementation is complete, but the Work Order is **not canonical/complete yet**. Remaining gates are promotion-candidate exact-head Governance + Desktop Shell, promotion HEDS, final approval mutation, final exact-head gates/HEDS, squash merge and post-merge validation on canonical `main`.
+Technical implementation and promotion review are complete. `DEC-020` and CP-0016 are approved for the merge candidate, but the Work Order is **not canonical/complete yet**. Remaining gates are fresh exact-head Governance + Desktop Shell on this final approval mutation, final HEDS, squash merge, and post-merge Governance + Desktop Shell on canonical `main`.

@@ -1,17 +1,18 @@
 # Checkpoint — Hive Coder
 
 **Checkpoint:** `HCODER-CP-0016`  
-**Status:** PROMOTION CANDIDATE — NOT YET CANONICAL  
+**Status:** APPROVED FOR SQUASH MERGE — NOT YET CANONICAL  
 **Date:** 2026-09-15  
 **Repository:** `KayzenRoot/hive-coder`  
 **Work Order:** `HCODER-WO-0016`  
 **Issue:** `#34`  
-**PR:** `#35` — DRAFT  
+**PR:** `#35` — FINAL APPROVAL CANDIDATE  
 **Base checkpoint:** `HCODER-CP-0015`  
 **Canonical base main SHA:** `330be799eedc3ea2478034039236d4a965f55274`  
-**Technical reviewed head:** `07dda00f7371bcb02158f0c26258b03fa0dec88d`
+**Technical reviewed head:** `07dda00f7371bcb02158f0c26258b03fa0dec88d`  
+**Promotion reviewed head:** `50c280004b0d869e32fda8f20806082654e63255`
 
-## Candidate state
+## Approved candidate state
 - All CP-0005 through CP-0015 permission/security boundaries remain authoritative and unchanged.
 - `DesktopSnapshot v2` adds truthful bounded workspace, Git and Hive evidence presentation state.
 - The desktop exposes two named native commands: `get_desktop_snapshot` and `choose_workspace`.
@@ -34,6 +35,16 @@ Exact technical head `07dda00f7371bcb02158f0c26258b03fa0dec88d`:
 - Desktop Shell run `34996930809` (#39): security gate PASS; TypeScript PASS; Vitest **12/12 PASS**; Vite production build PASS; npm audit **0 vulnerabilities**; RustSec scanned **432** locked crate dependencies with **7 allowed warning-class advisories** and no blocking vulnerability; Windows Rust **11/11 PASS**; `cargo check --locked` PASS; Tauri release build PASS; `DESKTOP_LAUNCH_SMOKE=PASS`.
 - HEDS technical review `5213079423`: **APPROVED FOR PROMOTION CANDIDATE**, unresolved HIGH/CRITICAL findings **0**.
 
+## Promotion evidence
+Exact promotion head `50c280004b0d869e32fda8f20806082654e63255`:
+- Governance run `34997849021` (#204): **SUCCESS**, Ubuntu **256/256 PASS**, Windows HIGH_ASSURANCE **56/56 PASS**.
+- Desktop Shell run `34997849241` (#40): **SUCCESS**, security gate PASS, Vitest **12/12 PASS**, npm audit **0 vulnerabilities**, RustSec no blocking vulnerability with **7 allowed warning-class advisories**, Windows Rust **11/11 PASS**, `cargo check --locked` PASS, Tauri release build PASS, `DESKTOP_LAUNCH_SMOKE=PASS`.
+- HEDS promotion review `5213131975`: **APPROVED FOR FINAL APPROVAL MUTATION**, unresolved HIGH/CRITICAL findings **0**.
+- Compare from technical reviewed head to promotion head contains documentation/evidence/governance changes only, with no application/workflow/dependency/lock/capability/permission drift.
+
+## Decision
+`DEC-020 — Trusted Workspace & Git Read Boundary` is APPROVED. This approval adds no privilege and remains non-canonical until squash merge plus post-merge validation on `main`.
+
 ## Explicit residual boundaries
 - Native folder-picker click/select is not yet physically automated E2E.
 - Unix-only link regressions are not exercised by the Windows desktop job; Windows reparse handling lacks a direct reparse fixture.
@@ -43,8 +54,8 @@ Exact technical head `07dda00f7371bcb02158f0c26258b03fa0dec88d`:
 - Runtime/provider/permission live adapters, write/terminal paths, installer/signing/updater, screenshot/pixel fidelity and full native interaction E2E remain unapproved.
 - Final Hive Coder project license remains undecided.
 
-## Promotion gates still required
-This candidate is not canonical. The documentation-only promotion mutation must pass exact-head Governance + Desktop Shell, then HEDS must verify no application/workflow/dependency/lock/capability drift. Only after final approval mutation, final exact-head gates/HEDS, squash merge and post-merge validation may CP-0016 become canonical/COMPLETE.
+## Final gates still required
+This checkpoint is approved for squash merge but is **not canonical**. This documentation/governance-only approval mutation must pass exact-head Governance + Desktop Shell and final HEDS with unresolved HIGH/CRITICAL = 0. Then PR #35 may be squash-merged. CP-0016 becomes canonical/COMPLETE only after post-merge Governance + Desktop Shell pass on the resulting `main` SHA and canonical closeout records those receipts.
 
 ## Next increment rule
-No WO-0017 may be promoted from this candidate state. The next NECESSARY increment is chosen only after CP-0016 is canonical on `main` and a fresh source-check reconciles remaining live runtime/provider/permission read surfaces.
+WO-0017 may remain technically staged, but it may not be promoted until CP-0016 is canonical on `main` and its stacked base is reconciled to the canonical merge.

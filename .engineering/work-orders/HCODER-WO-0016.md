@@ -1,6 +1,6 @@
 # HCODER-WO-0016 — Trusted Workspace & Git Read Surface
 
-**Status:** APPROVED FOR EXECUTION  
+**Status:** APPROVED FOR SQUASH MERGE — NOT YET CANONICAL  
 **Issue:** #34  
 **Risk:** ELEVATED  
 **Task class:** T3  

@@ -85,3 +85,13 @@ The dependency graph is committed through npm/Cargo lockfiles and validated by d
 Promotion candidate `e3b24420f7057272fbe15a4ddae88ce65a190e50` passed Governance run `34985024390` (#189): Ubuntu **256/256 PASS**, Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**; Desktop Shell run `34985024599` (#25): security gate PASS, Vitest **8/8 PASS**, npm audit **0 vulnerabilities**, Rust **3/3 PASS**, `cargo check --locked` PASS, Tauri release build PASS and `DESKTOP_LAUNCH_SMOKE=PASS`. HEDS promotion review `5211785907` verified the promotion delta as documentation/governance-only and reported unresolved HIGH/CRITICAL findings **0**.
 
 This APPROVED decision does not expand privilege. The approval mutation itself must pass exact-head Governance + Desktop Shell and final HEDS before merge.
+
+## DEC-020 — Trusted Workspace & Git Read Boundary
+**Status:** APPROVED  
+**Work Order:** `HCODER-WO-0016`
+
+Hive Coder admits its first user-mediated live workspace boundary as bounded read-only presentation state. Native `choose_workspace` accepts no caller-controlled target/path payload; the trusted Rust application layer canonicalizes/validates the selected directory and retains application-owned session identity. `DesktopSnapshot v2` reports bounded workspace, Git HEAD/branch and Hive checkpoint/evidence observations with explicit provenance and READY/UNKNOWN/DISCONNECTED/DEGRADED semantics.
+
+Git observation reads bounded `.git` metadata directly and never executes an external `git` command or repository hooks. The Tauri capability remains `desktop-read-only`, scoped to `main`, with zero plugin permissions. No terminal/shell, filesystem mutation, provider credential/model execution, runtime spawn, computer-use mutation, remote control, automatic skill activation, billing/purchase authority or Permission & Control Plane expansion is approved by this decision.
+
+`HCODER-WO-0016-CR-001` HIGH and `HCODER-WO-0016-CR-002` MEDIUM are resolved. Technical head `07dda00f7371bcb02158f0c26258b03fa0dec88d` passed Governance `34996930586`, Desktop Shell `34996930809` and HEDS technical review `5213079423`. Promotion head `50c280004b0d869e32fda8f20806082654e63255` passed Governance `34997849021`, Desktop Shell `34997849241` and HEDS promotion review `5213131975`, with unresolved HIGH/CRITICAL findings 0. This decision is approved for the merge candidate but becomes canonical only after the final approval head passes exact-head gates/HEDS, squash merge, and post-merge validation on `main`.
