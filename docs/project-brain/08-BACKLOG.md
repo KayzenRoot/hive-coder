@@ -15,10 +15,10 @@
 12. `HCODER-WO-0012` repository intelligence + continuous recertification — DONE.
 13. `HCODER-WO-0013` Provider Certification Lab + Semantic Repository Twin — DONE.
 14. `HCODER-WO-0014` Elite Specialist Forge + Autonomous Engineering Arena — DONE.
-15. `HCODER-WO-0015` Desktop Shell Foundation & Safe Workspace Read Model — PROMOTION CANDIDATE on PR `#32`.
+15. `HCODER-WO-0015` Desktop Shell Foundation & Safe Workspace Read Model — DONE. Canonical checkpoint `HCODER-CP-0015`; PR `#32` squash-merged; post-merge Governance #191 and Desktop Shell #27 green on canonical `main`.
 
 ## Product capability roadmap
-- **Desktop Shell/UI:** first read-only substrate implemented in WO-0015. Next layers must connect live runtime/provider/Git/evidence/permission state through typed Hive-owned adapters before enabling corresponding surfaces.
+- **Desktop Shell/UI:** first governed read-only substrate completed in WO-0015. Next layers must connect live runtime/provider/Git/evidence/permission state through typed Hive-owned adapters before enabling corresponding mutation surfaces.
 - **Model Capability Negotiator:** normalize provider/model capabilities and expose only verified capability state.
 - **Hive Skills Engine:** discover, verify, install, version, activate, compose and learn reusable skills under the existing permission boundary.
 - **Skill Learning Loop:** candidate skill creation only after sanitization, deterministic replay/evaluation and governed promotion.
@@ -30,7 +30,17 @@
 - **Integrated Build Loop:** code -> test -> launch -> observe -> computer-use validate -> repair -> evidence -> PR/review.
 - **Packaging/Updates:** signed Windows packaging, controlled acquisition, update channels, rollback and health diagnostics.
 
-## Open residual work after CP-0015 promotion
+## Next NECESSARY product increment after CP-0015
+Connect truthful live **read-only** desktop state to existing Hive-owned runtime/provider/task engines and introduce bounded workspace/Git/evidence/permission read adapters where concrete implementations are still absent.
+
+The next increment must:
+- keep desktop presentation state non-authoritative;
+- expose explicit provenance and UNKNOWN/DISCONNECTED/DEGRADED rather than fake readiness;
+- preserve `UI -> Application/Orchestrator -> Permission & Control Plane -> Capability Adapters`;
+- avoid generic shell execution, arbitrary filesystem mutation or desktop-input mutation;
+- keep all unavailable mutation controls disabled until a later governed permit-gated path exists.
+
+## Open residual work after CP-0015
 - Rust dependency refresh/target-chain analysis for the 7 RustSec warning-class advisories.
 - Stricter desktop CSP than `style-src 'unsafe-inline'`.
 - Native visual screenshot/pixel validation and full desktop interaction E2E.
@@ -38,4 +48,4 @@
 - Live runtime/provider/Git/evidence/permission adapter integration.
 - Final project license and release attribution decision.
 
-Only the next NECESSARY increment enters automatically after the current checkpoint is fully promoted and post-merge exact-head validation is green. HIGH_ASSURANCE capabilities retain their dedicated safety gates.
+Only the next NECESSARY increment enters automatically after source-check and a new governed Work Order/Context Lock are created. HIGH_ASSURANCE capabilities retain their dedicated safety gates.
