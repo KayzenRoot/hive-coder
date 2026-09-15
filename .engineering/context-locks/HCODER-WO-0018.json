@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "hive-context-lock-v1",
+  "workOrder": "HCODER-WO-0018",
+  "status": "LOCKED_FOR_EXECUTION_STACKED",
+  "repository": "KayzenRoot/hive-coder",
+  "base": {
+    "type": "stacked-work-order-head",
+    "workOrder": "HCODER-WO-0017",
+    "sha": "ac34e9f796daf5081fa8f828a903b74a9d72fb8f",
+    "canonicalDependency": "HCODER-CP-0017 must be canonical before WO-0018 promotion"
+  },
+  "authorityBoundary": {
+    "presentationOnly": true,
+    "genericRpc": false,
+    "runtimeSpawn": false,
+    "providerCalls": false,
+    "modelExecution": false,
+    "permissionMutation": false,
+    "taskMutation": false,
+    "filesystemMutation": false,
+    "computerUseMutation": false
+  },
+  "promotionBlockedUntil": ["HCODER-CP-0017 canonical on main", "exact-head Governance and Desktop Shell success", "HEDS no unresolved HIGH/CRITICAL"]
+}
