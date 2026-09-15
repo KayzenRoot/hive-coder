@@ -58,7 +58,7 @@ Supply-chain evidence includes npm audit with zero vulnerabilities and RustSec s
 
 The current local CSP still permits `style-src 'unsafe-inline'`. That is a known LOW hardening residual, not approval for untrusted HTML/style injection. Stricter CSP requires later validation.
 
-## Runtime observability security boundary — WO-0017 candidate
+## Runtime observability security boundary — WO-0017
 Runtime status is security-sensitive because UI state can mislead a user or future orchestrator even when it carries no direct mutation primitive. WO-0017 therefore treats status as hostile-at-the-boundary presentation data rather than trusted authority.
 
 - `RuntimeStatusSnapshot v1` contains no credentials, raw prompts, model outputs, permits, approval tokens, audit secret material or trusted-host signing keys.
@@ -72,4 +72,21 @@ Runtime status is security-sensitive because UI state can mislead a user or futu
 - Invalid encode/decode paths reduce only to a fixed generic DEGRADED snapshot; rejected values and exception details are not echoed back into presentation state.
 - The safe CLI exports a deterministic disconnected snapshot only. It does not enumerate credentials, invoke providers, execute models, spawn subprocesses or mutate runtime/control-plane state.
 
-WO-0017 introduces no Tauri command and no desktop IPC/process authority. Any future sidecar launch, child-process identity, transport authentication/framing or live status wiring is a separate security boundary requiring a later governed Work Order and fresh adversarial review.
+WO-0017 introduces no Tauri command and no desktop IPC/process authority. CP-0017 is canonical; live transport/process lifecycle remains separately governed.
+
+## Cross-runtime status IPC security boundary — WO-0018 promotion candidate
+WO-0018 treats the wire itself as hostile input and freezes it before any runtime process lifecycle is approved.
+
+- Protocol identity is exactly `hive-runtime-status-ipc-v1`; the only operation is `status.snapshot`.
+- Request IDs are bounded ASCII identifiers. Request, snapshot and response-envelope byte ceilings are fixed and independently checked.
+- Python rejects duplicate keys during parse and both sides require deterministic canonical JSON. Desktop raw-wire admission reserializes the fully validated normalized envelope and requires byte-for-byte canonical equality.
+- The lower-level TypeScript semantic object parser is private. Future consumers cannot legitimately bypass the raw response boundary through the public contract API.
+- Runtime/provider/task/permission provenance literals are revalidated across the language boundary; transport cannot invent provenance.
+- Fake READY providers, duplicate provider/model identity, inconsistent task counters and authoritative-looking permission counters under UNKNOWN/DISCONNECTED fail closed.
+- The Python one-shot server receives a prebuilt validated snapshot rather than an observation callback, preventing the protocol primitive from acquiring provider/model/process/task/permission execution authority.
+- No error-detail/free-form metadata field exists that could become a secret/exfiltration channel.
+- No generic RPC, socket listener, HTTP/WebSocket service, Tauri command or new dependency is introduced.
+
+A valid status envelope is never authorization. It cannot grant a CP capability, create/consume a permit, approve a request, activate a skill, certify a model capability, mutate a task/permission state, access credentials or authorize filesystem/Git/terminal/computer-use action.
+
+WO-0018 intentionally does not prove helper binary authenticity, child-process containment, restart/shutdown policy or desktop supervisor behavior. Those are later HIGH_ASSURANCE process-boundary concerns and must not be inferred from IPC validity.

@@ -1,11 +1,14 @@
 # HCODER-WO-0018 — Cross-Runtime Status IPC Contract
 
-**Status:** APPROVED FOR EXECUTION  
+**Status:** APPROVED FOR PROMOTION CANDIDATE  
 **Risk:** ELEVATED  
 **Task class:** T3  
 **Context radius:** C4  
 **Canonical base:** `HCODER-CP-0017` on `main` at `79e6eb60288c8e0adcb26bdcffdfe0ae21ef8db7`  
-**Issue:** `#44`
+**Issue:** `#44`  
+**PR:** `#45`  
+**Technical reviewed head:** `9df7202835a47f2c18af77bbefa665afa5358b38`  
+**HEDS technical review:** `5215646309`
 
 ## OBJECTIVE
 Define and prove a versioned, bounded, one-request/one-response runtime-status protocol shared by the canonical Python runtime-status contract and desktop TypeScript presentation layer, without launching a runtime process or granting execution authority.
@@ -80,7 +83,7 @@ Transport data is never an authorization token, capability grant, model-capabili
 - Duplicate keys, non-canonical wire, unknown/extra fields, oversized messages, bad IDs, protocol/schema drift, fake READY providers, bad provenance and inconsistent counters fail closed.
 - One-shot Python handler emits exactly one bounded response line from a prebuilt snapshot and performs no lifecycle/mutation action.
 - Existing Governance and Desktop Shell suites remain green on the exact candidate head.
-- HEDS reports no unresolved HIGH/CRITICAL finding.
+- HEDS finds no unresolved HIGH/CRITICAL issue.
 
 ## TESTS
 - Python canonical request encode/parse and strict duplicate/shape/version/op/id/size rejection.
@@ -94,14 +97,19 @@ Transport data is never an authorization token, capability grant, model-capabili
 - Full Desktop Shell regression.
 
 ## DELIVERABLES
-- `hive_runtime/runtime_status_protocol.py`
-- `tests/runtime/test_runtime_status_protocol.py`
-- `apps/desktop/src/contracts/runtimeStatus.ts`
-- `apps/desktop/src/contracts/runtimeStatus.test.ts`
-- Context Lock and evidence/promotion docs after objective proof.
+- `hive_runtime/runtime_status_protocol.py`;
+- `tests/runtime/test_runtime_status_protocol.py`;
+- `apps/desktop/src/contracts/runtimeStatus.ts`;
+- `apps/desktop/src/contracts/runtimeStatus.test.ts`;
+- Context Lock;
+- `HCODER-WO-0018-CR-001` correction record;
+- evidence/checkpoint/ADR/contract promotion artifacts after objective proof.
 
 ## REVIEW FORMAT
 HEDS_DELTA exact-head. Treat generic RPC expansion, secret passthrough, protocol ambiguity, fake readiness, provenance weakening, unbounded messages or authority-bearing fields as HIGH/CRITICAL.
 
+## TECHNICAL PROOF
+Exact technical head `9df7202835a47f2c18af77bbefa665afa5358b38` passed Governance #241 (**283/283 Python**, **56/56 Windows HIGH_ASSURANCE**) and Desktop Shell #77 (security gate PASS, **23/23 frontend**, npm audit 0, **11/11 Rust**, locked checks/audits, Windows release build and launch smoke). HEDS technical review `5215646309` reports unresolved HIGH/CRITICAL = 0. `HCODER-WO-0018-CR-001` MEDIUM is resolved.
+
 ## STOP CONDITION
-Exact-head Governance + Desktop Shell green; adversarial protocol tests green; HEDS APPROVED with unresolved HIGH/CRITICAL = 0. No runtime process lifecycle or execution/mutation authority may be promoted under WO-0018. Squash merge only after all final gates pass; post-merge validation is required before `HCODER-CP-0018` becomes canonical.
+Exact-head Governance + Desktop Shell green; adversarial protocol tests green; HEDS APPROVED with unresolved HIGH/CRITICAL = 0. No runtime process lifecycle or execution/mutation authority may be promoted under WO-0018. Squash merge only after all final gates pass; post-merge validation required before `HCODER-CP-0018` becomes canonical.

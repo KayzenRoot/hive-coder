@@ -38,7 +38,7 @@ WO-0016 evolves the bridge without turning the UI into a filesystem authority:
 
 The remaining path-based read TOCTOU residual is acceptable only for this non-authoritative presentation slice. Before a future privileged file/Git mutation path exists, a separate governed design must establish stronger handle-relative/no-follow capability I/O and preserve the Permission & Control Plane choke point.
 
-## Runtime observability presentation boundary — WO-0017 candidate
+## Runtime observability presentation boundary — WO-0017
 WO-0017 adds a Python-side presentation contract without connecting it to desktop process lifecycle or granting execution authority:
 
 `Existing Python engines -> bounded public observation/reduction -> RuntimeStatusSnapshot v1 -> future trusted IPC -> desktop presentation`
@@ -53,4 +53,20 @@ Architectural rules for this contract:
 - Invalid observation/transport data may reduce only to a fixed generic `DEGRADED` snapshot. Error details and rejected values are not echoed into presentation state.
 - `tools/runtime/status_snapshot.py` is a disconnected diagnostic exporter, not a host process, provider runner or authority service.
 
-WO-0017 intentionally stops before process identity, sidecar launch, wire framing/lifecycle and desktop transport. Those are a separate cross-runtime boundary and require their own Work Order after CP-0017 is canonical.
+WO-0017 intentionally stops before process identity, sidecar launch, wire framing/lifecycle and desktop transport. CP-0017 is canonical and the next layer must preserve these authority limits.
+
+## Cross-runtime runtime-status IPC boundary — WO-0018 promotion candidate
+WO-0018 freezes the cross-language presentation wire before any desktop process lifecycle is admitted:
+
+`RuntimeStatusSnapshot v1 -> hive-runtime-status-ipc-v1/status.snapshot -> strict raw TypeScript decoder -> presentation only`
+
+Architecture rules:
+- `hive-runtime-status-ipc-v1` contains exactly one operation: `status.snapshot`.
+- Request and response use deterministic canonical JSON with bounded UTF-8 size. Snapshot semantics remain owned by CP-0017 rather than redefined by transport.
+- Desktop response admission must traverse `decodeRuntimeStatusEnvelope(raw)`; the lower-level semantic parser is private so callers cannot bypass raw-wire canonicality.
+- Request ceiling is 512 bytes, snapshot ceiling remains 32,768 bytes, and total response ceiling is 33,024 bytes.
+- The Python `serve_one()` primitive receives a prebuilt validated snapshot and owns no callback/provider/model/process/task/permission lifecycle.
+- The protocol introduces no generic RPC namespace, socket listener, WebSocket, HTTP service or Tauri command.
+- Status transport remains non-authoritative and cannot become a permit, capability verifier, task command or permission decision.
+
+The separately governed runtime sidecar/supervisor layer may later consume this frozen status protocol, but it may not expand it silently. Process launch, identity/authenticity, restart/shutdown and containment remain outside WO-0018.
