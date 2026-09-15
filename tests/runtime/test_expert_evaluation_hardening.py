@@ -1,5 +1,8 @@
 from __future__ import annotations
-from hive_runtime.expert_agents import BenchmarkDimension, BenchmarkResult, ExperienceLedger, ExperienceRouter, required_dimensions_for_role
+from hive_runtime.expert_agents import (
+    BenchmarkDimension, BenchmarkResult, CompetenceLevel, CompetenceStandard,
+    ExperienceLedger, ExperienceRouter, required_dimensions_for_role,
+)
 from hive_runtime.orchestration import AgentRole
 from tests.runtime.expert_agent_fixture import ExpertAgentFixture, sha
 
@@ -45,7 +48,7 @@ class ExperienceRoutingTests(ExpertAgentFixture):
                 ledger.add(BenchmarkResult(
                     result_id, profile.agent_id, profile.fingerprint(), dim,
                     "same-family", f"suite-{version}", version,
-                    sha(f"samples:{dim.value}:{index}"), 10, 10, 0, 0, 0,
+                    sha(f"samples:{dim.value}:{index}"), 20, 20, 0, 0, 0,
                     sha(result_id),
                 ))
         report = ExperienceRouter(self.profile_authority, ledger).evaluate(
@@ -68,15 +71,24 @@ class ExperienceRoutingTests(ExpertAgentFixture):
         ledger = self.ledger()
         weaker = self.profile(AgentRole.BACKEND, "backend-weaker")
         stronger = self.profile(AgentRole.BACKEND, "backend-stronger")
-        self.add_results(ledger, weaker, successes=9, total=10)
+        self.add_results(ledger, weaker, successes=19, total=20)
         self.add_results(ledger, stronger, successes=20, total=20)
         registry = self.registry((weaker, stronger))
         profile, report = ExperienceRouter(self.profile_authority, ledger).route(
             registry.profiles_for(AgentRole.BACKEND), registry.capsules(), AgentRole.BACKEND,
-            self.standard(AgentRole.BACKEND, min_samples=10, lower=0.5),
+            self.standard(AgentRole.BACKEND),
         )
         self.assertEqual(profile.agent_id, "backend-stronger")
         self.assertTrue(report.passed)
+
+    def test_distinguished_floor_cannot_be_weakened_by_configuration(self):
+        weakened = CompetenceStandard(
+            CompetenceLevel.DISTINGUISHED,
+            required_dimensions_for_role(AgentRole.BACKEND),
+            10, 0.50, 1,
+        )
+        with self.assertRaises(ValueError):
+            weakened.validate()
 
     def test_wilson_lower_bound_penalizes_small_perfect_samples(self):
         self.assertLess(ExperienceLedger.wilson_lower_bound(5, 5),
