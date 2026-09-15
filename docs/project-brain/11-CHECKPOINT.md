@@ -1,53 +1,59 @@
 # Checkpoint — Hive Coder
 
-**Canonical approved checkpoint:** `HCODER-CP-0014`  
-**Promotion candidate:** `HCODER-CP-0015`  
-**Candidate status:** `CANDIDATE`  
+**Checkpoint:** `HCODER-CP-0015`  
+**Status:** APPROVED — FINAL EXACT-HEAD VALIDATION REQUIRED BEFORE MERGE  
 **Date:** 2026-09-15  
 **Repository:** `KayzenRoot/hive-coder`  
-**Work Order:** `HCODER-WO-0015`  
+**Approved Work Order:** `HCODER-WO-0015`  
 **PR:** `#32`  
-**Technical reviewed head:** `9e212c6f8c959f3d3cb19cc5146485f39bd6c8fd`
+**Base checkpoint:** `HCODER-CP-0014`
 
-## Canonical authority while candidate is under promotion
-`HCODER-CP-0014` remains the latest APPROVED checkpoint until CP-0015 itself passes its promotion gates and receives a separate APPROVED mutation. All CP-0005 through CP-0014 authority/security boundaries therefore remain in force unchanged.
-
-## CP-0015 candidate delta
-- First Windows-buildable Hive Coder desktop shell under `apps/desktop/` using Tauri 2 + React/TypeScript/Vite.
-- Original Hive visual foundation and workspace/status shell; no Apple proprietary assets, SF Symbols or Apple-specific font references.
-- Versioned `DesktopSnapshot v1` read model with explicit `READY`, `UNKNOWN`, `DISCONNECTED` and `DEGRADED` presentation states.
-- Exactly one desktop application command in WO-0015: `get_desktop_snapshot`.
-- The command accepts no execution payload and rejects callers whose WebView window label is not `main`.
+## Proven canonical state
+- All approved authority/security boundaries from HCODER-CP-0005 through HCODER-CP-0014 remain authoritative and unchanged.
+- Hive Coder now has a first governed Windows-buildable desktop substrate under `apps/desktop/` using Tauri 2 + React/TypeScript/Vite.
+- `DesktopSnapshot v1` is bounded presentation state only. It carries no execution, permission, credential, skill-activation or billing authority.
+- WO-0015 exposes exactly one Tauri application command: `get_desktop_snapshot`.
+- The command accepts no execution payload and fails closed unless invoked from the WebView window labelled `main`.
 - Declarative Tauri capability `desktop-read-only` targets only `main` and grants zero plugin permissions.
-- No Tauri shell/filesystem/process plugin, generic command bridge, arbitrary filesystem mutation, desktop-input mutation, provider credential path, remote-control authority, skill activation or billing/purchase authority is introduced.
-- Safety controls remain visible but inactive when no actionable trusted session exists; unavailable product surfaces remain disabled rather than pretending readiness.
-- npm/Cargo lockfiles are committed. Desktop CI validates exact locked graphs, security rules, TypeScript, tests, production web build, dependency audit, Rust tests/check, Windows Tauri release build and native launch smoke.
+- No Tauri shell/filesystem/process plugin, generic command bridge, arbitrary filesystem mutation, desktop-input mutation, provider credential path, remote-control authority, automatic skill activation or autonomous billing/purchase authority is introduced.
+- Runtime/provider/Git/evidence/permission state must remain truthful UNKNOWN/DISCONNECTED/DEGRADED unless a later governed live adapter proves otherwise.
+- Workspace is the only active first-shell navigation destination. Unimplemented Tasks/Code/Computer/Evidence paths and Run remain disabled rather than pretending readiness.
+- Pause/Emergency Stop/Take Control remain visible for safety discoverability but inactive without an actionable trusted session.
+- npm/Cargo lockfiles are committed and Desktop Shell CI validates exact dependency graphs, frontend/native tests, security rules, Windows release build and launch smoke.
+- Future privileged desktop/runtime operations remain subordinate to the canonical `Hive Desktop UI -> Hive Application/Orchestrator -> Permission & Control Plane -> Capability Adapters` layering.
 
-## Corrections staged for promotion
-- `HCODER-WO-0015-CR-001`: Vite/Vitest configuration typing — RESOLVED IN CANDIDATE.
-- `HCODER-WO-0015-CR-002`: deterministic Tauri icon + lock bootstrap — RESOLVED IN CANDIDATE.
-- `HCODER-WO-0015-CR-003`: main-window read-model scope — RESOLVED IN CANDIDATE.
-- `HCODER-WO-0015-CR-004`: truthful inactive desktop affordances — RESOLVED IN CANDIDATE.
-- `HCODER-WO-0015-CR-005`: Apple-specific font-reference removal — RESOLVED IN CANDIDATE.
+## Corrections
+- `HCODER-WO-0015-CR-001` MEDIUM: **RESOLVED**. Vite/Vitest configuration typing uses the Vitest-aware config contract and exact-head typecheck/build pass.
+- `HCODER-WO-0015-CR-002` MEDIUM: **RESOLVED**. Deterministic icon generation and committed npm/Cargo lock graphs remove bootstrap/build nondeterminism from the reviewed path.
+- `HCODER-WO-0015-CR-003` MEDIUM: **RESOLVED**. `get_desktop_snapshot` independently revalidates caller window label `main` in addition to declarative capability scoping.
+- `HCODER-WO-0015-CR-004` MEDIUM: **RESOLVED**. Inactive product surfaces and execution controls no longer imply readiness.
+- `HCODER-WO-0015-CR-005` LOW: **RESOLVED**. Apple-specific font references were removed and regression-blocked by the desktop security gate.
 
-## Technical evidence already proven
-Exact technical head `9e212c6f8c959f3d3cb19cc5146485f39bd6c8fd`:
+## Technical evidence
+Technical reviewed head `9e212c6f8c959f3d3cb19cc5146485f39bd6c8fd`:
 - Governance run `34982417149` (#187): Ubuntu **256/256 PASS**, Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**.
 - Desktop Shell run `34982422090` (#23): security gate PASS; TypeScript PASS; Vitest **8/8 PASS**; Vite production build PASS; npm audit **0 vulnerabilities**; Rust **3/3 PASS**; `cargo check --locked` PASS; Tauri release build PASS; `DESKTOP_LAUNCH_SMOKE=PASS`.
-- RustSec scan command succeeded over 431 locked crate dependencies, while explicitly reporting 7 warning-class advisories. The dependency graph is therefore not claimed warning-free.
-- HEDS technical review `5211566651`: **APPROVED FOR PROMOTION CANDIDATE**; unresolved HIGH/CRITICAL findings: **0**.
+- HEDS technical review `5211566651`: **APPROVED FOR PROMOTION CANDIDATE**, unresolved HIGH/CRITICAL **0**.
+
+## Promotion evidence
+Promotion candidate head `e3b24420f7057272fbe15a4ddae88ce65a190e50` is documentation/governance-only relative to the technical reviewed head. The final compare preserves the historical Test & Benchmark Plan and introduces no application/workflow/dependency/lock/capability change.
+
+Exact candidate evidence:
+- Governance run `34985024390` (#189): Ubuntu **256/256 PASS**, Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**.
+- Desktop Shell run `34985024599` (#25): security gate PASS; TypeScript PASS; Vitest **8/8 PASS**; Vite production build PASS; npm audit **0 vulnerabilities**; RustSec audit command PASS over 431 locked crate dependencies with the same 7 recorded warning-class advisories; Rust **3/3 PASS**; `cargo check --locked` PASS; Tauri release build PASS; `DESKTOP_LAUNCH_SMOKE=PASS`.
+- HEDS promotion review `5211785907`: **APPROVED FOR FINAL APPROVAL MUTATION**, unresolved HIGH/CRITICAL **0**.
 
 ## Explicit residual boundaries
-- Seven RustSec warning-class transitive advisories remain dependency debt and require later refresh/target-chain analysis before a warning-free supply-chain claim.
-- Desktop CSP still permits `style-src 'unsafe-inline'`; stricter CSP remains later hardening.
-- Native launch is proven, but screenshot/pixel fidelity validation and full desktop interaction E2E remain unproven.
-- `bundle.active=false`; installer, signing, updater, production packaging and rollback/roll-forward release evidence remain unapproved.
+- RustSec still reports seven warning-class transitive advisories. The Cargo graph is not claimed warning-free; dependency refresh/target-chain analysis remains follow-up debt.
+- Desktop CSP still permits `style-src 'unsafe-inline'`; stricter style CSP remains later hardening.
+- Native build/launch is proven, but screenshot/pixel fidelity validation, accessibility automation and full desktop interaction E2E remain unproven.
+- `bundle.active=false`; installer, code signing, updater, production package integrity, release channels and rollback/roll-forward deployment evidence remain unapproved.
 - Live runtime/provider/Git/evidence/permission adapters are not connected by WO-0015.
 - No real provider credentials, privileged computer-use mutation, remote control, automatic skill activation, autonomous billing/purchases or permission expansion is approved.
-- Final Hive Coder project license remains undecided.
+- Final Hive Coder project license remains undecided and is a release gate.
 
-## Candidate promotion rule
-CP-0015 remains `CANDIDATE` until this documentation/governance head independently passes exact-head Governance + Desktop Shell and receives promotion HEDS with no unresolved HIGH/CRITICAL finding. Only then may DEC-019/CP-0015 be mutated to APPROVED, revalidated again, marked ready and squash-merged. Post-merge Governance + Desktop Shell must pass on canonical `main` before WO-0015 is closed.
+## Final validation / merge rule
+This APPROVED checkpoint mutation is documentation/governance-only. It must independently pass exact-head Governance + Desktop Shell and final HEDS with no unresolved HIGH/CRITICAL finding before PR #32 may leave draft and squash-merge. The merge must use the exact final reviewed head. Push-triggered Governance + Desktop Shell must then pass on canonical `main` before WO-0015 is considered closed.
 
 ## Next necessary increment
-No WO-0016 is authorized while CP-0015 is only CANDIDATE. After final promotion and post-merge validation, source-check CP-0015 before choosing the next NECESSARY product increment.
+Do not authorize `HCODER-WO-0016` until CP-0015 is canonical on `main`, post-merge validation is green, Issue #30 is refreshed and a new source-check selects the next NECESSARY product increment.
