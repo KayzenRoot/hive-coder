@@ -1,16 +1,19 @@
 # DEC-023 — Runtime Status Sidecar Helper Boundary
 
-**Status:** FINAL APPROVAL CANDIDATE / NOT CANONICAL  
+**Status:** APPROVED / CANONICAL — CLOSEOUT SEAL PENDING  
 **Work Order:** `HCODER-WO-0019`  
 **Source checkpoint:** `HCODER-CP-0018`  
 **Target checkpoint:** `HCODER-CP-0019`  
 **Technical head:** `ba10ba72f76316806cd820dc0d205e68105f61bb`  
 **HEDS technical:** `5216093993`  
 **Promotion head:** `55975e7e97eb33d2b695d02e36ab6994fa7ae7b5`  
-**HEDS promotion:** `5216180277`
+**HEDS promotion:** `5216180277`  
+**Final reviewed product head:** `abe7b29cf59d3fd2e464e3ea69a7e585ba75e6dd`  
+**HEDS final product:** `5216313496`  
+**Product merge SHA:** `2ed4222556916cf524e31f65c4c417d27b7e6fd9`
 
 ## Decision
-Hive Coder introduces a fixed, single-purpose Python runtime-status sidecar helper that exposes only the already-canonical CP-0018 `hive-runtime-status-ipc-v1` one-shot presentation protocol over stdio.
+Hive Coder canonicalizes a fixed, single-purpose Python runtime-status sidecar helper that exposes only the already-canonical CP-0018 `hive-runtime-status-ipc-v1` one-shot presentation protocol over stdio.
 
 The helper is not a daemon, runtime host, generic process bridge, provider/model execution channel or authorization boundary. Its sole admitted mode is `--stdio-status-v1`.
 
@@ -25,7 +28,7 @@ The helper is not a daemon, runtime host, generic process bridge, provider/model
 ## Child-process law
 Process-level proof uses Hive's canonical `ManagedStdioProcess`, which launches argument arrays with `shell=False` and a least-privilege allowlisted child environment. The WO-0019 sidecar `ProcessSpec` supplies no environment overrides. Representative ambient provider credential material is proven absent from the child environment and emitted response.
 
-This decision does not approve a desktop launcher/supervisor. It only proves the helper contract itself can be launched safely by the existing test process boundary.
+This decision does not approve a desktop launcher/supervisor. It proves only the helper contract itself through the existing test process boundary.
 
 ## Fail-closed law
 At the executable boundary, tests prove rejection of missing/unknown/extra mode, malformed JSON, noncanonical encoding, duplicate keys, future protocol, unsupported operation, oversized input and missing newline. A buffered second canonical request is left unserved because the helper exits after the first accepted request.
@@ -43,11 +46,17 @@ A valid sidecar response is presentation data only. It cannot grant Permission &
 - any new mutation authority.
 
 ## Evidence
-Technical exact head `ba10ba72f76316806cd820dc0d205e68105f61bb` passed Governance #250 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #86 including Windows release build/smoke; HEDS `5216093993` approved promotion with H/C 0.
+Technical exact head `ba10ba72f76316806cd820dc0d205e68105f61bb` passed Governance #250 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #86; HEDS `5216093993` approved promotion with H/C 0.
 
-Promotion exact head `55975e7e97eb33d2b695d02e36ab6994fa7ae7b5` passed Governance #251 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #87 including Windows release build/smoke; HEDS `5216180277` approved the final approval mutation with H/C 0.
+Promotion exact head `55975e7e97eb33d2b695d02e36ab6994fa7ae7b5` passed Governance #251 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #87; HEDS `5216180277` approved the final approval mutation with H/C 0.
+
+Final product head `abe7b29cf59d3fd2e464e3ea69a7e585ba75e6dd` passed Governance #252 and Desktop Shell #88; HEDS final review `5216313496` approved squash merge with H/C 0.
+
+Product PR #48 was squash-merged using expected-head protection as GitHub-signed SHA `2ed4222556916cf524e31f65c4c417d27b7e6fd9`. That exact merge SHA passed push Governance #253 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #89 including Windows release build and launch smoke.
 
 `HCODER-WO-0019-CR-001` and `HCODER-WO-0019-CR-002` are resolved.
 
-## Canonicalization rule
-DEC-023 remains **NOT CANONICAL** until the final approval head passes exact-head Governance + Desktop Shell and HEDS with H/C 0, PR #48 is squash-merged using expected-head protection, and the product merge SHA passes push-triggered Governance + Desktop Shell validation. Canonical closeout is then recorded separately without widening authority.
+## Canonicalization result
+`DEC-023` is **APPROVED / CANONICAL** as the decision recorded by CP-0019, subject only to this documentation-only closeout receiving its own exact-head Governance + Desktop Shell + HEDS, squash merge and push validation seal.
+
+The decision canonicalizes no desktop supervisor, generic process dispatch or mutation authority. The next separately governed increment is the fresh CP-0019-based reconstruction of WO-0020.
