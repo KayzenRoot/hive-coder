@@ -22,7 +22,7 @@ export interface DesktopSnapshot {
   product: {
     name: string;
     version: string;
-    checkpoint: string;
+    baselineCheckpoint: string;
   };
   shell: StatusSignal;
   runtime: StatusSignal;
@@ -94,7 +94,7 @@ export function parseDesktopSnapshot(value: unknown): DesktopSnapshot {
     product: {
       name: boundedString(value.product.name, "product.name", 80),
       version: boundedString(value.product.version, "product.version", 40),
-      checkpoint: boundedString(value.product.checkpoint, "product.checkpoint", 80),
+      baselineCheckpoint: boundedString(value.product.baselineCheckpoint, "product.baselineCheckpoint", 80),
     },
     shell: statusSignal(value.shell, "shell"),
     runtime: statusSignal(value.runtime, "runtime"),
@@ -131,7 +131,7 @@ export function disconnectedSnapshot(): DesktopSnapshot {
     product: {
       name: "Hive Coder",
       version: "0.1.0",
-      checkpoint: "HCODER-CP-0014",
+      baselineCheckpoint: "HCODER-CP-0014",
     },
     shell: {
       state: "DEGRADED",
