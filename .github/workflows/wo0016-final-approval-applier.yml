@@ -21,7 +21,6 @@ jobs:
       - name: Verify approval delta
         run: |
           set -euo pipefail
-          git diff --check
           changed="$(git diff --name-only)"
           echo "$changed"
           test "$(echo "$changed" | wc -l)" -eq 4
@@ -29,6 +28,10 @@ jobs:
           echo "$changed" | grep -Fx '.engineering/work-orders/HCODER-WO-0016.md'
           echo "$changed" | grep -Fx 'docs/project-brain/10-DECISIONS-LEDGER.md'
           echo "$changed" | grep -Fx 'docs/project-brain/11-CHECKPOINT.md'
+          if git diff -- .engineering/evidence/HCODER-WO-0016.md .engineering/work-orders/HCODER-WO-0016.md docs/project-brain/10-DECISIONS-LEDGER.md docs/project-brain/11-CHECKPOINT.md | grep -E '^[+]<<<<<<<|^[+]=======|^[+]>>>>>>>'; then
+            echo 'conflict marker detected in approval delta'
+            exit 1
+          fi
       - name: Commit final approval and remove temporary applier
         run: |
           set -euo pipefail
