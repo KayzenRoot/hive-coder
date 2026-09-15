@@ -1,6 +1,6 @@
 # HCODER-WO-0014 — Elite Specialist Forge & Autonomous Engineering Arena
 
-**Status:** PROMOTION CANDIDATE  
+**Status:** APPROVED FOR GOVERNED MERGE  
 **Issue:** #28  
 **Risk:** HIGH_ASSURANCE  
 **Task class:** T3  
@@ -86,8 +86,12 @@ Runtime code, tests, canonical docs, evidence, Correction Deltas if required, DE
 ## REVIEW FORMAT
 HEDS_DELTA exact-head. UNKNOWN is not PASS. HIGH/CRITICAL findings block promotion.
 
-## PROMOTION CANDIDATE STATE
-Technical runtime head `54d19f3acbac6e20f34287d5fe12cc2316d89e23` is HEDS-approved for promotion candidate and passed Governance run `34965734345` with Ubuntu **256/256 PASS** and Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**. `CR-001..CR-004` are resolved. Promotion documentation is staged under this same PR and must pass its own exact-head Governance + final HEDS before DEC-018/CP-0014 can become APPROVED.
+## PROMOTION EVIDENCE
+Technical runtime head `54d19f3acbac6e20f34287d5fe12cc2316d89e23` passed Governance run `34965734345` with Ubuntu **256/256 PASS** and Windows Server 2025 HIGH_ASSURANCE **56/56 PASS** and received technical HEDS promotion-candidate approval (`review_id 5209609911`). `CR-001..CR-004` are resolved.
+
+Promotion candidate head `ef34acc493a10f16ba79459c5d7d9d4b39005e4a` passed exact-head Governance run `34973660965`. HEDS review `5210423743` approved the documentation/governance-only delta with no unresolved HIGH/CRITICAL finding and no real-provider overclaim.
+
+DEC-018, CP-0014 and the checkpoint delta are promoted to APPROVED in documentation-only changes. The resulting final approved head must pass exact-head Governance before squash merge; post-merge canonical `main` must then pass push-triggered Governance.
 
 ## STOP CONDITION
 Exact-head Governance green; HEDS APPROVED; no open HIGH/CRITICAL; DEC-018 and CP-0014 APPROVED; squash merge; post-merge Governance green.
