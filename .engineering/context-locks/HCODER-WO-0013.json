@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "hive-context-lock-v1",
+  "workOrderId": "HCODER-WO-0013",
+  "repository": "KayzenRoot/hive-coder",
+  "baseSha": "3dee30634f48420f7c7ffa1b2c2186066dad97d0",
+  "checkpoint": "HCODER-CP-0012",
+  "risk": "HIGH_ASSURANCE",
+  "taskClass": "T3",
+  "contextRadius": "C4",
+  "objective": "Build the Provider Certification Lab and Semantic Repository Twin without expanding authority.",
+  "authorityBoundaries": [
+    "CP-0005 permission authority remains unchanged",
+    "CP-0007/0008 capability truth remains unchanged",
+    "CP-0009 execution/checkpoint authority remains unchanged",
+    "CP-0010 planning/evidence authority remains unchanged",
+    "CP-0011 competence floors remain unchanged",
+    "CP-0012 repository-intelligence and certification evidence boundaries remain authoritative"
+  ],
+  "forbidden": [
+    "real provider credentials in CI",
+    "automatic permission changes",
+    "arbitrary repository code execution during indexing",
+    "provider/model self-grading",
+    "remote control",
+    "automatic skill promotion",
+    "claiming a real provider stack is already DISTINGUISHED without trusted evidence"
+  ]
+}

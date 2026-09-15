@@ -36,6 +36,32 @@ Benchmark result trust belongs to a host verifier and evidence digest. Raw model
 
 Fresh hidden/project-specific suites should use multiple verified independent source lineages and preserve generation-version identity. A generator change is an evaluation protocol change and requires regression evidence. Never treat generated-case novelty as sufficient proof by itself: trusted execution, grading and evidence binding remain mandatory before a case contributes to Experience Ledger competence.
 
-ChronoSeal and Benchmark Novelty are session-bounded in CP-0012. Durable cross-restart time/novelty attestation is required before a future provider-backed certification service can rely on those properties across processes or machines.
+## Provider Certification Lab policy
 
-Future benchmark upgrades should add stronger language/framework-specific task materialization, cost/latency telemetry, repair quality, regression severity, contamination estimation, durable benchmark lineage state and provider-backed re-certification. Never report unmeasured gains as facts.
+`HCODER-WO-0013` adds HIGH_ASSURANCE laboratory controls for exact-stack trials:
+- **StackGenome** canonically binds provider, model, model revision, toolset, capsule, skillset and runtime to the exact sealed Agent Profile execution-stack digest.
+- **SuiteLineage Authority** seals suite identity and derives competence-family diversity from an independence root. Renaming or version-churning one lineage cannot create additional family diversity.
+- Runner and grader identities are host-sealed with role, independence lineage and **EndpointSeal** digest. Runner/grader lineage or endpoint collapse is rejected.
+- **TrialForge** verifies ShadowBench/repository/Semantic Twin bindings and exposes no oracle material to the provider runner.
+- **One-Shot Trial Law** atomically and durably reserves profile + stack + hidden-case lineage before provider execution. Provider/grader failure cannot be used to reroll the same hidden case.
+- **GradeProof** requires every grading decision to carry a host-verifiable rationale/evidence digest before a TrialReceipt can exist.
+- Provider responses are bounded; invalid incident counters, oversized output or malformed responses fail closed.
+- **Contamination Radar** is downgrade/block-only. Known exposure can invalidate a trial but can never increase success, confidence or rank.
+- TrialReceipts are host-sealed and bind exact trial, profile, StackGenome, repository snapshot, Semantic Twin, SuiteLineage, dimension, response and durable chronology.
+- **EvidenceDNA** wraps CP-0011 BenchmarkResult evidence with exact StackGenome + repository snapshot + Semantic Twin + SuiteLineage binding. A valid benchmark cannot be transplanted to another repository state or execution stack.
+- Auditable certification accepts only verified EvidenceDNA envelopes matching the current exact certification context.
+- Durable chronology is HMAC-authenticated and uses a host-injected external monotonic sequence floor to detect rollback of an otherwise valid older journal.
+
+HIGH_ASSURANCE laboratory tests must include exact-head CI, runner/grader independence, endpoint collapse, grade-proof absence, concurrent reservation, signed rollback, case replay, StackGenome drift, SuiteLineage gaming, contamination blocks, EvidenceDNA tamper/transplant and unchanged Windows control-plane regression.
+
+## Explicit evaluation limits
+
+Hosted CI uses deterministic mock provider runners/graders and contains no production provider credentials. Passing laboratory contract tests is therefore not evidence that a real model/provider stack has earned `DISTINGUISHED`.
+
+The CP-0013 durable journal provides thread-safe atomic reservation inside one process. Cross-process/distributed reservation requires a later transactional/lease-backed laboratory service and is not approved by this checkpoint.
+
+The host-injected `MonotonicAnchor` is a contract, not yet a production platform implementation. A later deployment may bind it to an OS secure store, TPM, remote attestation service or another independently reviewed monotonic authority.
+
+Semantic Twin evidence is conservative static analysis. APIVein observations can include framework-like decorator patterns and Dataflow Echo is not dynamic taint analysis. These observations improve task construction/context but do not become architecture or security truth merely by existing.
+
+Future benchmark upgrades should add language/framework Specialist Packs, live provider qualification through locally provisioned credentials, adaptive fresh trials, cost/latency and repair-quality metrics, stronger contamination estimation, cross-process transactional trial reservation and externally attested monotonic chronology. Never report unmeasured gains as facts.
