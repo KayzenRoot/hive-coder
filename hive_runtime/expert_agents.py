@@ -44,7 +44,9 @@ from .repository_intelligence import (
 )
 from .evaluation_runtime import (
     BenchmarkNoveltyLedger,
+    CertificationAuthority,
     CertificationEvidence,
+    ChronoSealClock,
     CompetenceHalfLifePolicy,
     CounterfactualForge,
     CounterfactualProbe,
