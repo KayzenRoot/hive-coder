@@ -1,13 +1,13 @@
 # Checkpoint — Hive Coder
 
 **Checkpoint:** HCODER-CP-0012  
-**Status:** CANDIDATE  
+**Status:** APPROVED  
 **Date:** 2026-09-15  
 **Repository:** `KayzenRoot/hive-coder`  
-**Work Order:** `HCODER-WO-0012`  
+**Approved Work Order:** `HCODER-WO-0012`  
 **PR:** `#25`
 
-## Candidate canonical state
+## Proven canonical state
 - CP-0005 authorization, CP-0007/0008 capability truth, CP-0009 durable execution, CP-0010 sealed planning/evidence and CP-0011 measured competence remain authoritative.
 - RepoDNA provides bounded, deterministic, read-only repository indexing without importing or executing indexed repository code.
 - RepoDNA excludes known secret-like filenames, common binary artifacts and repository symlinks by default; root symlinks/noncanonical paths are rejected and file-count/per-file/total-byte ceilings fail closed.
@@ -22,13 +22,10 @@
 - Competence Half-Life and Recertification Clock verify the certification seal and may classify competence as `CURRENT`, `DUE` or `EXPIRED`. Changed repository snapshot, changed execution stack/profile, stale evidence, unsigned/tampered evidence or insufficient recent benchmark-family diversity prevent silent reuse of old certification.
 - Outcome Echo stores only trusted-host sealed operational outcomes whose epoch also comes from ChronoSeal. Regressions/rollbacks may force earlier recertification; positive outcomes cannot create trusted benchmark evidence or promote rank.
 - Expertise Capsule Extensions provide versioned language/framework doctrine and benchmark dimensions bound to an exact base capsule/provenance digest; they contain no permission or competence-rank field.
-- `HCODER-WO-0012-CR-001` closes the initial caller-controlled freshness, unsigned certification, unverified-novelty admission, mutable GenomePulse/indexed mappings, ShadowBench identity and RepoDNA path/open hardening findings subject to final exact-head evidence.
+- `HCODER-WO-0012-CR-001` is RESOLVED and closes caller-controlled freshness, unsigned certification, unverified-novelty admission, mutable GenomePulse/indexed mappings, ShadowBench identity and RepoDNA path/open hardening findings.
+- HEDS verdict: **APPROVED**, no unresolved HIGH/CRITICAL findings in scope.
+- Exact-head implementation/documentation evidence head `fb90d330fab05df0d5b6cb8ef1dabee09c168f7f` passed Governance run `34927005524`: Ubuntu **224/224 PASS** and Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**, with exact-head verification on both runners and `ResourceWarning` fatal in the Linux suite.
 - No new permission, desktop mutation capability, provider credential, remote-control listener, skill activation authority, benchmark self-verification or unbounded self-modification is introduced.
-
-## Promotion gates still required
-- exact-head Governance must pass on the final implementation/documentation head;
-- HEDS must confirm CR-001 closure and no unresolved HIGH/CRITICAL findings;
-- DEC-016 must be promoted to APPROVED only after those gates.
 
 ## Explicit residual boundaries
 - RepoDNA/TruthWeave currently cover deterministic UTF-8 repository text, Python imports and selected `package.json`/`pyproject.toml` dependency facts. Universal AST/schema/build-system extraction remains future work.
@@ -39,5 +36,5 @@
 - Outcome Echo is not yet an Experience Router ranking input. This checkpoint deliberately permits negative recertification pressure only, not positive promotion.
 - Parallel/distributed benchmark execution is not approved.
 
-## Next direction after promotion
+## Next necessary increment
 Build the **Provider Certification Lab & Semantic Repository Twin**: trusted benchmark runner/grader adapters, provider-backed exact-stack certification, durable ChronoSeal/benchmark-lineage attestation, richer AST/schema/API/dataflow extractors, semantic dependency graph mining, framework-specific capsule packs, contamination-resistant task materialization and auditable certification reports. Authority boundaries remain unchanged.
