@@ -1,6 +1,6 @@
 # HCODER-WO-0016 — Trusted Workspace & Git Read Surface
 
-**Status:** APPROVED FOR SQUASH MERGE — NOT YET CANONICAL  
+**Status:** COMPLETE / CANONICAL  
 **Issue:** #34  
 **Risk:** ELEVATED  
 **Task class:** T3  
@@ -141,3 +141,14 @@ HEDS_DELTA exact-head. Treat arbitrary path authority, root escape, filesystem m
 
 ## STOP CONDITION
 Exact-head Governance + Desktop Shell green; workspace/Git/evidence read security tests and dependency audits green; HEDS APPROVED with no unresolved HIGH/CRITICAL; canonical docs truthful; squash merge; post-merge Governance + Desktop Shell green; Issue #30 refreshed. No terminal/filesystem mutation/runtime-spawn/provider credential/computer-control authority may be promoted under this Work Order.
+
+## CANONICAL CLOSEOUT
+**Result:** STOP CONDITION SATISFIED.  
+**Checkpoint:** `HCODER-CP-0016` APPROVED / CANONICAL.  
+**Product PR:** #35 squash-merged.  
+**Canonical product merge SHA:** `6483ed36393b02f45e286590e75bc9fb36d48727`.  
+**Final product HEDS:** `5214385916`, unresolved HIGH/CRITICAL 0.  
+**Post-merge Governance:** `35009304333` (#215) SUCCESS.  
+**Post-merge Desktop Shell:** `35009304230` (#51) SUCCESS, including Windows release build and `DESKTOP_LAUNCH_SMOKE=PASS`.
+
+The original Work Order specification above is preserved as the immutable audit contract. This appendix records completion only; it does not alter its historical scope, requirements, constraints, acceptance criteria or authority boundary.
