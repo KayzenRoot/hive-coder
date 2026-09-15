@@ -97,7 +97,7 @@ Git observation reads bounded `.git` metadata directly and never executes an ext
 `HCODER-WO-0016-CR-001` HIGH and `HCODER-WO-0016-CR-002` MEDIUM are resolved. Technical head `07dda00f7371bcb02158f0c26258b03fa0dec88d` passed Governance `34996930586`, Desktop Shell `34996930809` and HEDS technical review `5213079423`. Promotion head `50c280004b0d869e32fda8f20806082654e63255` passed Governance `34997849021`, Desktop Shell `34997849241` and HEDS promotion review `5213131975`, with unresolved HIGH/CRITICAL findings 0. This decision is approved for the merge candidate but becomes canonical only after the final approval head passes exact-head gates/HEDS, squash merge, and post-merge validation on `main`.
 
 ## DEC-021 — Runtime Observability Presentation Contract
-**Status:** CANDIDATE — APPROVAL PENDING  
+**Status:** APPROVED FOR SQUASH MERGE — NOT YET CANONICAL  
 **Work Order:** `HCODER-WO-0017`
 
 Hive Coder standardizes runtime/provider/task/permission **presentation truth** through the versioned `RuntimeStatusSnapshot v1` contract. The contract is explicitly non-authoritative: it cannot grant permission, mint or substitute for execution permits, activate skills, authorize provider/model execution, mutate task state or enable computer-use/file/Git actions.
@@ -110,4 +110,4 @@ The WO-0017 safe CLI is a disconnected diagnostic exporter, not a runtime host. 
 
 `HCODER-WO-0017-CR-001` MEDIUM is resolved. Technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef` passed Governance #225 (`35015244682`): Ubuntu **273/273 PASS**, Windows HIGH_ASSURANCE **56/56 PASS**; Desktop Shell #61 (`35015244727`): security gate PASS, frontend **12/12 PASS**, npm audit **0 vulnerabilities**, Rust **11/11 PASS**, RustSec scan completed with seven warning-class advisories and no blocking vulnerability, `cargo check --locked` PASS, Tauri release build PASS and `DESKTOP_LAUNCH_SMOKE=PASS`. HEDS technical review `5215028501` approved the implementation for promotion with unresolved HIGH/CRITICAL findings **0**.
 
-This decision remains CANDIDATE until the documentation/evidence promotion head itself passes exact-head Governance + Desktop Shell and promotion HEDS. A later approval mutation may mark it APPROVED FOR SQUASH MERGE, but canonical authority begins only after merge and post-merge validation on `main`.
+Promotion head `e2ae69e1be2f152eb9ce37b9b05f674dd072f5b5` was documentation/evidence/governance-only relative to the technical head and passed Governance #234 (`35016227601`) plus Desktop Shell #70 (`35016227612`). HEDS promotion review `5215216401` returned **APPROVED FOR FINAL APPROVAL MUTATION** with unresolved HIGH/CRITICAL findings **0**. This approval mutation itself adds no authority; its resulting exact head must pass fresh Governance + Desktop Shell and final HEDS before squash merge. Canonical authority begins only after merge and successful post-merge validation on `main`.

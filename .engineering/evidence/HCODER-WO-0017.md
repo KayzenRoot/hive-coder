@@ -5,7 +5,8 @@
 **PR:** `#42`  
 **Canonical base:** `442733aeae6bd2f615dc0bc4c76dda024455c212` (`HCODER-CP-0016`)  
 **Technical reviewed head:** `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef`  
-**Status:** APPROVED FOR PROMOTION CANDIDATE
+**Promotion reviewed head:** `e2ae69e1be2f152eb9ce37b9b05f674dd072f5b5`  
+**Status:** APPROVED FOR SQUASH MERGE — FINAL EXACT-HEAD GATES PENDING
 
 ## Objective evidence
 WO-0017 establishes the first Hive-owned versioned runtime observability contract above the existing Python engines without creating a new authority path. `RuntimeStatusSnapshot v1` carries bounded presentation-only runtime, provider/catalog, task-progress and permission state with explicit canonical provenance and truthful `READY`, `UNKNOWN`, `DISCONNECTED` or `DEGRADED` semantics.
@@ -48,13 +49,12 @@ Semantic HEDS pre-review found that the mechanically green initial replay lacked
 
 The initial replay gates on `3053d6ee83483a41a5809f9fa52be40f2e28a04b` are historical only and do not count as final approval evidence after CR-001.
 
-## Exact-head Governance evidence
-Run `35015244682` (#225) on exact technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef`: **SUCCESS**.
+## Exact-head technical evidence
+Governance run `35015244682` (#225) on exact technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef`: **SUCCESS**.
 - Ubuntu source-pack: **273/273 PASS**.
 - Windows Server 2025 HIGH_ASSURANCE: **56/56 PASS**.
 
-## Exact-head Desktop Shell evidence
-Run `35015244727` (#61) on the same exact head: **SUCCESS**.
+Desktop Shell run `35015244727` (#61) on the same exact head: **SUCCESS**.
 
 Security gate:
 - `DESKTOP_SECURITY_GATE=PASS`;
@@ -79,8 +79,16 @@ Frontend/native regression:
 - Tauri Windows release build: PASS;
 - `DESKTOP_LAUNCH_SMOKE=PASS`.
 
-## HEDS technical review
-PR review `5215028501`, anchored to exact head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef`: **APPROVED FOR PROMOTION CANDIDATE**. Unresolved HIGH/CRITICAL findings: **0**.
+HEDS technical review `5215028501`, anchored to exact head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef`: **APPROVED FOR PROMOTION CANDIDATE**. Unresolved HIGH/CRITICAL findings: **0**.
+
+## Promotion-head evidence
+Promotion head `e2ae69e1be2f152eb9ce37b9b05f674dd072f5b5` is documentation/evidence/governance-only relative to the HEDS-approved technical head. No runtime implementation, CLI, test, Tauri command, capability, dependency or authority-bearing path changed.
+
+- Governance run `35016227601` (#234): **SUCCESS** on exact promotion SHA.
+- Desktop Shell run `35016227612` (#70): **SUCCESS** on exact promotion SHA.
+- HEDS promotion review `5215216401`: **APPROVED FOR FINAL APPROVAL MUTATION**; unresolved HIGH/CRITICAL **0**.
+
+The promotion review reconfirmed that status remains non-authoritative, provider catalog observation remains distinct from VERIFIED model capability evidence, permission private internals remain unobserved, and desktop process/IPC lifecycle remains deferred.
 
 ## Explicit residual boundaries
 - WO-0017 proves the status schema/adapter reductions and safe disconnected exporter, not live cross-runtime desktop IPC.
@@ -93,4 +101,4 @@ PR review `5215028501`, anchored to exact head `63abc6349421ed4c83c52c5f03d305cb
 - No installer/signing/updater or full native interaction/visual E2E is claimed.
 
 ## STOP status
-Technical implementation is complete and HEDS-approved for promotion. CP-0017 is **not canonical yet**. Remaining gates are documentation/governance promotion, fresh exact-head Governance + Desktop Shell, promotion HEDS, final approval mutation, final exact-head gates/HEDS, squash merge and post-merge validation on `main`.
+Technical implementation and promotion documentation are HEDS-approved. This final approval mutation may mark DEC-021 / CP-0017 approved for squash merge, but its resulting exact head must still pass fresh Governance + Desktop Shell and final HEDS with no unresolved HIGH/CRITICAL. Only then may PR #42 be squash-merged. CP-0017 remains **NOT CANONICAL** until post-merge Governance + Desktop Shell validation succeeds on the exact resulting `main` SHA and canonical closeout is recorded.

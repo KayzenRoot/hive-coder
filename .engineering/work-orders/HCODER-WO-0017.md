@@ -1,6 +1,6 @@
 # HCODER-WO-0017 — Runtime Observability Contract & Safe Status Export
 
-**Status:** PROMOTION CANDIDATE — NOT YET CANONICAL  
+**Status:** APPROVED FOR SQUASH MERGE — FINAL EXACT-HEAD GATES PENDING  
 **Risk:** ELEVATED  
 **Task class:** T3  
 **Context radius:** C4  
@@ -105,4 +105,6 @@ Exact-head Governance and Desktop Shell regressions green; runtime status tests 
 ## PROMOTION RECORD
 Technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef` passed Governance #225 (`35015244682`) and Desktop Shell #61 (`35015244727`) on the exact SHA. Ubuntu Python was **273/273 PASS**, Windows HIGH_ASSURANCE **56/56 PASS**, frontend **12/12 PASS**, npm audit reported **0 vulnerabilities**, Windows Rust was **11/11 PASS**, `cargo check --locked`, Tauri release build and `DESKTOP_LAUNCH_SMOKE` all passed. HEDS technical review `5215028501` returned **APPROVED FOR PROMOTION CANDIDATE** with unresolved HIGH/CRITICAL findings **0**.
 
-`HCODER-WO-0017-CR-001` MEDIUM is resolved in the reviewed technical head. Promotion remains documentation/evidence/governance-only. This Work Order does **not** become complete/canonical until the promotion/final approval heads pass their own exact-head gates/HEDS, squash merge succeeds and post-merge validation succeeds on `main`.
+Promotion head `e2ae69e1be2f152eb9ce37b9b05f674dd072f5b5` was verified as documentation/evidence/governance-only relative to the technical head. Governance #234 (`35016227601`) and Desktop Shell #70 (`35016227612`) both completed **SUCCESS** on that exact SHA. HEDS promotion review `5215216401` returned **APPROVED FOR FINAL APPROVAL MUTATION** with unresolved HIGH/CRITICAL findings **0**.
+
+`HCODER-WO-0017-CR-001` MEDIUM is resolved in the reviewed technical head. This final approval mutation remains documentation/governance-only and does not expand authority. WO-0017 is approved for squash merge only after the resulting exact head passes fresh Governance + Desktop Shell and final HEDS with no unresolved HIGH/CRITICAL. It does **not** become complete/canonical until squash merge succeeds and post-merge validation succeeds on `main`.

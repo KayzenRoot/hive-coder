@@ -2,10 +2,12 @@
 
 **Source checkpoint:** `HCODER-CP-0016`  
 **Target checkpoint:** `HCODER-CP-0017`  
-**Target state in this commit:** `CANDIDATE`  
+**Target state in this commit:** `APPROVED FOR SQUASH MERGE — FINAL EXACT-HEAD GATES PENDING`  
 **Technical head:** `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef`  
+**Promotion reviewed head:** `e2ae69e1be2f152eb9ce37b9b05f674dd072f5b5`  
 **PR:** `#42`  
-**HEDS technical review:** `5215028501`
+**HEDS technical review:** `5215028501`  
+**HEDS promotion review:** `5215216401`
 
 ## Promotion boundary
 Promote the first versioned Hive runtime observability presentation contract. The delta adds bounded runtime/provider/task/permission status reduction and strict JSON validation without connecting the desktop to a live Python child process and without adding any mutation/authorization surface.
@@ -25,6 +27,13 @@ Exact technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef` passed:
 - Desktop Shell #61 (`35015244727`): security gate PASS, frontend **12/12 PASS**, npm audit **0 vulnerabilities**, Rust **11/11 PASS**, RustSec scan of **432** locked crates with **7 warning-class advisories** and no blocking vulnerability, `cargo check --locked` PASS, Tauri release build PASS and `DESKTOP_LAUNCH_SMOKE=PASS`;
 - HEDS technical review `5215028501`: unresolved HIGH/CRITICAL findings **0**.
 
+Exact promotion head `e2ae69e1be2f152eb9ce37b9b05f674dd072f5b5` passed:
+- Governance #234 (`35016227601`): **SUCCESS**;
+- Desktop Shell #70 (`35016227612`): **SUCCESS**;
+- HEDS promotion review `5215216401`: **APPROVED FOR FINAL APPROVAL MUTATION**, unresolved HIGH/CRITICAL **0**.
+
+The promotion delta from the technical head is documentation/evidence/governance-only.
+
 ## Correction
 `HCODER-WO-0017-CR-001` MEDIUM is resolved in the technical candidate. The correction completed strict decoder/provenance/type/counter/fail-closed semantics without expanding authority.
 
@@ -37,4 +46,4 @@ Exact technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef` passed:
 - No provider/model execution, credential access, task/permission mutation, terminal/process bridge, file/Git mutation or computer-use mutation is approved.
 
 ## Promotion rule
-CP-0017 remains only `CANDIDATE` until this documentation/evidence/governance delta passes fresh exact-head Governance + Desktop Shell, receives promotion HEDS with no unresolved HIGH/CRITICAL finding, is subsequently marked APPROVED for squash merge, passes final exact-head gates/HEDS, merges, and passes post-merge validation on canonical `main`.
+DEC-021 / CP-0017 are approved for squash merge by this documentation-only mutation, subject to fresh exact-head Governance + Desktop Shell and final HEDS on the resulting PR head. Squash merge is allowed only with unresolved HIGH/CRITICAL findings = 0. CP-0017 becomes canonical only after the merged `main` SHA passes post-merge Governance + Desktop Shell and canonical closeout is recorded.
