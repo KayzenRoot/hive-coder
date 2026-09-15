@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 from hive_runtime.agent_tasks import NodeStatus, TaskBudget, TaskSnapshot, TaskStatus
-from hive_runtime.intelligence.capabilities import ModelCapabilityRegistry
+from hive_runtime.intelligence.capabilities import CapabilityRequest, ModelCapabilityRegistry
 from hive_runtime.providers import CapabilityProbeResult, ProviderCatalog, ProviderModel
 from hive_runtime.runtime_status import (
     MAX_MODELS_PER_PROVIDER,
@@ -71,8 +71,8 @@ class RuntimeStatusContractTests(unittest.TestCase):
         result = summarize_provider_catalog(catalog, ("fixture",))
         self.assertEqual(result, (ProviderStatus("fixture", ("m1",), StatusState.READY),))
         profile = registry.get("fixture", "m1")
-        self.assertIsNotNone(profile)
-        self.assertFalse(registry.negotiate("fixture", "m1", frozenset({"text"})).allowed)
+        self.assertEqual(profile.model_id, "m1")
+        self.assertFalse(registry.negotiate("fixture", "m1", CapabilityRequest(frozenset({"text"}))).allowed)
 
     def test_task_summary_exposes_only_bounded_progress(self) -> None:
         source = TaskSnapshot(
