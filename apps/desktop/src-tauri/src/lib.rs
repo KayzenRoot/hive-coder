@@ -1,3 +1,5 @@
+mod runtime_status_supervisor;
+
 use rfd::FileDialog;
 use serde::Serialize;
 use std::fs::{self, File, Metadata};
@@ -704,11 +706,19 @@ fn choose_workspace(
     desktop_snapshot(&state)
 }
 
+#[tauri::command]
+fn get_runtime_status_envelope(webview_window: tauri::WebviewWindow) -> Result<String, String> {
+    if !desktop_window_is_authorized(webview_window.label()) {
+        return Err("runtime status is unavailable for this window".to_owned());
+    }
+    runtime_status_supervisor::query_runtime_status_envelope()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(DesktopState::default())
-        .invoke_handler(tauri::generate_handler![get_desktop_snapshot, choose_workspace])
+        .invoke_handler(tauri::generate_handler![get_desktop_snapshot, choose_workspace, get_runtime_status_envelope])
         .run(tauri::generate_context!())
         .expect("Hive Coder desktop runtime failed");
 }
