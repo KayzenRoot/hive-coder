@@ -484,6 +484,7 @@ class ParetoCrown:
         qualified: list[tuple[SpecialistBlueprint, float, float, float, float]] = []; seen: set[str] = set()
         for blueprint, profile in candidates:
             if not self.forge.verify(blueprint): continue
+            if not self.forge.profile_authority.verify(profile): continue
             fp = blueprint.fingerprint()
             if fp in seen: raise ValueError("duplicate Pareto Crown candidate")
             seen.add(fp)

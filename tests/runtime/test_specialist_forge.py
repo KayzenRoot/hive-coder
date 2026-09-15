@@ -146,12 +146,10 @@ class SpecialistForgeTests(unittest.TestCase):
         horizon = AntiOverfitHorizon(self.fx.morph.verify)
         challenge = self.fx.challenge(2)
         horizon.admit(challenge)
-        with self.assertRaises(ValueError):
-            horizon.admit(challenge)
+        with self.assertRaises(ValueError): horizon.admit(challenge)
         same_case = self.fx.case(2)
         variant = self.fx.morph.create(self.fx.blueprint, self.fx.pack, same_case, self.fx.suite_a, morph_index=3)
-        with self.assertRaises(ValueError):
-            horizon.admit(variant)
+        with self.assertRaises(ValueError): horizon.admit(variant)
 
     def test_evidence_seal_covers_telemetry_grade_outcome_and_lineage(self):
         challenge = self.fx.challenge(3)
@@ -177,8 +175,7 @@ class SpecialistForgeTests(unittest.TestCase):
             policy_violation=False, tamper_event=False, telemetry=ArenaTelemetry(10, 10), grade_proof_digest=GRADE,
         )
         lattice.add(one)
-        with self.assertRaises(ValueError):
-            lattice.add(two)
+        with self.assertRaises(ValueError): lattice.add(two)
 
     def test_horizon_gate_is_mandatory_inside_mastery_lattice(self):
         lattice = MasteryLattice(self.fx.evidence_authority)
@@ -197,8 +194,7 @@ class SpecialistForgeTests(unittest.TestCase):
             telemetry=ArenaTelemetry(10, 10), grade_proof_digest=GRADE,
         )
         lattice.add(first)
-        with self.assertRaises(ValueError):
-            lattice.add(second)
+        with self.assertRaises(ValueError): lattice.add(second)
 
     def test_policy_floors_cannot_be_weakened(self):
         with self.assertRaises(ValueError): ArenaSelectionPolicy(min_trials_per_dimension=19).validate()
@@ -258,9 +254,20 @@ class SpecialistForgeTests(unittest.TestCase):
         with self.assertRaises(LookupError):
             crown.select(((self.fx.blueprint, self.fx.profile),), frozenset({BenchmarkDimension.DEBUGGING}))
 
-    def test_selector_revalidates_certification_at_selection_time(self):
+    def test_selector_rejects_unsealed_profile_even_when_fingerprint_matches(self):
         lattice = MasteryLattice(self.fx.evidence_authority)
         self._populate(lattice, self.fx.blueprint, 500, latency=100, cost=100)
+        unsealed = replace(self.fx.profile, profile_tag="")
+        self.assertEqual(unsealed.fingerprint(), self.fx.profile.fingerprint())
+        crown = ParetoCrown(
+            self.fx.forge, lattice, ReliabilityShadow(RegressionAuthority(b"r" * 32)), self.fx.certifier
+        )
+        with self.assertRaises(LookupError):
+            crown.select(((self.fx.blueprint, unsealed),), frozenset({BenchmarkDimension.DEBUGGING}))
+
+    def test_selector_revalidates_certification_at_selection_time(self):
+        lattice = MasteryLattice(self.fx.evidence_authority)
+        self._populate(lattice, self.fx.blueprint, 600, latency=100, cost=100)
         revoked = ParetoCrown(
             self.fx.forge, lattice, ReliabilityShadow(RegressionAuthority(b"r" * 32)),
             lambda profile, evidence, repository, twin: False,
