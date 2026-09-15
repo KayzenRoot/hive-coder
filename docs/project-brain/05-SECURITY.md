@@ -39,3 +39,19 @@ WO-0014 treats specialist composition, arena evidence and routing as security-se
 - Hosted CI remains mock/deterministic. It proves contracts and adversarial invariants only, not the security or elite quality of any real provider stack.
 
 Production attestation for real provider billing/latency/reliability telemetry and durable cross-restart mastery/reputation are not approved in WO-0014. Any future `TelemetrySeal` or `MasteryVault` must receive a separate HIGH_ASSURANCE threat model, rollback protection, adversarial tests and governed promotion before use.
+
+## Desktop shell security boundary — WO-0015 candidate
+The first desktop shell is intentionally non-privileged.
+
+- The frontend has one named invoke path only: `get_desktop_snapshot`.
+- The native command accepts no arbitrary command, path, process, shell string, provider credential or desktop-input payload.
+- The command revalidates the caller WebView label as `main` even though the declarative capability is also scoped to `main`.
+- Tauri capability `desktop-read-only` grants zero plugin permissions; shell/filesystem/process plugins are prohibited by the desktop security gate.
+- The UI cannot mint or consume CP permits, activate skills, write arbitrary files, inject keyboard/mouse input, access credentials, expose remote control or authorize billing/purchases.
+- `DesktopSnapshot v1` is non-authoritative presentation state. Unknown/disconnected live subsystems must remain visibly unknown/disconnected rather than being inferred READY.
+- Safety actions remain disabled until an actionable trusted session exists.
+- The desktop security gate rejects generic process execution, unsafe HTML sinks, extra frontend invoke sites, unapproved Tauri commands, nonempty capability permissions, missing lockfiles and Apple-specific font references.
+
+Supply-chain evidence for the candidate includes npm audit with zero vulnerabilities and RustSec scan success over the locked Cargo graph. RustSec nevertheless reports seven warning-class advisories, including an unsoundness warning in transitive `glib 0.18.5`; these remain explicit dependency debt and the Rust graph is not claimed warning-free.
+
+The current local CSP still permits `style-src 'unsafe-inline'`. That is a known LOW hardening residual, not approval for untrusted HTML/style injection. Stricter CSP requires later validation.
