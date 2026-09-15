@@ -1,40 +1,40 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** HCODER-CP-0011  
+**Checkpoint:** HCODER-CP-0012  
 **Status:** APPROVED  
-**Date:** 2026-09-14  
+**Date:** 2026-09-15  
 **Repository:** `KayzenRoot/hive-coder`  
-**Approved Work Order:** `HCODER-WO-0011`  
-**PR:** `#23`
+**Approved Work Order:** `HCODER-WO-0012`  
+**PR:** `#25`
 
 ## Proven canonical state
-- CP-0005 authorization, CP-0007/0008 capability truth, CP-0009 durable execution and CP-0010 sealed planning/evidence remain authoritative.
-- Versioned Expertise Capsules exist for Planner, Architect, Backend, Frontend, Data, Security, QA, Performance, DevOps, Reviewer and Documentation.
-- Capsules encode engineering doctrine, anti-patterns, review lenses, descriptive tool kinds, required model capabilities, benchmark dimensions and provenance digest; capsules grant no authority.
-- Agent Profiles are HMAC-SHA256 sealed by a trusted-host `AgentProfileAuthority` and bind exact role, capsule fingerprint, model-capability requirements, context ceiling, independence lineage and `execution_stack_digest`.
-- Agent Profiles contain no self-declared competence rank. Competence comes only from trusted benchmark evidence bound to the exact sealed profile fingerprint.
-- ContextLens deterministically selects minimum-sufficient role context under a bounded token budget. Required authoritative tags must be satisfied by host-verified context. Untrusted content is explicitly labeled `untrusted_data` and cannot satisfy authoritative context requirements.
-- Code Truth Map separates fact claims from verification. Only provenance-backed facts accepted by a trusted-host verifier enter the authoritative fingerprint.
-- Architectural Genome binds invariants to exact verified Code Truth facts and the Project Digital Twin and deterministically reports drift when either changes.
-- Experience Ledger stores benchmark claims separately from trust, rejects trusted sample-set replay for the same exact profile/dimension and counts only trusted-host verified results.
-- Experience Routing uses role-specific dimensions, benchmark-family diversity, Wilson 95% lower confidence bounds and zero critical/policy/tamper incidents. Model/provider names and agent prose do not participate in scoring.
-- Competence ranks have irreducible floors. The current `DISTINGUISHED` floor is at least 40 trusted samples per required dimension, at least two independent benchmark families, and a Wilson lower confidence bound of at least 0.80 with zero integrity/policy incidents.
-- Production AgentMesh and CounterPlan/Failure Oracle paths reject competence standards below `DISTINGUISHED`; callers cannot relabel weaker thresholds as elite production certification.
-- AgentMesh revalidates the CP-0010 MasterPlan seal and exact Digital Twin before assignment. Step capability requirements must fit the selected sealed specialist profile.
-- Security/QA/Reviewer oversight lineage is separated from implementation lineage across the complete assignment set, independent of plan ordering; oversight lineages are also mutually distinct.
-- CounterPlan and Failure Oracle require a valid sealed MasterPlan/current Digital Twin and host-sealed, registered, role-eligible, measured and lineage-separated challengers. Findings may block by policy but grant no authority.
-- The expert implementation is split across identity, context/truth, evaluation, doctrine and mesh modules behind a compatibility facade to improve auditability and evolution.
-- `HCODER-WO-0011-CR-001` resolved competence portability, trusted benchmark replay, configurable rank downgrade, reviewer/challenger independence, suite-family gaming, challenge-plan trust and module-auditability findings. Test fixtures were upgraded to production floors rather than weakening the invariant.
-- HEDS correction evidence head `5c1020ca56fd8efec6ac7b302b446c99ffab8453` passed Governance run `34924937295`: Ubuntu **195/195 PASS** and Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**, both with exact-head verification; test gates treat `ResourceWarning` as fatal.
-- HEDS verdict: **APPROVED**, with no unresolved HIGH/CRITICAL findings in scope.
-- No new permission, desktop mutation capability, real provider credential, remote-control listener, automatic skill promotion or unbounded self-modification is introduced.
+- CP-0005 authorization, CP-0007/0008 capability truth, CP-0009 durable execution, CP-0010 sealed planning/evidence and CP-0011 measured competence remain authoritative.
+- RepoDNA provides bounded, deterministic, read-only repository indexing without importing or executing indexed repository code.
+- RepoDNA excludes known secret-like filenames, common binary artifacts and repository symlinks by default; root symlinks/noncanonical paths are rejected and file-count/per-file/total-byte ceilings fail closed.
+- RepoDNA uses root containment, regular-file checks, bounded reads and no-follow opening where the platform exposes it. Repository snapshots bind exact canonical path, content SHA-256, size, language, file kind and extractor version.
+- TruthWeave automatically derives file-content, Python import and selected manifest-dependency facts. Each fact is bound to the exact repository snapshot, file digest, extraction rule and fact object digest; copied provenance cannot bless changed content.
+- GenomePulse mines repository-footprint Architectural Invariants from verified Code Truth facts plus explicit trusted Digital Twin node/path bindings. Its fact/invariant relationship map is immutable after construction and it does not use model inference as architecture authority.
+- ShadowBench creates host-keyed fresh hidden evaluation-case identities from verified repository facts across CP-0011 benchmark dimensions. Case objects expose only prompt/oracle digests, not plaintext oracle answers, and verification recomputes lineage, nonce, prompt/oracle digests and case identity.
+- Benchmark Novelty requires trusted case verification before admission and rejects exact replay, semantic replay and cosmetic epoch/mutation churn over the same source-fact lineage.
+- Counterfactual Forge creates non-mutating structural probes that bind hypothetical fact replacement to immutable GenomePulse relationships expected to drift.
+- **ChronoSeal** supplies a trusted-host monotonic logical epoch for certification and outcome observation. Callers cannot provide their own current freshness value.
+- HMAC-SHA256 **Certification Authority** issues production certification evidence only for a passing `DISTINGUISHED` competence report bound to the exact sealed Agent Profile, exact Competence Standard, exact competence-report fingerprint, exact repository snapshot and ChronoSeal epoch. Benchmark families are derived from the measured report.
+- Competence Half-Life and Recertification Clock verify the certification seal and may classify competence as `CURRENT`, `DUE` or `EXPIRED`. Changed repository snapshot, changed execution stack/profile, stale evidence, unsigned/tampered evidence or insufficient recent benchmark-family diversity prevent silent reuse of old certification.
+- Outcome Echo stores only trusted-host sealed operational outcomes whose epoch also comes from ChronoSeal. Regressions/rollbacks may force earlier recertification; positive outcomes cannot create trusted benchmark evidence or promote rank.
+- Expertise Capsule Extensions provide versioned language/framework doctrine and benchmark dimensions bound to an exact base capsule/provenance digest; they contain no permission or competence-rank field.
+- `HCODER-WO-0012-CR-001` is RESOLVED and closes caller-controlled freshness, unsigned certification, unverified-novelty admission, mutable GenomePulse/indexed mappings, ShadowBench identity and RepoDNA path/open hardening findings.
+- HEDS verdict: **APPROVED**, no unresolved HIGH/CRITICAL findings in scope.
+- Exact-head implementation/documentation evidence head `fb90d330fab05df0d5b6cb8ef1dabee09c168f7f` passed Governance run `34927005524`: Ubuntu **224/224 PASS** and Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**, with exact-head verification on both runners and `ResourceWarning` fatal in the Linux suite.
+- No new permission, desktop mutation capability, provider credential, remote-control listener, skill activation authority, benchmark self-verification or unbounded self-modification is introduced.
 
 ## Explicit residual boundaries
-- WO-0011 proves the certification/routing machinery; it does **not** claim that any real provider-backed Hive agent has already earned `DISTINGUISHED` status. Production certification requires trusted benchmark executions bound to the exact future provider/model/tool stack.
-- Code Truth Map extraction from ASTs, schemas, manifests, runtime probes and repository provenance is still a later governed increment; the current map is a verified-fact foundation.
-- Architectural Genome contains the invariant mechanism, not yet a complete automatically mined genome of arbitrary repositories.
-- Benchmark thresholds require continued calibration/versioning, fresh/hidden corpus maintenance, decay and re-certification as stacks evolve.
-- Parallel/distributed AgentMesh execution is not approved.
+- RepoDNA/TruthWeave currently cover deterministic UTF-8 repository text, Python imports and selected `package.json`/`pyproject.toml` dependency facts. Universal AST/schema/build-system extraction remains future work.
+- Filename-based secret exclusion is defense in depth, not a universal secret scanner.
+- ShadowBench defines hidden case identity/novelty/oracle contracts. It does not yet execute provider-backed benchmarks or claim any real provider/model stack has earned `DISTINGUISHED`.
+- GenomePulse mines repository-footprint invariants from trusted bindings; full semantic architecture inference/mining remains a later governed expansion.
+- ChronoSeal and Benchmark Novelty state are session-bounded in CP-0012. Durable trusted cross-restart time/novelty attestation is not yet introduced; ambiguous restart reuse must therefore fail closed in a future certification service rather than silently extend validity.
+- Outcome Echo is not yet an Experience Router ranking input. This checkpoint deliberately permits negative recertification pressure only, not positive promotion.
+- Parallel/distributed benchmark execution is not approved.
 
 ## Next necessary increment
-Build the **Repository Intelligence & Elite Evaluation Runtime**: provenance-backed automatic Code Truth extraction, Architectural Genome mining, fresh hidden benchmark generation, provider-backed specialist certification, language/framework Expertise Capsules, benchmark decay/re-certification and outcome feedback into Experience Routing. Authority boundaries remain unchanged.
+Build the **Provider Certification Lab & Semantic Repository Twin**: trusted benchmark runner/grader adapters, provider-backed exact-stack certification, durable ChronoSeal/benchmark-lineage attestation, richer AST/schema/API/dataflow extractors, semantic dependency graph mining, framework-specific capsule packs, contamination-resistant task materialization and auditable certification reports. Authority boundaries remain unchanged.

@@ -1,0 +1,10 @@
+{
+  "workOrderId": "HCODER-WO-0012",
+  "baseCheckpoint": "HCODER-CP-0011",
+  "baseSha": "f2db05d4b8d9a5b3cee54c22e325863ed2bfa748",
+  "risk": "ELEVATED",
+  "taskClass": "T3",
+  "contextRadius": "C4",
+  "allowed": ["repository-intelligence", "repodna", "truthweave", "genomepulse", "shadowbench", "counterfactual-forge", "benchmark-novelty", "competence-half-life", "recertification", "outcome-feedback", "capsule-extensions", "benchmarks", "docs", "tests"],
+  "forbidden": ["permission-expansion", "repository-code-execution-during-index", "agent-self-promotion", "model-name-authority", "automatic-skill-promotion", "remote-control-listener", "new-desktop-capability", "provider-credential-provisioning", "unbounded-self-modification"]
+}

@@ -18,7 +18,7 @@ Approved pin: Cua Driver `0.28.1`, tag `cua-driver-rs-v0.28.1`, commit `d8028a79
 
 Modern MCP revision `2026-07-28` is per-request negotiated over stdio. `server/discover` proves protocol/capability envelope; canonical tool inventory comes from a separate `tools/list` request. Hive preserves each advertised `inputSchema`, capability tokens and annotations. Production does not infer executable tools from discovery names or model text.
 
-`HCODER-WO-0005` approves only Hive semantic actions `pointer.click` and `keyboard.type_text`. `HCODER-WO-0006` resolves their concrete Cua tool names from the pinned driver's advertised capabilities and validates required argument properties before wiring. Every `tools/call` carries modern MCP metadata plus a Hive request fingerprint and remains permit-gated.
+`HCODER-WO-0005` approves only Hive semantic actions `pointer.click` and `keyboard.type_text`. `HCODER-WO-0006` resolves their concrete Cua tool names from the pinned driver's advertised capabilities and validates required input properties before wiring. Every `tools/call` carries modern MCP metadata plus a Hive request fingerprint and remains permit-gated.
 
 The real Windows harness is opt-in (`HIVE_ENABLE_REAL_CUA=1`), requires an explicitly supplied pinned binary and sandbox application, and obtains foreground HWND/PID/process image through Win32 rather than model input. The application/window identity is revalidated before dispatch. No automatic binary installation occurs. Hosted CI contract success is not evidence of physical desktop mutation; physical E2E stays UNKNOWN until an explicitly provisioned safe runner proves it.
 
@@ -60,6 +60,29 @@ Expertise is descriptive competence, not execution authority. `ExpertiseCapsule`
 `AgentMesh` revalidates the CP-0010 MasterPlan seal and exact Digital Twin before assigning measured specialists. Oversight roles cannot reuse an implementation independence lineage in the same assignment flow. Assignment fingerprints bind the selected profile, capsule and competence report.
 
 CounterPlan and Failure Oracle challengers are host-identified, independence-separated advisory/review surfaces. Their output can block according to policy but can never grant authority or weaken CP-0005/0007/0008/0009/0010 controls.
+
+## Repository intelligence and elite-evaluation boundary
+`RepoDNAIndexer` is a read-only discovery surface. It may hash/classify bounded UTF-8 repository files, but it must not import modules, invoke package managers, run hooks, execute manifests or follow repository symlinks. Root symlinks/noncanonical paths are rejected; file opens are root-contained, regular-file checked and bounded, with no-follow semantics where the platform exposes them. Known secret-like filenames and common binary artifacts are excluded by default; this is defense in depth rather than a universal secret scanner. Resource ceilings fail closed rather than silently truncating authoritative snapshots.
+
+`TruthWeave` derives descriptive Code Truth facts from exact RepoDNA content and extraction-rule identity. Its verifier accepts only facts whose fingerprints exactly match the facts reproducible from the same snapshot. Repository text, comments and imperative strings remain data and cannot become Hive instruction authority.
+
+`GenomePulse` combines verified Code Truth facts with explicit trusted canonical node/path bindings and the existing Project Digital Twin. It mines immutable evidence-bound repository-footprint invariants; it does not ask a model to invent authoritative architecture. Drift evidence cannot grant a permission or rewrite the Digital Twin by itself.
+
+`ShadowBench` generates host-keyed hidden evaluation identities from verified repository facts. Generated cases are proposals until a trusted benchmark runner/grader creates CP-0011-compatible evidence. Oracle material is represented as host-bound digests, not model-visible answer text. Case verification recomputes lineage, hidden nonce, prompt digest, oracle digest and case identity. `BenchmarkNoveltyLedger` requires an injected trusted case verifier before admission and then rejects exact, semantic and source-lineage replay so cosmetic case IDs or epoch churn cannot fake evaluation diversity.
+
+`CounterfactualForge` creates non-mutating structural probes that bind a hypothetical fact replacement to immutable GenomePulse fact/invariant relationships expected to drift. It never edits repository source.
+
+`ChronoSealClock` is a trusted-host monotonic logical epoch. Certification/outcome code reads its epoch rather than accepting caller-provided current time. CP-0012 ChronoSeal state is session-bounded; durable cross-restart time attestation is intentionally deferred.
+
+`CertificationAuthority` HMAC-seals production certification evidence issued for a passing `DISTINGUISHED` CompetenceReport. The evidence binds the exact sealed Agent Profile, exact Competence Standard, exact report fingerprint, exact repository snapshot, ChronoSeal epoch and benchmark families derived from the measured report. The authority object belongs only to the trusted host and is never a model/tool surface.
+
+`RecertificationClock` is negative/expiry authority only. It verifies the Certification Authority seal and may classify existing certification as `CURRENT`, `DUE` or `EXPIRED` according to exact profile/standard/repository binding and Competence Half-Life. It cannot promote an agent. A changed execution-stack digest changes the sealed Agent Profile fingerprint and prevents silent reuse of older certification evidence.
+
+`OutcomeEchoLedger` accepts only trusted-host sealed operational outcomes whose observation epoch also comes from ChronoSeal. Its signal is advisory-only. Regressions/rollbacks may force earlier recertification; positive outcomes cannot mint benchmark evidence, change a Competence Standard or promote rank.
+
+`ExpertiseCapsuleExtension` is descriptive language/framework doctrine bound to a base capsule fingerprint and provenance digest. It contains no permission or rank and has no automatic activation path.
+
+Benchmark Novelty state is also session-bounded in CP-0012. This is acceptable because WO-0012 does not contain a provider-backed trusted runner/grader that can convert generated cases into competence evidence. Durable novelty/ChronoSeal attestation is a prerequisite of the future Provider Certification Lab.
 
 ## Remote-control boundary
 Remote Hive control will be a separate HIGH_ASSURANCE subsystem. It must use authenticated encrypted device/session semantics, least privilege, revocation, audit and emergency stop. A raw Cua/RDP/VNC endpoint must never be exposed directly to the public internet by Hive.
