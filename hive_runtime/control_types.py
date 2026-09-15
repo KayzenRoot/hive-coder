@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from enum import Enum
@@ -124,9 +125,17 @@ class ApprovalChallenge:
     expires_at: float
     capability: str
     action: str
-    target: Mapping[str, str | None]
+    target_json: str
     arguments_sha256: str
-    display_arguments: Mapping[str, Any]
+    display_arguments_json: str
+
+    @property
+    def target(self) -> Mapping[str, Any]:
+        return json.loads(self.target_json)
+
+    @property
+    def display_arguments(self) -> Mapping[str, Any]:
+        return json.loads(self.display_arguments_json)
 
 
 @dataclass(frozen=True)

@@ -13,6 +13,7 @@ SENSITIVE_KEY_MARKERS = (
     "passwd",
     "authorization",
     "api_key",
+    "api-key",
     "apikey",
     "cookie",
     "session_key",
@@ -21,6 +22,12 @@ SENSITIVE_KEY_MARKERS = (
 _SECRET_PATTERNS = (
     re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{8,}", re.IGNORECASE),
     re.compile(r"\bsk-[A-Za-z0-9_-]{8,}", re.IGNORECASE),
+    re.compile(r"\bghp_[A-Za-z0-9]{12,}\b"),
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{12,}\b"),
+    re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{8,}\b", re.IGNORECASE),
+    re.compile(r"\bAKIA[A-Z0-9]{12,}\b"),
+    re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"),
+    re.compile(r"(?i)\b(?:api[_-]?key|token|secret|password|passwd)\s*[:=]\s*[^\s,;]+"),
 )
 
 
@@ -38,7 +45,7 @@ def redact(value: Any, *, key: str | None = None) -> Any:
         return result
     if value is None or isinstance(value, (bool, int, float)):
         return value
-    return repr(value)
+    return f"<redacted:{type(value).__name__}>"
 
 
 def canonical_json(value: Any) -> str:
@@ -61,6 +68,8 @@ class AuditEvent:
 
 
 class AuditLog:
+    """Append-only event sequence. PermissionControlPlane keeps its instance private."""
+
     def __init__(self, clock: Callable[[], float]) -> None:
         self._clock = clock
         self._events: list[AuditEvent] = []
@@ -68,6 +77,8 @@ class AuditLog:
     def append(self, event_type: str, *, session_id: str | None = None, details: Mapping[str, Any] | None = None) -> AuditEvent:
         sequence = len(self._events) + 1
         timestamp = float(self._clock())
+        if timestamp != timestamp or timestamp in (float("inf"), float("-inf")):
+            raise ValueError("audit clock returned a non-finite value")
         clean_details = redact(dict(details or {}))
         previous = self._events[-1].digest if self._events else "0" * 64
         payload = {

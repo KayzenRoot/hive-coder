@@ -1,22 +1,28 @@
-# Evidence Bundle — HCODER-WO-0004 (pre-PR candidate)
+# Evidence Bundle — HCODER-WO-0004 (candidate)
 
 ## Identity
 - Base: `f05154b3494c9ed67c93a0ae6374a49713d343c3`
 - Branch: `feat/HCODER-WO-0004-control-plane`
 - Issue: #8
+- PR: #9
 - Risk: HIGH_ASSURANCE
 
-## Local deterministic evidence
-- `PYTHONNOUSERSITE=1 python3 -m unittest discover -s tests -p 'test_*.py'`: PASS for the isolated control-plane candidate, 28/28 tests.
-- Local tests cover default deny, explicit deny precedence, wrong application/window/workspace/resource, unknown capability, prompt-injection-shaped context, invalid request shape, approval/permit tamper and replay, target/argument binding, expiry, policy epoch invalidation, emergency stop, user takeover, callback failure containment, redaction and audit-chain verification.
-- GitHub broad regression + Windows platform proof are still mandatory and will supersede this local pre-PR evidence.
+## First-candidate proof
+Candidate `9c83d498a6284f7869d918ac2926858c0926525f` passed Governance run `34911907919`.
+- Ubuntu exact-head: `EXACT_HEAD_OK=9c83d498a6284f7869d918ac2926858c0926525f`; broad suite 55/55 PASS with ResourceWarning fatal.
+- Windows Server 2025 exact-head: same SHA; targeted control-plane suite 29/29 PASS with ResourceWarning fatal.
+
+## HEDS corrections after first green candidate
+- CR-001 HIGH: wall-clock security expiry -> monotonic security clock + stronger token validation/key floor.
+- CR-002 HIGH: mutable approval/request representation -> canonical one-operation snapshots + copy-on-read challenge views.
+- CR-003 MEDIUM: public appendable audit surface + narrow inline redaction -> private audit surface + broader redaction.
+- CR-004 HIGH: callbacks under critical lock -> post-invalidation asynchronous callback dispatch.
 
 ## Safety evidence
-- No Cua adapter action method is added or changed by the candidate.
+- No Cua adapter action method is added or changed.
 - No Open Interpreter prompt method is added.
-- The control plane produces only signed execution permits; it performs no OS action itself.
-- Free-form `untrusted_context` is excluded from the authorization fingerprint/decision surface and is represented in audit only by SHA-256.
-- Approval display arguments are recursively redacted; the cryptographic request fingerprint remains bound to the actual canonical arguments.
+- The control plane performs no OS action itself.
+- Free-form `untrusted_context` is excluded from authorization semantics and reduced to a safe hash for audit.
 
 ## Pending
-Exact-head PR Governance, Windows targeted suite, HEDS adversarial audit, any same-WO correction deltas, and final canonical promotion.
+The corrected head must pass fresh exact-head Ubuntu broad regression, Windows targeted tests and final HEDS before canonical promotion.

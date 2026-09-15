@@ -9,12 +9,15 @@
 - model/task text is untrusted context and cannot grant permissions;
 - high-risk mutation and critical capabilities have mandatory approval floors;
 - approvals and execution permits are HMAC-SHA256 signed, short-lived and single-use;
-- signed claims bind session, request fingerprint, policy epoch, global emergency epoch and expiry;
-- request fingerprints bind capability, action, target and canonical executor arguments;
+- security TTLs use a monotonic clock, separate from wall-clock audit timestamps;
+- signed claims bind session, request fingerprint, policy epoch, global emergency epoch and expiry, and are cross-checked against server-side token records;
+- request fingerprints bind capability, action, target and a canonical snapshot of executor arguments;
+- approval target/display payloads are stored as canonical JSON and exposed as copies, preventing caller mutation of the approval record;
 - target allowlists cover application, window, workspace root and resource;
-- emergency stop, user takeover, cancellation and policy updates invalidate outstanding challenges/tokens/permits;
-- cancellation callbacks are invoked after state invalidation, and callback exceptions are contained/audited;
-- audit details are redacted and hash chained.
+- emergency stop, user takeover, cancellation, expiry and policy updates invalidate outstanding challenges/tokens/permits before callback propagation;
+- cancellation callbacks run outside the authorization critical path so a hung callback cannot hold the control-plane lock;
+- the control plane's audit log is private; callers receive read-only event snapshots and chain verification;
+- audit details are redacted and hash chained. The in-memory chain is tamper-evident ordering, not durable cryptographic attestation.
 
 ## Two-stage authorization
 1. Policy evaluation returns `DENY`, `ALLOW` or `REQUIRE_APPROVAL`.
