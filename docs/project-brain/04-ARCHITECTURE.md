@@ -21,7 +21,7 @@ Rules:
 
 `DesktopSnapshot v1` established a non-authoritative presentation bridge, a `main`-window-only Tauri capability with zero plugin permissions and no shell/filesystem/process plugin or generic dispatch. Future mutation remains subordinate to the canonical layering.
 
-## Trusted workspace/Git read surface — WO-0016 promotion candidate
+## Trusted workspace/Git read surface — WO-0016
 WO-0016 evolves the bridge without turning the UI into a filesystem authority:
 
 `React UI -> desktopBridge.ts -> { choose_workspace | get_desktop_snapshot } -> trusted Rust application state -> DesktopSnapshot v2`
@@ -37,3 +37,20 @@ WO-0016 evolves the bridge without turning the UI into a filesystem authority:
 - Runtime/provider/permission may be shown only with explicit provenance and truthful UNKNOWN/DISCONNECTED/DEGRADED state until corresponding live adapters exist.
 
 The remaining path-based read TOCTOU residual is acceptable only for this non-authoritative presentation slice. Before a future privileged file/Git mutation path exists, a separate governed design must establish stronger handle-relative/no-follow capability I/O and preserve the Permission & Control Plane choke point.
+
+## Runtime observability presentation boundary — WO-0017 candidate
+WO-0017 adds a Python-side presentation contract without connecting it to desktop process lifecycle or granting execution authority:
+
+`Existing Python engines -> bounded public observation/reduction -> RuntimeStatusSnapshot v1 -> future trusted IPC -> desktop presentation`
+
+Architectural rules for this contract:
+- `RuntimeStatusSnapshot v1` is presentation data only and can never substitute for Permission & Control Plane authorization, CP permits, trusted capability evidence or task-control authority.
+- The JSON boundary is versioned, byte-bounded and strict. Unknown fields, duplicate keys, invalid states, invalid counters and unbounded collections fail closed.
+- Runtime/provider/task/permission records use canonical Hive-owned provenance identities. Caller-defined labels do not become provenance.
+- Provider `READY` means a concrete bounded local catalog observation exists. It does not assert provider reachability/authentication and does not promote model capability to VERIFIED.
+- The task reducer consumes bounded public `TaskSnapshot` state and excludes plan fingerprints, attempts, event payloads, prompts and outputs.
+- The Permission & Control Plane has no approved public live counter observer in WO-0017. The architecture therefore reports UNKNOWN/DISCONNECTED rather than reaching into private session/challenge/permit state.
+- Invalid observation/transport data may reduce only to a fixed generic `DEGRADED` snapshot. Error details and rejected values are not echoed into presentation state.
+- `tools/runtime/status_snapshot.py` is a disconnected diagnostic exporter, not a host process, provider runner or authority service.
+
+WO-0017 intentionally stops before process identity, sidecar launch, wire framing/lifecycle and desktop transport. Those are a separate cross-runtime boundary and require their own Work Order after CP-0017 is canonical.
