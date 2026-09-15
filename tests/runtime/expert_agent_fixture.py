@@ -78,11 +78,10 @@ class ExpertAgentFixture(unittest.TestCase):
             registry.add_profile(profile)
         return registry
 
-    def standard(self, role: AgentRole, *, min_samples: int = 10,
-                 lower: float = 0.60) -> CompetenceStandard:
+    def standard(self, role: AgentRole) -> CompetenceStandard:
         return CompetenceStandard(
             CompetenceLevel.DISTINGUISHED, required_dimensions_for_role(role),
-            min_samples, lower, 2,
+            40, 0.80, 2,
         )
 
     @staticmethod
@@ -91,7 +90,7 @@ class ExpertAgentFixture(unittest.TestCase):
 
     def add_results(self, ledger: ExperienceLedger, profile: AgentProfile,
                     dimensions: frozenset[BenchmarkDimension] | None = None,
-                    *, successes: int = 10, total: int = 10, critical: int = 0,
+                    *, successes: int = 20, total: int = 20, critical: int = 0,
                     policy: int = 0, tamper: int = 0, trusted: bool = True,
                     families: tuple[str, ...] = ("hive-fresh", "terminal-lab")) -> None:
         dimensions = dimensions or required_dimensions_for_role(profile.role)
