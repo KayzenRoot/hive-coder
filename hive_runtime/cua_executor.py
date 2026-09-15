@@ -6,6 +6,7 @@ from typing import Any, Mapping, Protocol
 
 from .control_plane import PermissionControlPlane
 from .control_types import ActionRequest, Capability
+from .cua import CuaAdapter
 from .errors import AdapterStateError, AuthorizationDenied, RpcProtocolError
 
 
@@ -33,20 +34,16 @@ SAFE_CUA_TOOLS: dict[str, SafeCuaTool] = {
 class GatedCuaActionExecutor:
     """Permit-gated, fail-closed bridge to the tiny approved Cua tools/call subset."""
 
-    def __init__(
-        self,
-        *,
-        control_plane: PermissionControlPlane,
-        peer: Any,
-        live_target_resolver: LiveTargetResolver,
-        post_action_verifier: PostActionVerifier | None = None,
-        timeout: float = 5.0,
-    ) -> None:
+    def __init__(self, *, control_plane: PermissionControlPlane, peer: Any, live_target_resolver: LiveTargetResolver, post_action_verifier: PostActionVerifier | None = None, timeout: float = 5.0, tool_bindings: Mapping[str, str] | None = None) -> None:
         self.control_plane = control_plane
         self.peer = peer
         self.live_target_resolver = live_target_resolver
         self.post_action_verifier = post_action_verifier
         self.timeout = float(timeout)
+        bindings = dict(tool_bindings or {})
+        if set(bindings) - set(SAFE_CUA_TOOLS) or any(not isinstance(v, str) or not v for v in bindings.values()):
+            raise AuthorizationDenied("untrusted_or_unknown_cua_tool_binding")
+        self.tool_bindings = bindings
         self._lock = threading.RLock()
         self._cancelled_sessions: set[str] = set()
         self._inflight: dict[str, threading.Event] = {}
@@ -57,9 +54,6 @@ class GatedCuaActionExecutor:
             event = self._inflight.get(session_id)
             if event is not None:
                 event.set()
-        # JsonRpcPeer has no per-request cancellation primitive. Closing the peer
-        # is the only proven way in this runtime to wake a blocking request and
-        # stop further dispatch. This intentionally sacrifices the Cua session.
         close = getattr(self.peer, "close", None)
         if callable(close):
             try:
@@ -77,6 +71,7 @@ class GatedCuaActionExecutor:
         arguments = self._validated_arguments(spec, request.arguments)
         if self.peer is None:
             raise AdapterStateError("Cua MCP peer is not available")
+        tool_name = self.tool_bindings.get(spec.action, spec.tool_name)
 
         with self._lock:
             if request.session_id in self._cancelled_sessions:
@@ -98,11 +93,9 @@ class GatedCuaActionExecutor:
             if cancel_event.is_set():
                 raise AuthorizationDenied("control_session_cancelled_before_dispatch")
 
-            params = {
-                "name": spec.tool_name,
-                "arguments": arguments,
-                "_meta": {"hive/requestFingerprint": self.control_plane.request_fingerprint(request)},
-            }
+            meta = CuaAdapter.modern_meta()
+            meta["hive/requestFingerprint"] = self.control_plane.request_fingerprint(request)
+            params = {"name": tool_name, "arguments": arguments, "_meta": meta}
             result = self.peer.request("tools/call", params, timeout=self.timeout)
             if cancel_event.is_set():
                 raise AuthorizationDenied("control_session_cancelled_during_execution")
