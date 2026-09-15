@@ -35,33 +35,29 @@ jobs:
           text = path.read_text(encoding='utf-8')
           original = text
 
-          old_child = '''        if !current.exists() {
-              return Ok(None);
-          }
-          let metadata = fs::symlink_metadata(&current).map_err(|_| "workspace child metadata is unavailable".to_owned())?;
-          if is_link_or_reparse(&metadata) {
-          '''
-          new_child = '''        let metadata = match fs::symlink_metadata(&current) {
-              Ok(metadata) => metadata,
-              Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-              Err(_) => return Err("workspace child metadata is unavailable".to_owned()),
-          };
-          if is_link_or_reparse(&metadata) {
-          '''
+          old_child = (
+              "        if !current.exists() {\n"
+              "            return Ok(None);\n"
+              "        }\n"
+              "        let metadata = fs::symlink_metadata(&current).map_err(|_| \"workspace child metadata is unavailable\".to_owned())?;\n"
+          )
+          new_child = (
+              "        let metadata = match fs::symlink_metadata(&current) {\n"
+              "            Ok(metadata) => metadata,\n"
+              "            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),\n"
+              "            Err(_) => return Err(\"workspace child metadata is unavailable\".to_owned()),\n"
+              "        };\n"
+          )
           if old_child in text:
               text = text.replace(old_child, new_child, 1)
 
-          old_evidence = '''                    let Ok(metadata) = item.metadata() else {
-          '''
-          new_evidence = '''                    let Ok(metadata) = fs::symlink_metadata(item.path()) else {
-          '''
+          old_evidence = "                    let Ok(metadata) = item.metadata() else {\n"
+          new_evidence = "                    let Ok(metadata) = fs::symlink_metadata(item.path()) else {\n"
           if old_evidence in text:
               text = text.replace(old_evidence, new_evidence, 1)
 
-          old_ref = '''        if !reference.starts_with("refs/heads/") || reference.len() > 220 {
-          '''
-          new_ref = '''        if !reference.starts_with("refs/heads/") || reference == "refs/heads/" || reference.len() > 220 {
-          '''
+          old_ref = "        if !reference.starts_with(\"refs/heads/\") || reference.len() > 220 {\n"
+          new_ref = "        if !reference.starts_with(\"refs/heads/\") || reference == \"refs/heads/\" || reference.len() > 220 {\n"
           if old_ref in text:
               text = text.replace(old_ref, new_ref, 1)
 
