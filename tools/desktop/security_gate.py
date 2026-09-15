@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DESKTOP = ROOT / "apps" / "desktop"
+TAURI = DESKTOP / "src-tauri"
 
 FORBIDDEN_TEXT = {
     "tauri_plugin_shell": "Rust shell plugin",
@@ -17,10 +18,15 @@ FORBIDDEN_TEXT = {
     "@tauri-apps/plugin-process": "process plugin",
     "tauri_plugin_process": "Rust process plugin",
     "dangerouslySetInnerHTML": "untrusted HTML sink",
+    "OPENAI_API_KEY": "provider credential reference",
+    "ANTHROPIC_API_KEY": "provider credential reference",
+    "GEMINI_API_KEY": "provider credential reference",
 }
 
 ALLOWED_INVOKE_FILE = (DESKTOP / "src" / "lib" / "desktopBridge.ts").resolve()
 ALLOWED_COMMANDS = {"get_desktop_snapshot"}
+EXPECTED_CAPABILITY = "desktop-read-only"
+EXPECTED_WINDOW = "main"
 
 
 def text_files() -> list[Path]:
@@ -35,7 +41,7 @@ def main() -> int:
         failures.append("desktop source tree is empty")
 
     package_lock = DESKTOP / "package-lock.json"
-    cargo_lock = DESKTOP / "src-tauri" / "Cargo.lock"
+    cargo_lock = TAURI / "Cargo.lock"
     if not package_lock.is_file():
         failures.append("package-lock.json must be committed")
     if not cargo_lock.is_file():
@@ -60,7 +66,7 @@ def main() -> int:
             lines = text.splitlines()
             for index, line in enumerate(lines):
                 if "#[tauri::command]" in line:
-                    following = "\n".join(lines[index + 1:index + 4])
+                    following = "\n".join(lines[index + 1:index + 5])
                     match = re.search(r"fn\s+([A-Za-z0-9_]+)\s*\(", following)
                     if not match:
                         failures.append(f"{rel}: unable to resolve tauri command after annotation")
@@ -72,11 +78,44 @@ def main() -> int:
     if command_names != ALLOWED_COMMANDS:
         failures.append(f"Tauri command allowlist mismatch: {sorted(command_names)}")
 
-    capability = DESKTOP / "src-tauri" / "capabilities" / "desktop-read-only.json"
-    data = json.loads(capability.read_text(encoding="utf-8"))
-    permissions = data.get("permissions")
-    if permissions != []:
-        failures.append(f"desktop capability permissions must be empty, got {permissions!r}")
+    capability_path = TAURI / "capabilities" / "desktop-read-only.json"
+    capability = json.loads(capability_path.read_text(encoding="utf-8"))
+    if capability.get("identifier") != EXPECTED_CAPABILITY:
+        failures.append("desktop capability identifier mismatch")
+    if capability.get("windows") != [EXPECTED_WINDOW]:
+        failures.append(f"desktop capability must target only [{EXPECTED_WINDOW!r}]")
+    if capability.get("permissions") != []:
+        failures.append(f"desktop capability permissions must be empty, got {capability.get('permissions')!r}")
+
+    tauri_config = json.loads((TAURI / "tauri.conf.json").read_text(encoding="utf-8"))
+    app_config = tauri_config.get("app", {})
+    security = app_config.get("security", {})
+    if security.get("capabilities") != [EXPECTED_CAPABILITY]:
+        failures.append("tauri.conf must enable only the desktop-read-only capability")
+    if tauri_config.get("app", {}).get("withGlobalTauri") not in (None, False):
+        failures.append("global Tauri JavaScript API must remain disabled")
+
+    windows = app_config.get("windows")
+    if not isinstance(windows, list) or len(windows) != 1 or windows[0].get("label") != EXPECTED_WINDOW:
+        failures.append("tauri.conf must declare exactly one window labeled main")
+    elif "url" in windows[0]:
+        failures.append("main production window must not declare a remote URL")
+
+    csp = security.get("csp")
+    if not isinstance(csp, str) or "default-src 'self'" not in csp:
+        failures.append("desktop CSP must be explicit and default to self")
+    if security.get("dangerousDisableAssetCspModification") not in (None, False):
+        failures.append("Tauri asset CSP modification must not be disabled")
+
+    bundle = tauri_config.get("bundle", {})
+    if bundle.get("active") is not False:
+        failures.append("WO-0015 must keep installer/bundle generation disabled")
+
+    rust_lib = (TAURI / "src" / "lib.rs").read_text(encoding="utf-8")
+    if 'const DESKTOP_WINDOW_LABEL: &str = "main";' not in rust_lib:
+        failures.append("read-model command must bind its trusted window label explicitly")
+    if "webview_window.label()" not in rust_lib:
+        failures.append("read-model command must revalidate the invoking window label")
 
     package = json.loads((DESKTOP / "package.json").read_text(encoding="utf-8"))
     all_deps = {**package.get("dependencies", {}), **package.get("devDependencies", {})}
@@ -107,6 +146,8 @@ def main() -> int:
 
     print("DESKTOP_SECURITY_GATE=PASS")
     print(f"TAURI_COMMANDS={','.join(sorted(command_names))}")
+    print(f"CAPABILITY={EXPECTED_CAPABILITY}")
+    print(f"WINDOW_SCOPE={EXPECTED_WINDOW}")
     print("CAPABILITY_PERMISSIONS=0")
     print("LOCKFILES=COMMITTED")
     return 0
