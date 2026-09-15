@@ -91,8 +91,8 @@ A valid status envelope is never authorization. It cannot grant a CP capability,
 
 CP-0018 canonicalizes only this wire security boundary. It does not prove helper binary authenticity, child-process containment, restart/shutdown policy or desktop supervisor behavior. Those remain later HIGH_ASSURANCE process-boundary concerns and must not be inferred from IPC validity.
 
-## Runtime-status sidecar security boundary — WO-0019 promotion candidate
-WO-0019 proves a fixed one-shot helper process while deliberately refusing desktop supervision or live execution authority.
+## Runtime-status sidecar security boundary — WO-0019
+WO-0019 canonicalizes a fixed one-shot helper process while deliberately refusing desktop supervision or live execution authority.
 
 - Exact argv must be only `--stdio-status-v1`; missing, unknown or extra arguments are rejected before protocol handling.
 - The helper constructs the canonical disconnected snapshot locally and does not inspect provider/network/credential/task/control-plane state.
@@ -106,4 +106,4 @@ WO-0019 proves a fixed one-shot helper process while deliberately refusing deskt
 
 The sidecar remains non-authoritative presentation infrastructure. It cannot create/consume CP permits, approve requests, activate skills, execute providers/models, mutate tasks/permissions/files/Git, invoke terminal/computer-use, expose remote control or authorize billing/purchases.
 
-CP-0019 candidate does not prove packaged helper authenticity, signing, process containment, restart/shutdown policy, trusted desktop supervisor identity or live observation. Those are explicit prerequisites for the later separately governed WO-0020 desktop supervisor and must not be inferred from the helper's one-shot safety proof.
+CP-0019 canonicalizes only this fixed helper/process boundary. It does not prove packaged helper authenticity, signing, process containment, restart/shutdown policy, trusted desktop supervisor identity or live observation. Those are explicit prerequisites for the later separately governed WO-0020 desktop supervisor and must not be inferred from the helper's one-shot safety proof.

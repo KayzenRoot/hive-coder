@@ -71,8 +71,8 @@ Architecture rules:
 
 CP-0018 canonicalizes this frozen IPC boundary only. The separately governed runtime sidecar/supervisor layer may later consume this protocol, but it may not expand it silently. Process launch, identity/authenticity, restart/shutdown and containment remain outside WO-0018.
 
-## Fixed runtime-status sidecar boundary — WO-0019 promotion candidate
-WO-0019 introduces the first process-level consumer of the frozen CP-0018 wire without connecting that process to the desktop:
+## Fixed runtime-status sidecar boundary — WO-0019
+WO-0019 canonicalizes the first process-level consumer of the frozen CP-0018 wire without connecting that process to the desktop:
 
 `future trusted supervisor -> fixed status_sidecar.py --stdio-status-v1 -> CP-0018 serve_one -> prebuilt CP-0017 disconnected snapshot`
 
@@ -85,4 +85,4 @@ Architecture rules:
 - the sidecar itself gains no provider/model, credential, task, permission or mutation adapter;
 - presentation truth remains non-authoritative and intentionally DISCONNECTED until a later separately governed trusted observer/supervisor exists.
 
-WO-0019 does not add a Tauri command, process plugin or desktop launcher. The future WO-0020 desktop supervisor must be reconstructed on canonical CP-0019 and separately prove helper identity, fixed launch target, lifecycle/containment and read-only system-truth integration before any desktop process capability can be promoted.
+CP-0019 adds no Tauri command, process plugin or desktop launcher. The next governed layer, WO-0020, must be freshly reconstructed on canonical CP-0019 and separately prove helper identity, fixed launch target, lifecycle/containment and read-only system-truth integration before any desktop process capability can be promoted.

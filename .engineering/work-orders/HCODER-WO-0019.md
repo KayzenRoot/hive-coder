@@ -1,16 +1,19 @@
 # HCODER-WO-0019 — Runtime Status Sidecar Helper
 
-**Status:** FINAL APPROVAL CANDIDATE / FINAL GATES PENDING — NOT CANONICAL  
+**Status:** COMPLETE / CANONICAL  
 **Risk:** ELEVATED  
 **Task class:** T3  
 **Context radius:** C3  
 **Canonical base:** `HCODER-CP-0018` on `main` at `c0a44d43546b9f176125b9e7099b8422d6b62ba3`  
-**Issue:** `#47`  
-**PR:** `#48` — DRAFT  
+**Issue:** `#47` — CLOSED / COMPLETED  
+**Product PR:** `#48` — SQUASH MERGED  
 **Technical exact head:** `ba10ba72f76316806cd820dc0d205e68105f61bb`  
 **HEDS technical:** `5216093993` — APPROVED FOR PROMOTION, H/C 0  
 **Promotion exact head:** `55975e7e97eb33d2b695d02e36ab6994fa7ae7b5`  
 **HEDS promotion:** `5216180277` — APPROVED FOR FINAL APPROVAL MUTATION, H/C 0  
+**Final reviewed product head:** `abe7b29cf59d3fd2e464e3ea69a7e585ba75e6dd`  
+**HEDS final product:** `5216313496` — APPROVED FOR SQUASH MERGE, H/C 0  
+**Product merge SHA:** `2ed4222556916cf524e31f65c4c417d27b7e6fd9`  
 **Historical evidence only:** PR `#38` / branch `feat/HCODER-WO-0019-runtime-status-sidecar` MUST NOT be merged or cherry-picked.
 
 ## OBJECTIVE
@@ -52,16 +55,22 @@ Desktop/Tauri process spawn, generic process launcher, daemon/service lifecycle,
 
 The sidecar transports presentation state only. It is not an authority boundary and does not launch providers/models or create execution authority.
 
-## ACCEPTANCE / PROOF
-Technical exact head `ba10ba72f76316806cd820dc0d205e68105f61bb`:
+## TECHNICAL PROOF
+Exact technical head `ba10ba72f76316806cd820dc0d205e68105f61bb`:
 - Governance #250: **288/288 Ubuntu PASS**, **61/61 Windows HIGH_ASSURANCE PASS** including sidecar; ResourceWarning fatal.
 - Desktop Shell #86: SUCCESS, security gate, **23/23 frontend**, npm audit 0, locked Rust audit/tests/check, Windows release build/smoke.
 - HEDS technical `5216093993`: APPROVED FOR PROMOTION, H/C 0.
 
-Promotion exact head `55975e7e97eb33d2b695d02e36ab6994fa7ae7b5`:
+## PROMOTION PROOF
+Exact promotion head `55975e7e97eb33d2b695d02e36ab6994fa7ae7b5`:
 - Governance #251: **288/288 Ubuntu PASS**, **61/61 Windows HIGH_ASSURANCE PASS**.
 - Desktop Shell #87: SUCCESS including Windows release build/smoke.
 - HEDS promotion `5216180277`: APPROVED FOR FINAL APPROVAL MUTATION, H/C 0.
+
+## FINAL PRODUCT PROOF
+Exact final product head `abe7b29cf59d3fd2e464e3ea69a7e585ba75e6dd` passed Governance #252 (`35029148474`) and Desktop Shell #88 (`35029148429`), including **288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**, **23/23 frontend**, npm audit 0, locked Rust audit/tests/check, Tauri Windows release build and launch smoke. HEDS final review `5216313496` approved squash merge with unresolved HIGH/CRITICAL 0.
+
+Product PR #48 was squash-merged with expected-head protection as GitHub-signed SHA `2ed4222556916cf524e31f65c4c417d27b7e6fd9`. That exact merge SHA then passed Governance #253 (`35029537865`) with **288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE**, and Desktop Shell #89 (`35029537862`) including Windows release build and launch smoke.
 
 ## CORRECTIONS
 - `HCODER-WO-0019-CR-001` LOW — RESOLVED: process-level one-shot/adversarial coverage.
@@ -70,10 +79,23 @@ Promotion exact head `55975e7e97eb33d2b695d02e36ab6994fa7ae7b5`:
 Neither correction changed CP-0018 protocol semantics or expanded authority.
 
 ## DELIVERABLES
-Work Order, Context Lock, fixed sidecar, process-level tests, resolved Correction Deltas, Evidence Bundle, Checkpoint Delta, DEC-023 candidate, Project Brain promotion reconciliation and continuation handoff.
+Work Order, Context Lock, fixed sidecar, process-level tests, resolved Correction Deltas, Evidence Bundle, Checkpoint Delta, DEC-023, Project Brain reconciliation and canonical closeout receipt.
 
 ## REVIEW FORMAT
 HEDS_DELTA exact-head. Provider/model invocation, credential inheritance/read, long-running listener, generic dispatch/RPC, unexpected mutation authority or secret/status leakage is HIGH/CRITICAL.
 
 ## STOP CONDITION
-Final exact-head Governance + Desktop Shell green, final HEDS with unresolved HIGH/CRITICAL 0, PR #48 ready only after those proofs, squash merge with expected-head protection, then push-triggered Governance + Desktop Shell green on `main`. CP-0019 is not canonical before post-merge proof and documentation-only canonical closeout. No desktop launcher/process capability is promoted under WO-0019.
+SATISFIED for the product increment. No desktop launcher/process capability was promoted under WO-0019. Canonical closeout remains documentation-only and must independently pass exact-head Governance + Desktop Shell, HEDS, squash merge and push validation before the CP-0019 seal is final.
+
+## CANONICAL CLOSEOUT
+**Result:** PRODUCT STOP CONDITION SATISFIED / CANONICAL CLOSEOUT STAGED.  
+**Checkpoint:** `HCODER-CP-0019` APPROVED / CANONICAL subject to closeout PR sealing.  
+**Decision:** `DEC-023` APPROVED / CANONICAL subject to closeout PR sealing.  
+**Product PR:** #48 squash-merged.  
+**Final reviewed product head:** `abe7b29cf59d3fd2e464e3ea69a7e585ba75e6dd`.  
+**Canonical product merge SHA:** `2ed4222556916cf524e31f65c4c417d27b7e6fd9`.  
+**Final product HEDS:** `5216313496`, unresolved HIGH/CRITICAL 0.  
+**Post-merge Governance:** `35029537865` (#253) SUCCESS — 288/288 Ubuntu, 61/61 Windows HIGH_ASSURANCE.  
+**Post-merge Desktop Shell:** `35029537862` (#89) SUCCESS, including Windows release build and launch smoke.
+
+The original Work Order specification above remains the audit contract. This appendix records completion only and does not expand historical scope or authority. After closeout sealing, the next NECESSARY increment is a fresh reconstruction of `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface` on canonical CP-0019; historical stacked WO-0020 work remains supporting evidence only.
