@@ -210,10 +210,11 @@ fn safe_existing_path(root: &Path, relative: &Path) -> Result<Option<PathBuf>, S
             Component::Normal(part) => current.push(part),
             _ => return Err("non-canonical child path rejected".to_owned()),
         }
-        if !current.exists() {
-            return Ok(None);
-        }
-        let metadata = fs::symlink_metadata(&current).map_err(|_| "workspace child metadata is unavailable".to_owned())?;
+        let metadata = match fs::symlink_metadata(&current) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(_) => return Err("workspace child metadata is unavailable".to_owned()),
+        };
         if is_link_or_reparse(&metadata) {
             return Err("workspace child symlink or reparse point rejected".to_owned());
         }
@@ -431,7 +432,7 @@ fn git_model(root: &Path) -> GitReadModel {
     let head_value = head_text.trim();
 
     if let Some(reference) = head_value.strip_prefix("ref: ") {
-        if !reference.starts_with("refs/heads/") || reference.len() > 220 {
+        if !reference.starts_with("refs/heads/") || reference == "refs/heads/" || reference.len() > 220 {
             return GitReadModel {
                 signal: signal(
                     OperationalState::Degraded,
@@ -546,7 +547,7 @@ fn evidence_model(root: &Path) -> EvidenceReadModel {
                         degraded = true;
                         continue;
                     };
-                    let Ok(metadata) = item.metadata() else {
+                    let Ok(metadata) = fs::symlink_metadata(item.path()) else {
                         degraded = true;
                         continue;
                     };
@@ -831,4 +832,52 @@ mod tests {
         assert!(matches!(evidence.signal.state, OperationalState::Ready));
         cleanup(&root);
     }
+
+    #[test]
+    fn empty_git_branch_reference_fails_closed() {
+        let root = temp_root("git-empty-branch");
+        fs::create_dir_all(root.join(".git")).unwrap();
+        fs::write(root.join(".git/HEAD"), "ref: refs/heads/\n").unwrap();
+        let canonical = validate_workspace_root(&root).unwrap();
+        let git = git_model(&canonical);
+        assert!(git.repository);
+        assert!(git.branch.is_none());
+        assert!(git.head.is_none());
+        assert!(matches!(git.signal.state, OperationalState::Degraded));
+        cleanup(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn dangling_symlink_is_rejected_as_unsafe_child() {
+        use std::os::unix::fs::symlink;
+
+        let root = temp_root("dangling-link");
+        symlink(root.join("missing-target"), root.join("dangling")).unwrap();
+        let canonical = validate_workspace_root(&root).unwrap();
+        assert!(safe_existing_path(&canonical, Path::new("dangling")).is_err());
+        cleanup(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn evidence_symlink_escape_is_not_counted() {
+        use std::os::unix::fs::symlink;
+
+        let root = temp_root("evidence-symlink");
+        let outside = temp_root("evidence-outside");
+        fs::create_dir_all(root.join(".engineering/evidence")).unwrap();
+        let outside_file = outside.join("outside.md");
+        fs::write(&outside_file, "outside evidence").unwrap();
+        symlink(&outside_file, root.join(".engineering/evidence/linked.md")).unwrap();
+
+        let canonical = validate_workspace_root(&root).unwrap();
+        let evidence = evidence_model(&canonical);
+        assert_eq!(evidence.evidence_bundles, 0);
+        assert!(matches!(evidence.signal.state, OperationalState::Degraded));
+
+        cleanup(&root);
+        cleanup(&outside);
+    }
+
 }
