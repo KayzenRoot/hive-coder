@@ -118,6 +118,10 @@ def main() -> int:
         failures.append("runtime status invocation must use the named argument-free command")
     if re.search(r"invoke\(RUNTIME_STATUS_COMMAND\s*,", bridge_text):
         failures.append("runtime status command must not receive frontend arguments")
+    if "decodeRuntimeStatusEnvelope(raw)" not in bridge_text:
+        failures.append("runtime status bridge must admit raw wire only through decodeRuntimeStatusEnvelope(raw)")
+    if "JSON.parse(raw)" in bridge_text:
+        failures.append("runtime status bridge must not bypass canonical raw-wire validation with JSON.parse(raw)")
 
     capability_path = TAURI / "capabilities" / "desktop-read-only.json"
     capability = json.loads(capability_path.read_text(encoding="utf-8"))
@@ -176,24 +180,38 @@ def main() -> int:
         if any(token in signature for token in ("String", "Path", "PathBuf", "Vec<", "serde_json", "Value")):
             failures.append("choose_workspace command accepts caller-controlled target/payload")
 
+    runtime_match = re.search(r"fn\s+get_runtime_status_envelope\s*\((.*?)\)\s*->", prod_rust, re.DOTALL)
+    if not runtime_match:
+        failures.append("runtime status command signature not found")
+    else:
+        signature = runtime_match.group(1)
+        if any(token in signature for token in ("String", "Path", "PathBuf", "Vec<", "serde_json", "Value")):
+            failures.append("runtime status command accepts caller-controlled process/payload data")
+
     if "std::process" in prod_rust:
         failures.append("workspace/Git read path must not invoke an external process command")
 
     supervisor_text = ALLOWED_PROCESS_FILE.read_text(encoding="utf-8") if ALLOWED_PROCESS_FILE.is_file() else ""
+    supervisor_prod = production_rust(supervisor_text)
     required_supervisor_guards = [
         'const SIDECAR_MODE: &str = "--stdio-status-v1";',
+        'const STATUS_REQUEST: &str = "{\\\"op\\\":\\\"status.snapshot\\\",\\\"protocol\\\":\\\"hive-runtime-status-ipc-v1\\\",\\\"requestId\\\":\\\"desktop-runtime\\\"}";',
+        "const MAX_STATUS_RESPONSE_BYTES: u64 = 33_024;",
         "std::env::current_exe()",
         "Command::new(&sidecar)",
         ".arg(SIDECAR_MODE)",
         ".env_clear()",
-        "MAX_STATUS_RESPONSE_BYTES",
         "SIDECAR_TIMEOUT",
+        "terminate_child",
+        "fs::symlink_metadata",
     ]
     for guard in required_supervisor_guards:
-        if guard not in supervisor_text:
+        if guard not in supervisor_prod:
             failures.append(f"fixed runtime supervisor guard missing: {guard}")
-    for forbidden in (".args(", "powershell", "cmd.exe", "sh -c", "bash -c", "std::env::var("):
-        if forbidden in supervisor_text:
+    if supervisor_prod.count("Command::new") != 1:
+        failures.append(f"fixed runtime supervisor must contain exactly one Command::new site, found {supervisor_prod.count('Command::new')}")
+    for forbidden in (".args(", ".env(", "powershell", "cmd.exe", "sh -c", "bash -c", "std::env::var(", "std::env::vars("):
+        if forbidden in supervisor_prod:
             failures.append(f"fixed runtime supervisor contains forbidden dynamic execution surface: {forbidden}")
     process_sites = [path for path in files if path.suffix == ".rs" and "Command::new" in production_rust(path.read_text(encoding="utf-8"))]
     if process_sites != [ALLOWED_PROCESS_FILE]:
@@ -241,6 +259,8 @@ def main() -> int:
     print(f"WINDOW_SCOPE={EXPECTED_WINDOW}")
     print("CAPABILITY_PERMISSIONS=0")
     print("WORKSPACE_SELECTION_ARGS=0")
+    print("RUNTIME_STATUS_ARGS=0")
+    print("RUNTIME_STATUS_RAW_DECODER=STRICT")
     print("FILESYSTEM_MUTATION_PRIMITIVES=0")
     print("GENERIC_PROCESS_EXECUTION=0")
     print("FIXED_RUNTIME_SIDECAR_PROCESS=1")
