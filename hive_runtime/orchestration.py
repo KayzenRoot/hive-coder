@@ -133,7 +133,6 @@ class Assumption:
 
 
 class AssumptionEvidenceVerifier(Protocol):
-    """Trusted host boundary that verifies referenced facts independently of planner prose."""
     def __call__(self, assumption: Assumption) -> bool: ...
 
 
@@ -168,14 +167,20 @@ class ProjectDigitalTwin:
         if any(not set(node.depends_on).issubset(known) for node in self._nodes.values()):
             raise ValueError("digital twin contains unknown dependency")
 
-    def change_radius(self, targets: Iterable[str], *, max_depth: int = 4, max_nodes: int = 200) -> ChangeRadius:
+    def validate_targets(self, targets: Iterable[str], *, max_nodes: int = 200) -> frozenset[str]:
         roots = frozenset(targets)
         if not roots or not roots.issubset(self._nodes):
             raise ValueError("change target not present in digital twin")
-        if not 0 <= max_depth <= 20 or not 1 <= max_nodes <= 10_000:
-            raise ValueError("invalid change-radius bounds")
+        if not 1 <= max_nodes <= 10_000:
+            raise ValueError("invalid change-radius bound")
         if len(roots) > max_nodes:
-            return ChangeRadius(roots, roots, True)
+            raise ValueError("change targets exceed planning bound")
+        return roots
+
+    def change_radius(self, targets: Iterable[str], *, max_depth: int = 4, max_nodes: int = 200) -> ChangeRadius:
+        roots = self.validate_targets(targets, max_nodes=max_nodes)
+        if not 0 <= max_depth <= 20:
+            raise ValueError("invalid change-radius depth")
         reverse: dict[str, set[str]] = {key: set() for key in self._nodes}
         for node in self._nodes.values():
             for dep in node.depends_on:
@@ -269,7 +274,6 @@ class PlannerPort(Protocol):
 
 
 class CouncilPort(Protocol):
-    """Host chooses reviewer identity; model output cannot impersonate another council role."""
     def __call__(self, objective: ObjectiveSpec, proposal: DeepPlanProposal, reviewer: AgentRole) -> Iterable[CouncilAssessment]: ...
 
 
@@ -314,8 +318,6 @@ class MasterPlan:
 
 
 class DeepPlanEngine:
-    """Deterministic approval shell around high-intelligence planning ports."""
-
     def __init__(self, policy: PlanningPolicy = PlanningPolicy()) -> None:
         self.policy = policy
 
@@ -357,11 +359,7 @@ class DeepPlanEngine:
             step.validate(len(objective.acceptance_criteria))
             if not set(step.depends_on).issubset(known) or step.step_id in step.depends_on:
                 raise ValueError("invalid plan dependency")
-            if not step.change_targets:
-                raise ValueError("every plan step requires explicit change target")
-            radius = twin.change_radius(step.change_targets, max_depth=0, max_nodes=self.policy.max_change_radius)
-            if radius.truncated:
-                raise ValueError("step targets exceed change-radius bound")
+            twin.validate_targets(step.change_targets, max_nodes=self.policy.max_change_radius)
             covered.update(step.requirement_indexes)
         if covered != set(range(len(objective.acceptance_criteria))):
             raise ValueError("plan does not cover every acceptance criterion")
@@ -418,7 +416,6 @@ class EvidenceRecord:
 
 
 class EvidenceTrustVerifier(Protocol):
-    """Trusted host boundary. Evidence producers cannot self-mark records trusted."""
     def __call__(self, record: EvidenceRecord) -> bool: ...
 
 
@@ -429,8 +426,7 @@ class EvidenceGraph:
         self._requirements: dict[int, set[str]] = {}; self._stops: dict[str, set[str]] = {}
 
     def add(self, record: EvidenceRecord, *, requirement_indexes: Iterable[int] = (), stop_conditions: Iterable[str] = ()) -> None:
-        record.validate()
-        requirements = tuple(requirement_indexes); stops = tuple(stop_conditions)
+        record.validate(); requirements = tuple(requirement_indexes); stops = tuple(stop_conditions)
         if record.evidence_id in self._records:
             raise ValueError("duplicate evidence id")
         if any(not isinstance(index, int) or index < 0 for index in requirements):
@@ -477,7 +473,7 @@ class CorrectionEntry:
 
 
 class SelfCorrectionLedger:
-    """Session-bounded correction ledger; external host persistence is required before auto-restart correction."""
+    """Session-bounded; cross-restart automatic correction requires later trusted persistence."""
     def __init__(self, master: MasterPlan, *, max_total: int = 12, max_per_step: int = 3) -> None:
         if not 0 <= max_total <= 100 or not 0 <= max_per_step <= 20:
             raise ValueError("invalid correction bounds")
