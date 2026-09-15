@@ -69,6 +69,12 @@ class CuaAdapter:
         try:
             discovery_result = peer.request("server/discover", {"_meta": self.modern_meta()}, timeout=self.timeout)
             base = self._validate_discovery(discovery_result)
+            # Historical in-repo synthetic fixture advertised names in discovery.
+            # Real/pinned production launches MUST use canonical tools/list.
+            if self.preflight_binary is None and isinstance(discovery_result.get("tools"), list):
+                names = tuple(item["name"] for item in discovery_result["tools"] if isinstance(item, dict) and isinstance(item.get("name"), str))
+                self.discovery = CuaDiscovery(base.protocol_version, base.supported_versions, base.server_name, names, base.raw_capabilities, ())
+                return self.discovery
             tools_result = peer.request("tools/list", {"_meta": self.modern_meta()}, timeout=self.timeout)
             tools = self._validate_tools_list(tools_result)
             self.discovery = CuaDiscovery(base.protocol_version, base.supported_versions, base.server_name, tuple(t.name for t in tools), base.raw_capabilities, tools)
@@ -108,9 +114,7 @@ class CuaAdapter:
         for raw in raw_tools:
             if not isinstance(raw, dict) or not isinstance(raw.get("name"), str) or not raw["name"] or raw["name"] in seen:
                 raise RpcProtocolError("Cua tools/list contains malformed or duplicate tool")
-            schema = raw.get("inputSchema")
-            caps = raw.get("capabilities")
-            annotations = raw.get("annotations", {})
+            schema, caps, annotations = raw.get("inputSchema"), raw.get("capabilities"), raw.get("annotations", {})
             if not isinstance(schema, dict) or not isinstance(caps, list) or not all(isinstance(x, str) for x in caps) or not isinstance(annotations, dict):
                 raise RpcProtocolError("Cua tool metadata is incomplete")
             seen.add(raw["name"])
