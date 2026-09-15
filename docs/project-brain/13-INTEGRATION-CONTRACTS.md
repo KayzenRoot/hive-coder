@@ -46,6 +46,21 @@ The approved `MasterPlan` is sealed with HMAC-SHA256 by a trusted-host `PlanAppr
 
 `SelfCorrectionLedger` is bounded globally/per-step and can only request changes inside the targets already approved for that step. In CP-0010 it is session-bounded; automatic cross-restart self-correction is disabled until a later trusted persistence contract exists.
 
+## Expert Agent Mesh boundary
+Expertise is descriptive competence, not execution authority. `ExpertiseCapsule` records role doctrine, anti-patterns, review lenses, descriptive tool kinds, required model capabilities and benchmark dimensions. A capsule cannot grant a capability, activate a skill, mint a permit or make evidence trusted.
+
+`AgentProfile` binds one agent identity to one role/capsule/context budget/independence lineage and is HMAC-SHA256 sealed by a trusted-host `AgentProfileAuthority`. There is no self-declared competence level in the profile.
+
+`ContextLens` labels selected content as either trusted context or untrusted data. Required authoritative tags must be satisfied by host-verified context. External/tool/web/repository content never becomes instruction authority merely because it contains imperative text, and insufficient trusted context/budget fails closed.
+
+`CodeTruthMap` accepts fact claims but only host-verified provenance-backed facts enter its authoritative fingerprint. `ArchitecturalGenome` binds invariants to exact verified fact fingerprints plus the Project Digital Twin; drift is descriptive evidence that must be handled by higher-level planning/review before execution.
+
+`ExperienceLedger` separates benchmark claim storage from trust. `ExperienceRouter` uses only host-verified results and confidence-adjusted role standards. The initial Distinguished standard requires per-dimension sample floors, multiple independent suites, Wilson lower confidence bounds and zero critical/policy/tamper incidents. Provider/model names are not routing evidence.
+
+`AgentMesh` revalidates the CP-0010 MasterPlan seal and exact Digital Twin before assigning measured specialists. Oversight roles cannot reuse an implementation independence lineage in the same assignment flow. Assignment fingerprints bind the selected profile, capsule and competence report.
+
+CounterPlan and Failure Oracle challengers are host-identified, independence-separated advisory/review surfaces. Their output can block according to policy but can never grant authority or weaken CP-0005/0007/0008/0009/0010 controls.
+
 ## Remote-control boundary
 Remote Hive control will be a separate HIGH_ASSURANCE subsystem. It must use authenticated encrypted device/session semantics, least privilege, revocation, audit and emergency stop. A raw Cua/RDP/VNC endpoint must never be exposed directly to the public internet by Hive.
 

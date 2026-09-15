@@ -1,0 +1,10 @@
+{
+  "workOrderId": "HCODER-WO-0011",
+  "baseCheckpoint": "HCODER-CP-0010",
+  "baseSha": "f02ee394e792324920478f00572933741ff8e037",
+  "risk": "ELEVATED",
+  "taskClass": "T3",
+  "contextRadius": "C4",
+  "allowed": ["expertise-capsules", "agent-profiles", "context-lens", "code-truth-map", "architectural-genome", "experience-ledger", "experience-routing", "agent-mesh", "counterplan", "failure-oracle", "benchmarks"],
+  "forbidden": ["permission-expansion", "agent-self-promotion", "model-name-authority", "automatic-skill-promotion", "remote-control-listener", "new-desktop-capability", "unbounded-self-modification"]
+}
