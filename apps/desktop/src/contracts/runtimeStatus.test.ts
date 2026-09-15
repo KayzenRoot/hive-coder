@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseRuntimeStatusEnvelope, RUNTIME_STATUS_PROTOCOL, RUNTIME_STATUS_SCHEMA } from "./runtimeStatus";
 
-const disconnected = () => ({
+const disconnected = (): Record<string, any> => ({
   protocol: RUNTIME_STATUS_PROTOCOL,
   requestId: "r-1",
   ok: true,
@@ -28,13 +28,13 @@ describe("runtime status IPC contract", () => {
 
   it("rejects fake READY providers", () => {
     const raw = disconnected();
-    raw.snapshot.providers = [{ providerId: "opencode-go", modelIds: [], state: "READY" }] as never[];
+    raw.snapshot.providers = [{ providerId: "opencode-go", modelIds: [], state: "READY" }];
     expect(() => parseRuntimeStatusEnvelope(raw)).toThrow(/readiness/);
   });
 
   it("rejects authoritative-looking counters on disconnected permission state", () => {
     const raw = disconnected();
-    raw.snapshot.permission.policyEpoch = 1 as never;
+    raw.snapshot.permission.policyEpoch = 1;
     expect(() => parseRuntimeStatusEnvelope(raw)).toThrow(/counters/);
   });
 });
