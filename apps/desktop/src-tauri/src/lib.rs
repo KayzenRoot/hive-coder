@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+const DESKTOP_WINDOW_LABEL: &str = "main";
+
 #[derive(Clone, Copy, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 enum OperationalState {
@@ -102,9 +104,16 @@ fn desktop_snapshot() -> DesktopSnapshot {
     }
 }
 
+fn desktop_window_is_authorized(label: &str) -> bool {
+    label == DESKTOP_WINDOW_LABEL
+}
+
 #[tauri::command]
-fn get_desktop_snapshot() -> DesktopSnapshot {
-    desktop_snapshot()
+fn get_desktop_snapshot(webview_window: tauri::WebviewWindow) -> Result<DesktopSnapshot, &'static str> {
+    if !desktop_window_is_authorized(webview_window.label()) {
+        return Err("desktop snapshot is unavailable for this window");
+    }
+    Ok(desktop_snapshot())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -133,5 +142,13 @@ mod tests {
     fn unconnected_runtime_is_not_reported_ready() {
         let snapshot = desktop_snapshot();
         assert!(matches!(snapshot.runtime.state, OperationalState::Disconnected));
+    }
+
+    #[test]
+    fn read_model_is_bound_to_main_window_label() {
+        assert!(desktop_window_is_authorized("main"));
+        assert!(!desktop_window_is_authorized("preview"));
+        assert!(!desktop_window_is_authorized("*"));
+        assert!(!desktop_window_is_authorized(""));
     }
 }
