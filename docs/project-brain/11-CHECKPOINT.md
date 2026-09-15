@@ -1,64 +1,64 @@
 # Checkpoint — Hive Coder
 
 **Checkpoint:** `HCODER-CP-0017`  
-**Status:** APPROVED FOR SQUASH MERGE — NOT YET CANONICAL  
+**Status:** APPROVED / CANONICAL  
 **Date:** 2026-09-15  
 **Repository:** `KayzenRoot/hive-coder`  
-**Work Order:** `HCODER-WO-0017` — APPROVED FOR SQUASH MERGE / FINAL EXACT-HEAD GATES PENDING  
-**Issue:** `#41` — OPEN  
-**Product PR:** `#42` — DRAFT / FINAL APPROVAL GATES PENDING  
+**Work Order:** `HCODER-WO-0017` — COMPLETE  
+**Issue:** `#41` — CLOSED / COMPLETED  
+**Product PR:** `#42` — SQUASH MERGED  
 **Base checkpoint:** `HCODER-CP-0016`  
 **Canonical base main SHA:** `442733aeae6bd2f615dc0bc4c76dda024455c212`  
-**Technical reviewed head:** `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef`  
-**Promotion reviewed head:** `e2ae69e1be2f152eb9ce37b9b05f674dd072f5b5`  
-**HEDS technical review:** `5215028501`  
-**HEDS promotion review:** `5215216401`
+**Final reviewed product head:** `51a61a8ebdf8b50efcada02ba73c9ef406f27605`  
+**Canonical product merge SHA:** `00bcb87251772cba0eb385d9628448374e9dd612`  
+**Final HEDS product review:** `5215281964`
 
-## Approved product state for merge candidate
+## Canonical product state
 - All CP-0005 through CP-0016 permission/security boundaries remain authoritative and unchanged.
-- `RuntimeStatusSnapshot v1` is a bounded non-authoritative presentation schema for runtime/provider/task/permission state.
+- `RuntimeStatusSnapshot v1` is the canonical bounded non-authoritative presentation schema for runtime/provider/task/permission state.
 - Operational states are `READY`, `UNKNOWN`, `DISCONNECTED` and `DEGRADED`; unknown/unconnected state is never inferred READY.
-- Runtime/provider/task/permission records carry canonical Hive provenance. Caller-defined provenance labels are rejected.
+- Runtime/provider/task/permission records use canonical Hive provenance; caller-defined provenance labels are rejected.
 - Strict JSON decoding enforces UTF-8, total input ceiling, exact object shapes, duplicate-key rejection, collection/string/counter ceilings and semantic state invariants.
 - Python boolean values cannot masquerade as numeric counters.
-- In-memory status state must use the governed `StatusState` enum before serialization.
-- Provider READY means only bounded concrete catalog observation; it does not verify provider health/authentication and cannot create VERIFIED model-capability evidence.
-- Permission/control-plane private internals are not serialized. When no safe public observer exists, permission presentation remains UNKNOWN/DISCONNECTED with no authoritative-looking counters.
-- Rejected encoding/decoding may map to one fixed generic non-secret DEGRADED snapshot.
-- `tools/runtime/status_snapshot.py` emits one deterministic DISCONNECTED snapshot and performs no provider/model/process/network/mutation action.
-- No new desktop Tauri command, capability permission, subprocess bridge, shell execution, filesystem/Git mutation, model execution, credential access, permission/task mutation or computer-use authority is introduced.
+- In-memory status state requires the governed `StatusState` enum before serialization.
+- Provider READY means only bounded concrete catalog observation. It does not establish provider reachability/authentication and cannot create VERIFIED model-capability evidence.
+- Permission/control-plane private internals are not serialized. Without a safe public observer, permission presentation remains UNKNOWN/DISCONNECTED with no authoritative-looking counters.
+- Rejected encoding/decoding maps only to one fixed generic non-secret DEGRADED snapshot.
+- `tools/runtime/status_snapshot.py` remains a deterministic disconnected diagnostic exporter and performs no provider/model/process/network/mutation action.
+- No desktop Tauri command, capability permission, subprocess bridge, shell execution, filesystem/Git mutation, model execution, credential access, permission/task mutation or computer-use authority was introduced by CP-0017.
 
 ## Correction
-`HCODER-WO-0017-CR-001` MEDIUM: **RESOLVED IN TECHNICAL CANDIDATE**. HEDS semantic pre-review found incomplete provenance, missing strict decoder semantics, boolean-as-integer acceptance and runtime type/provenance ambiguity. The reviewed head hardens all of these without expanding authority.
+`HCODER-WO-0017-CR-001` MEDIUM: **RESOLVED**. The correction completed canonical provenance, strict bounded decode semantics, runtime typed-state enforcement, boolean-counter rejection, fake-READY rejection and fixed non-secret DEGRADED fallback without expanding authority.
 
-## Technical proof
-Exact technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef`:
-- Governance `35015244682` (#225): **SUCCESS**; Ubuntu **273/273 PASS**; Windows HIGH_ASSURANCE **56/56 PASS**.
-- Desktop Shell `35015244727` (#61): **SUCCESS**; desktop security gate PASS; TypeScript PASS; Vitest **12/12 PASS**; Vite production build PASS; npm audit **0 vulnerabilities**; RustSec scanned **432** locked crates with no blocking vulnerability and **7 warning-class advisories**; Windows Rust **11/11 PASS**; `cargo check --locked` PASS; Tauri release build PASS; `DESKTOP_LAUNCH_SMOKE=PASS`.
-- HEDS technical review `5215028501`: **APPROVED FOR PROMOTION CANDIDATE**, unresolved HIGH/CRITICAL **0**.
+## Pre-merge proof
+Final exact product head `51a61a8ebdf8b50efcada02ba73c9ef406f27605`:
+- Governance `35017995721` (#235): **SUCCESS**; source-pack and Windows HIGH_ASSURANCE jobs passed.
+- Desktop Shell `35017995616` (#71): **SUCCESS**; desktop security gate, TypeScript/component contracts, production web build, npm audit, locked RustSec audit, Windows Rust tests/check, Tauri release build and `DESKTOP_LAUNCH_SMOKE=PASS` all passed.
+- HEDS final review `5215281964`: **APPROVED FOR SQUASH MERGE**, unresolved HIGH/CRITICAL **0**.
 
-## Promotion proof
-Exact promotion head `e2ae69e1be2f152eb9ce37b9b05f674dd072f5b5`:
-- Governance `35016227601` (#234): **SUCCESS**.
-- Desktop Shell `35016227612` (#70): **SUCCESS**.
-- Delta from technical head: documentation/evidence/governance-only.
-- HEDS promotion review `5215216401`: **APPROVED FOR FINAL APPROVAL MUTATION**, unresolved HIGH/CRITICAL **0**.
+## Merge and post-merge proof
+Product PR #42 was squash-merged as GitHub-signed commit `00bcb87251772cba0eb385d9628448374e9dd612`, whose parent is canonical CP-0016 SHA `442733aeae6bd2f615dc0bc4c76dda024455c212`.
 
-## Approved decision
-`DEC-021 — Runtime Observability Presentation Contract` is approved for the squash-merge candidate by the final approval mutation. It is not canonical authority until merge and post-merge validation complete on `main`.
+On exact product merge SHA `00bcb87251772cba0eb385d9628448374e9dd612`:
+- Governance `35018459649` (#236): **SUCCESS**; source-pack and Windows HIGH_ASSURANCE jobs passed.
+- Desktop Shell `35018459732` (#72): **SUCCESS**; desktop-web and desktop-windows passed, including dependency audits, locked Rust tests/check, Tauri Windows release build and `DESKTOP_LAUNCH_SMOKE=PASS`.
+
+## Canonical decision
+`DEC-021 — Runtime Observability Presentation Contract` is **APPROVED / CANONICAL**. Runtime status remains presentation truth only and cannot authorize execution, mint permits, activate skills, mutate tasks, promote model capability evidence or grant desktop/filesystem/Git/computer-use authority.
 
 ## Explicit residual boundaries
-- No live desktop-to-Python runtime-status transport is approved by CP-0017.
-- No desktop child-process launch, helper identity/authenticity or sidecar lifecycle is approved here.
+- No live desktop-to-Python runtime-status transport is canonicalized by CP-0017.
+- No desktop child-process launch, helper identity/authenticity or sidecar lifecycle is canonicalized here.
 - Provider READY is not network-health, authentication or capability-certification evidence.
-- Permission live counts remain unobserved until a safe public observer exists.
-- `RuntimeStatusSnapshot` is presentation data and cannot authorize any operation.
+- Permission live counts remain unobserved until a separately governed safe public observer exists.
 - Seven RustSec warning-class transitive advisories remain dependency debt.
-- Installer/signing/updater, full native interaction E2E, visual screenshot/pixel fidelity and accessibility automation remain unproven.
+- Stricter CSP, native/full desktop interaction E2E, visual screenshot/pixel fidelity and accessibility automation remain open hardening/validation work.
+- Stronger handle-relative/no-follow capability I/O is required before privileged workspace mutation.
+- Installer/signing/updater/release packaging and rollback/roll-forward proof remain open.
 - Final Hive Coder project license remains undecided.
 
-## Promotion remaining
-The final approval mutation must pass fresh exact-head Governance + Desktop Shell and final HEDS with no unresolved HIGH/CRITICAL. Then PR #42 may be marked ready and squash-merged. The resulting exact `main` SHA must pass post-merge Governance + Desktop Shell before CP-0017 is recorded **CANONICAL** in a separate documentation-only closeout.
+## Closeout gate
+This documentation-only canonical closeout must itself pass exact-head Governance + Desktop Shell and HEDS with unresolved HIGH/CRITICAL findings 0, then be squash-merged and pass push validation on the resulting `main` SHA. The product state recorded above is already supported by the product merge and post-merge evidence; the closeout PR introduces no runtime or authority change.
 
-## Next governed increment after canonical CP-0017
-`HCODER-WO-0018 — Cross-Runtime Status IPC Contract` may be reconstructed from its historical staged implementation only after CP-0017 is canonical. It must consume the strict canonical `RuntimeStatusSnapshot v1` contract, not the older pre-correction parser assumptions, and must not inherit divergent pre-squash history.
+## Next NECESSARY governed increment
+`HCODER-WO-0018 — Cross-Runtime Status IPC Contract` is staged next. Reconstruct it on canonical CP-0017 from the historical implementation rather than merging divergent ancestry. It must consume the corrected strict `RuntimeStatusSnapshot v1` contract, preserve presentation state as non-authoritative, use only the exact governed `status.snapshot` protocol space, and add no runtime spawn/provider/model/credential/task/permission/filesystem/Git/computer-use authority.

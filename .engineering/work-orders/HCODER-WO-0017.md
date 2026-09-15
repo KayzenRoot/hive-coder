@@ -1,6 +1,6 @@
 # HCODER-WO-0017 — Runtime Observability Contract & Safe Status Export
 
-**Status:** APPROVED FOR SQUASH MERGE — FINAL EXACT-HEAD GATES PENDING  
+**Status:** COMPLETE / CANONICAL  
 **Risk:** ELEVATED  
 **Task class:** T3  
 **Context radius:** C4  
@@ -108,3 +108,16 @@ Technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef` passed Governance #225
 Promotion head `e2ae69e1be2f152eb9ce37b9b05f674dd072f5b5` was verified as documentation/evidence/governance-only relative to the technical head. Governance #234 (`35016227601`) and Desktop Shell #70 (`35016227612`) both completed **SUCCESS** on that exact SHA. HEDS promotion review `5215216401` returned **APPROVED FOR FINAL APPROVAL MUTATION** with unresolved HIGH/CRITICAL findings **0**.
 
 `HCODER-WO-0017-CR-001` MEDIUM is resolved in the reviewed technical head. This final approval mutation remains documentation/governance-only and does not expand authority. WO-0017 is approved for squash merge only after the resulting exact head passes fresh Governance + Desktop Shell and final HEDS with no unresolved HIGH/CRITICAL. It does **not** become complete/canonical until squash merge succeeds and post-merge validation succeeds on `main`.
+
+## CANONICAL CLOSEOUT
+**Result:** STOP CONDITION SATISFIED.  
+**Checkpoint:** `HCODER-CP-0017` APPROVED / CANONICAL.  
+**Decision:** `DEC-021` APPROVED / CANONICAL.  
+**Product PR:** #42 squash-merged.  
+**Final reviewed product head:** `51a61a8ebdf8b50efcada02ba73c9ef406f27605`.  
+**Canonical product merge SHA:** `00bcb87251772cba0eb385d9628448374e9dd612`.  
+**Final product HEDS:** `5215281964`, unresolved HIGH/CRITICAL 0.  
+**Post-merge Governance:** `35018459649` (#236) SUCCESS.  
+**Post-merge Desktop Shell:** `35018459732` (#72) SUCCESS, including Windows release build and `DESKTOP_LAUNCH_SMOKE=PASS`.
+
+The original Work Order specification above is preserved as the immutable audit contract. This appendix records completion only; it does not alter its historical scope, requirements, constraints, acceptance criteria or authority boundary. The canonical closeout itself remains subject to its documentation-only PR exact-head gates/HEDS and final push validation.
