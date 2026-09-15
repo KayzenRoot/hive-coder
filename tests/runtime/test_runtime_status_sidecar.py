@@ -9,7 +9,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 from hive_runtime.process import ManagedStdioProcess, ProcessSpec, safe_child_environment
-from hive_runtime.runtime_status_protocol import MAX_REQUEST_BYTES, encode_request, parse_response
+from hive_runtime.runtime_status_protocol import (
+    MAX_REQUEST_BYTES,
+    PROTOCOL_VERSION,
+    REQUEST_OPERATION,
+    encode_request,
+    parse_response,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 SIDECAR = ROOT / "tools" / "runtime" / "status_sidecar.py"
@@ -30,10 +36,11 @@ def wait_for_exit(process: ManagedStdioProcess, timeout: float = 5.0) -> bool:
 
 
 class RuntimeStatusSidecarTests(unittest.TestCase):
-    def test_fixed_mode_one_shot_canonical_roundtrip(self) -> None:
+    def test_fixed_mode_is_process_level_one_shot_with_canonical_roundtrip(self) -> None:
         process = ManagedStdioProcess(sidecar_spec(MODE)).start()
         try:
             process.stdin.write(encode_request("process-1") + "\n")
+            process.stdin.write(encode_request("must-not-run") + "\n")
             process.stdin.flush()
             line = process.stdout.readline()
             self.assertTrue(line.endswith("\n"))
@@ -60,18 +67,25 @@ class RuntimeStatusSidecarTests(unittest.TestCase):
                     process.stop()
                 self.assertEqual(process.stderr_tail(), ())
 
-    def test_malformed_noncanonical_and_oversized_requests_fail_closed(self) -> None:
-        noncanonical = (
-            '{"protocol":"hive-runtime-status-ipc-v1",'
-            '"requestId":"noncanonical","op":"status.snapshot"}'
+    def test_invalid_protocol_requests_fail_closed_at_process_boundary(self) -> None:
+        canonical = encode_request("rejected")
+        noncanonical = json.dumps(
+            {"protocol": PROTOCOL_VERSION, "requestId": "rejected", "op": REQUEST_OPERATION},
+            separators=(",", ":"),
         )
+        duplicate = canonical.replace('{"op":', '{"op":"status.snapshot","op":', 1)
+        future_protocol = canonical.replace(PROTOCOL_VERSION, "future")
+        unsupported_operation = canonical.replace(REQUEST_OPERATION, "provider.call")
         cases = (
             "not-json",
             noncanonical,
+            duplicate,
+            future_protocol,
+            unsupported_operation,
             "x" * (MAX_REQUEST_BYTES + 1),
         )
         for payload in cases:
-            with self.subTest(payload=payload[:32]):
+            with self.subTest(payload=payload[:48]):
                 process = ManagedStdioProcess(sidecar_spec(MODE)).start()
                 try:
                     process.stdin.write(payload + "\n")
