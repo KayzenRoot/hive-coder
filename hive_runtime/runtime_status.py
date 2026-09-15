@@ -65,6 +65,8 @@ class ProviderStatus:
             if normalized in seen:
                 raise ValueError("duplicate provider model id")
             seen.add(normalized)
+        if self.state is StatusState.READY and not self.model_ids:
+            raise ValueError("READY provider requires at least one observed model")
         return self
 
 
@@ -184,12 +186,7 @@ SECRET_KEYS = ("token", "secret", "password", "credential", "api_key", "apikey",
 
 
 def reject_secret_like_mapping(values: Mapping[str, object]) -> None:
-    """Defense-in-depth guard for host-built observation dictionaries.
-
-    The status contract does not serialize arbitrary mappings. This helper allows a
-    trusted host to reject accidental secret-bearing observation input before it is
-    reduced into bounded counters/identifiers.
-    """
+    """Reject accidental secret-bearing observation input before reduction."""
     for key in values:
         lowered = str(key).strip().lower()
         if any(marker in lowered for marker in SECRET_KEYS):
@@ -201,7 +198,8 @@ def summarize_provider_catalog(catalog: ProviderCatalog, provider_ids: Iterable[
     for raw_provider in provider_ids:
         provider_id = _bounded_text(raw_provider, field="provider_id", limit=80).lower()
         models = tuple(model.model_id for model in catalog.models(provider_id))
-        summaries.append(ProviderStatus(provider_id, models).validated())
+        state = StatusState.READY if models else StatusState.UNKNOWN
+        summaries.append(ProviderStatus(provider_id, models, state).validated())
         if len(summaries) > MAX_PROVIDERS:
             raise ValueError("too many providers")
     return tuple(summaries)
