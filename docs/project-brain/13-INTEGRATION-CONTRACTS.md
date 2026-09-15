@@ -84,6 +84,27 @@ CounterPlan and Failure Oracle challengers are host-identified, independence-sep
 
 Benchmark Novelty state is also session-bounded in CP-0012. This is acceptable because WO-0012 does not contain a provider-backed trusted runner/grader that can convert generated cases into competence evidence. Durable novelty/ChronoSeal attestation is a prerequisite of the future Provider Certification Lab.
 
+## Provider Certification Lab & Semantic Repository Twin boundary
+`SemanticRepositoryTwin` is compiled only from bounded RepoDNA content using static extractors. SchemaSense, APIVein, Dataflow Echo and Dependency Cortex produce descriptive structure and bounded traversal; none of these surfaces may execute indexed repository code, grant permission, activate a skill, mint trusted evidence or rewrite the Project Digital Twin by themselves.
+
+`StackGenome` is the canonical exact-stack descriptor for certification trials. Its fingerprint must match the sealed Agent Profile execution-stack digest. Provider/model names alone have no competence authority.
+
+`SuiteLineageAuthority` HMAC-seals suite identity and independence root. CP-0011 benchmark-family diversity for lab evidence is derived from this trusted lineage rather than caller-controlled family labels.
+
+Runner and grader are represented by host-sealed `LabActor` identities. A valid lab trial requires distinct roles, distinct independence lineages and distinct EndpointSeal digests. Runner/grader identity is not accepted from model output.
+
+`StackSealAuthority` binds the sealed Agent Profile, StackGenome, provider/model identity, exact repository snapshot, Semantic Twin fingerprint, SuiteLineage, ShadowBench case, independent actors and evaluation protocol into one trial contract. Any mismatch fails closed.
+
+`TrialForge` materializes bounded provider-visible work without exposing host oracle material. The trial lineage is atomically reserved through `DurableAttestationJournal.reserve_once()` before provider execution. This One-Shot Trial Law prevents failure-driven rerolls inside the journal authority domain.
+
+A grader decision requires GradeProof before Hive may create a `TrialReceipt`. Provider responses are bounded in the certification path. Contamination Radar is negative-only and cannot increase score or rank.
+
+`DurableAttestationJournal` HMAC/hash-chains records and validates them against a host-injected external monotonic sequence floor. `DurableChronoSealClock` persists logical epochs through that journal. A valid older journal below the trusted floor is rollback and fails closed. Cross-process/distributed reservation and a production secure MonotonicAnchor implementation are not approved by CP-0013.
+
+`BenchmarkAttestationAuthority` may aggregate only compatible sealed TrialReceipts. The resulting **EvidenceDNA Envelope** HMAC-binds the complete CP-0011 BenchmarkResult to exact StackGenome, repository snapshot, Semantic Twin and SuiteLineage. `ProviderCertificationLab.evaluate_and_certify()` accepts verified EvidenceDNA envelopes, not portable naked benchmark results, and rejects evidence transplant across repository/twin/stack contexts.
+
+Auditable certification reports bind the exact EvidenceDNA set plus CP-0012 certification evidence. Certification remains competence evidence only. It never creates a CP-0005 permission, execution permit, credential, remote-control authority or skill activation.
+
 ## Remote-control boundary
 Remote Hive control will be a separate HIGH_ASSURANCE subsystem. It must use authenticated encrypted device/session semantics, least privilege, revocation, audit and emergency stop. A raw Cua/RDP/VNC endpoint must never be exposed directly to the public internet by Hive.
 
