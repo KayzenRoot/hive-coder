@@ -5,7 +5,8 @@
 **PR:** `#45`  
 **Canonical base:** `79e6eb60288c8e0adcb26bdcffdfe0ae21ef8db7` (`HCODER-CP-0017`)  
 **Technical reviewed head:** `9df7202835a47f2c18af77bbefa665afa5358b38`  
-**Status:** APPROVED FOR PROMOTION CANDIDATE
+**Promotion reviewed head:** `6545346943b94fd90b7e8cbc293c2c1afb511d52`  
+**Status:** PROMOTION HEDS APPROVED / FINAL EXACT-HEAD GATES PENDING
 
 ## Objective evidence
 WO-0018 freezes a cross-runtime presentation-only status protocol before any desktop runtime process lifecycle is approved. The protocol is exactly `hive-runtime-status-ipc-v1` with one operation, `status.snapshot`.
@@ -42,32 +43,33 @@ Semantic pre-review found that the initial TypeScript semantic parser was export
 
 A subsequent desktop-web failure on the corrected head was traced to test-fixture construction only: one provenance replacement targeted the protocol prefix and one valid provider fixture used noncanonical key order. The implementation was unchanged; the fixtures were corrected in `9df7202835a47f2c18af77bbefa665afa5358b38`.
 
-## Exact-head Governance evidence
+## Technical exact-head evidence
 Governance run `35022149949` (#241) on `9df7202835a47f2c18af77bbefa665afa5358b38`: **SUCCESS**.
 - Ubuntu source-pack: **283/283 PASS**.
 - Windows Server 2025 HIGH_ASSURANCE: **56/56 PASS**.
 
-## Exact-head Desktop Shell evidence
 Desktop Shell run `35022149971` (#77) on the same exact head: **SUCCESS**.
-
-Desktop-web:
 - `DESKTOP_SECURITY_GATE=PASS`;
 - TypeScript typecheck PASS;
 - Vitest **23/23 PASS**, including **11** runtime-status IPC tests;
 - Vite production build PASS;
-- npm audit: **0 vulnerabilities**.
-
-Desktop-windows:
+- npm audit: **0 vulnerabilities**;
 - RustSec scanned **432** locked crate dependencies with no blocking vulnerability and **7 allowed warning-class advisories**;
 - Rust unit tests **11/11 PASS**;
 - `cargo check --locked` PASS with warnings denied;
 - Tauri Windows release build PASS;
 - `DESKTOP_LAUNCH_SMOKE=PASS`.
 
-## HEDS technical review
-Review `5215646309`, anchored to exact head `9df7202835a47f2c18af77bbefa665afa5358b38`: **APPROVED FOR PROMOTION CANDIDATE**. Unresolved HIGH/CRITICAL findings: **0**.
+HEDS technical review `5215646309`, anchored to the technical head: **APPROVED FOR PROMOTION CANDIDATE**. Unresolved HIGH/CRITICAL findings: **0**.
 
-GitHub does not allow the PR author account to submit a formal APPROVE event on its own pull request, so the HEDS verdict is recorded as an exact-head review COMMENT. This is not represented as a GitHub branch-review approval.
+## Promotion exact-head evidence
+Promotion head `6545346943b94fd90b7e8cbc293c2c1afb511d52`:
+- Governance `35023149491` (#242): **SUCCESS**.
+- Desktop Shell `35023149610` (#78): **SUCCESS**.
+- Compare from technical head shows exactly one commit touching only nine documentation/governance files; no Python/TypeScript implementation, Rust/Tauri, workflow, dependency or permission change.
+- HEDS promotion review `5215758695`: **APPROVED FOR FINAL APPROVAL MUTATION**, unresolved HIGH/CRITICAL **0**.
+
+GitHub does not allow the PR author account to submit a formal APPROVE event on its own pull request, so HEDS verdicts are recorded as exact-head review COMMENT events rather than GitHub branch-review approvals.
 
 ## Explicit residual boundaries
 - No desktop-to-Python child-process transport or supervisor is implemented by WO-0018.
@@ -78,5 +80,5 @@ GitHub does not allow the PR author account to submit a formal APPROVE event on 
 - Seven RustSec warning-class transitive advisories remain inherited dependency debt.
 - Actual runtime sidecar lifecycle remains a separately governed later increment.
 
-## Promotion rule
-The technical implementation is approved only for promotion staging. `HCODER-CP-0018` remains non-canonical until the promotion/final approval deltas pass fresh exact-head Governance + Desktop Shell, HEDS reports unresolved HIGH/CRITICAL = 0, PR #45 is squash-merged, and post-merge validation succeeds on canonical `main`.
+## Final gate rule
+The commit carrying this final-approval state must independently pass fresh exact-head Governance + Desktop Shell and final HEDS with unresolved HIGH/CRITICAL = 0. Only then may PR #45 become ready and be squash-merged. CP-0018 remains non-canonical until post-merge validation and a documentation-only canonical closeout succeed on `main`.
