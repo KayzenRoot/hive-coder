@@ -74,3 +74,23 @@ jobs:
       - name: Tauri Windows build without bundle
         working-directory: apps/desktop
         run: npm run tauri -- build --no-bundle
+      - name: Windows desktop launch smoke
+        working-directory: apps/desktop
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD "src-tauri\target\release\hive-coder-desktop.exe"
+          if (-not (Test-Path $exe)) { throw "desktop executable missing: $exe" }
+          $process = Start-Process -FilePath $exe -PassThru
+          try {
+            Start-Sleep -Seconds 5
+            if ($process.HasExited) {
+              throw "Hive Coder desktop exited during launch smoke with code $($process.ExitCode)"
+            }
+            Write-Output "DESKTOP_LAUNCH_SMOKE=PASS"
+          }
+          finally {
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+              $process.WaitForExit()
+            }
+          }
