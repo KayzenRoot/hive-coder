@@ -34,7 +34,7 @@ Open Interpreter `0.0.43` and Cua Driver `0.28.1` are pinned behind Hive-owned b
 
 ## DEC-009 — Real Cua Windows harness contract
 **Status:** APPROVED  
-`HCODER-WO-0006` corrects the production modern MCP contract to `server/discover` followed by `tools/list`, with protocol metadata on every request. Hive resolves concrete Cua click/type tool names only from the pinned driver's advertised capabilities and validates required input properties before wiring. Every `tools/call` carries modern MCP metadata plus a Hive request fingerprint and remains permit-gated. Hosted CI proves contract and Windows logic but does not prove a physical Cua click/type; physical desktop E2E remains UNKNOWN until an explicitly provisioned safe runner proves it.
+`HCODER-WO-0006` corrects the production modern MCP contract to `server/discover` followed by `tools/list`, with protocol metadata on every request. Hive resolves concrete Cua click/type tool names only from the pinned driver's advertised capability tokens and required input schema, never from model/task text. The real Windows harness is explicit opt-in, exact-version preflighted, requires a named sandbox application, obtains HWND/PID/process identity through typed Win32 APIs and wires the trusted discovered bindings into the existing permit-gated executor. No capability is added beyond CP-0005. Hosted CI proves contract and Windows logic but does not prove a physical Cua click/type; physical E2E remains UNKNOWN until a safe runner with the pinned binary is explicitly provisioned.
 
 ## DEC-010 — Advanced capability roadmap
 **Status:** APPROVED DIRECTION  
