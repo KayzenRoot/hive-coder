@@ -1,6 +1,6 @@
 # License & Provenance — Hive Coder
 
-Third-party foundations must be evaluated before source import or distribution.
+Third-party foundations/dependencies must be evaluated before source import or distribution.
 
 ## Approved foundation records
 
@@ -23,10 +23,22 @@ Third-party foundations must be evaluated before source import or distribution.
 - Windows x64 artifact SHA-256: `ab90418aa2efb5a48d6eea1481fb99ae6a93e3fe93c829ee5340d5c50fb5cb1a`.
 - Integration classification: external dependency, not copied source.
 
+## Desktop dependency record
+
+### Rusty File Dialog (`rfd`)
+- Repository: `PolyMeilex/rfd`.
+- Release: `0.17.2`.
+- Source ref reviewed: `0.17.2`.
+- Upstream release manifest declares license: MIT.
+- Hive declaration: exact `=0.17.2`, `default-features = false`.
+- Integration classification: crates.io dependency, no copied/modified source.
+- Purpose: operating-system native folder selection initiated by explicit user action; it receives no model/task-selected target from the Hive frontend.
+- Cargo resolution is committed and RustSec-scanned in Desktop Shell CI.
+
 ## Explicit exclusions
-OmniParser and Ultralytics are not part of the approved first foundation set. Optional/transitive components require independent provenance/license review before inclusion.
+OmniParser and Ultralytics are not part of the approved first foundation set. Optional/transitive components require independent provenance/license review before inclusion/distribution.
 
 ## Rules
-Preserve required copyright/NOTICE/attribution; record source URL/version/commit and license for imported code; distinguish dependency use from copied/modified source; do not copy proprietary visual assets; scan transitive/optional dependencies before release; unresolved or incompatible licensing blocks distribution. Foundation binaries are not vendored and automatic install/download remains disabled under HCODER-WO-0002.
+Preserve required copyright/NOTICE/attribution; record source URL/version/commit or release ref and license for imported/dependent code; distinguish dependency use from copied/modified source; do not copy proprietary visual assets; scan transitive/optional dependencies before release; unresolved or incompatible licensing blocks distribution. Foundation binaries are not vendored and automatic install/download remains disabled under HCODER-WO-0002.
 
 No final Hive Coder project license is selected by this checkpoint. A later governed decision must choose it after product/distribution requirements are defined.

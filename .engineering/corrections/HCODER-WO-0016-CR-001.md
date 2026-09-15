@@ -1,26 +1,23 @@
 # HCODER-WO-0016-CR-001 — Root-containment hardening
 
-**Status:** CORRECTION REQUIRED  
+**Status:** RESOLVED  
 **Severity:** HIGH  
 **Detected by:** HEDS exact-head review of PR #35  
-**Affected implementation head:** `3d57190dcebcf0328ecc1ad9e8652a1b09a58869`
+**Affected implementation head:** `3d57190dcebcf0328ecc1ad9e8652a1b09a58869`  
+**Correction commit:** `edea51a6d5fae051be43754179f33f9f1e4a316c`  
+**Validated technical head:** `07dda00f7371bcb02158f0c26258b03fa0dec88d`
 
 ## Finding
-The initial evidence-bundle enumeration used `DirEntry::metadata()`. On Unix this follows a symlink before `is_link_or_reparse()` sees the metadata, so a symlinked `.md` entry could be counted as evidence outside the trusted workspace root. In addition, `safe_existing_path()` called `Path::exists()` before `symlink_metadata()`, allowing a dangling symlink to be misclassified as an absent path rather than an unsafe path.
+The initial evidence-bundle enumeration used `DirEntry::metadata()`, which can follow symlinks on Unix before link rejection. `safe_existing_path()` also used `exists()` before no-follow metadata, allowing a dangling symlink to look absent. An empty `ref: refs/heads/` could also produce malformed native Git presentation state.
 
-This violates the WO-0016 root-containment invariant. Repository content is untrusted data, and a symlink/reparse transition must never silently broaden or masquerade as trusted workspace evidence.
+## Resolution
+- evidence entries use `fs::symlink_metadata(item.path())` and link/reparse entries are degraded/skipped rather than counted;
+- child-path admission uses no-follow metadata and distinguishes true NotFound from unsafe dangling links;
+- empty local branch references fail closed as DEGRADED;
+- deterministic regressions cover malformed empty branch refs and, on Unix where deterministic symlink creation is available, dangling-link and evidence-symlink escape cases.
 
-A secondary contract defect was found in Git HEAD parsing: `ref: refs/heads/` could produce an empty branch string which the strict frontend contract rejects. Native state must fail closed before emitting malformed presentation data.
-
-## Required correction
-- use no-follow metadata for evidence directory entries;
-- inspect child paths with `symlink_metadata()` before treating NotFound as absence, so dangling links are rejected;
-- reject empty local branch references as DEGRADED native state;
-- add deterministic regression tests covering symlink evidence escape (Unix where symlink creation is deterministic), dangling-link rejection and malformed empty branch refs;
-- rerun exact-head Governance + Desktop Shell and HEDS.
+## Objective validation
+Exact technical head `07dda00f7371bcb02158f0c26258b03fa0dec88d` passed Governance run `34996930586` and Desktop Shell run `34996930809`. HEDS review `5213079423` re-audited the correction and reports unresolved HIGH/CRITICAL findings `0`.
 
 ## Authority impact
-No new authority is permitted. The correction only tightens read-only validation and fail-closed behavior.
-
-## Stop condition
-This finding is RESOLVED only when the corrected exact head passes the required tests/gates and HEDS confirms no remaining HIGH/CRITICAL root-containment issue.
+None. The correction only tightens the approved read-only validation boundary.

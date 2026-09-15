@@ -16,19 +16,24 @@ Rules:
 - Durable logs/evidence must redact secrets and minimize user desktop data.
 - Architecture changes require T3 Work Order + ADR/Decisions Ledger update.
 
-## Desktop shell foundation — WO-0015 candidate
-`apps/desktop/` is the first governed desktop substrate. It uses Tauri 2 with React/TypeScript/Vite, but the desktop framework does not own Hive authority.
+## Desktop shell foundation — WO-0015
+`apps/desktop/` is the first governed desktop substrate using Tauri 2 with React/TypeScript/Vite. The desktop framework does not own Hive authority.
 
-The WO-0015 application bridge is deliberately read-only:
+`DesktopSnapshot v1` established a non-authoritative presentation bridge, a `main`-window-only Tauri capability with zero plugin permissions and no shell/filesystem/process plugin or generic dispatch. Future mutation remains subordinate to the canonical layering.
 
-`React UI -> desktopBridge.ts -> get_desktop_snapshot -> DesktopSnapshot v1`
+## Trusted workspace/Git read surface — WO-0016 promotion candidate
+WO-0016 evolves the bridge without turning the UI into a filesystem authority:
 
-- `get_desktop_snapshot` is the only Tauri command in the increment.
-- The command accepts no user-controlled execution payload and fails closed unless invoked from the WebView window labelled `main`.
-- `DesktopSnapshot v1` is presentation state, not an authorization token or capability grant.
-- Tauri capability `desktop-read-only` grants zero plugin permissions.
-- Shell/filesystem/process plugins and generic command dispatch are absent.
-- Runtime/provider/Git/evidence/permission signals may be shown only with explicit provenance and truthful UNKNOWN/DISCONNECTED/DEGRADED state when the corresponding live adapter is absent.
-- Safety controls may be visible before they are actionable, but they must remain disabled until a later governed session exposes a trusted action path.
+`React UI -> desktopBridge.ts -> { choose_workspace | get_desktop_snapshot } -> trusted Rust application state -> DesktopSnapshot v2`
 
-Any future desktop mutation path must preserve the canonical layering: UI -> application/orchestrator -> Permission & Control Plane -> capability adapter/executor. A Tauri command must never become a bypass around the existing permit model.
+- `choose_workspace` accepts no frontend path argument. The operating-system/native picker is invoked only after explicit user interaction.
+- The Rust application validates/canonicalizes the selected directory and retains it as session-owned `DesktopState`; the UI sees bounded identity/presentation fields only.
+- Workspace observations are bounded, root-contained and read-only. Static symlink/reparse traversal fails closed.
+- Git identity is observed from bounded `.git/HEAD`, loose ref or bounded packed-ref data, never by spawning `git`.
+- Linked-worktree pointer files are intentionally reported DEGRADED rather than followed outside the selected root.
+- Hive checkpoint/evidence discovery is bounded and no-follow; physical text reads enforce a byte ceiling before decoding.
+- `DesktopSnapshot v2` remains presentation state, not an authorization token/capability grant.
+- Tauri capability `desktop-read-only` still grants zero plugin permissions.
+- Runtime/provider/permission may be shown only with explicit provenance and truthful UNKNOWN/DISCONNECTED/DEGRADED state until corresponding live adapters exist.
+
+The remaining path-based read TOCTOU residual is acceptable only for this non-authoritative presentation slice. Before a future privileged file/Git mutation path exists, a separate governed design must establish stronger handle-relative/no-follow capability I/O and preserve the Permission & Control Plane choke point.
