@@ -63,7 +63,10 @@ jobs:
           toolchain: 1.98.1
           cache: false
       - name: Install pinned RustSec cargo-audit
-        run: cargo install cargo-audit --version 0.22.2 --locked
+        uses: taiki-e/install-action@26e9283f268b880168bdbd2c545dfcd60ec2c6ab
+        with:
+          tool: cargo-audit@0.22.2
+          fallback: none
       - name: Audit locked Rust dependency graph
         run: cargo audit --file apps/desktop/src-tauri/Cargo.lock
       - name: Generate deterministic Hive desktop icon
