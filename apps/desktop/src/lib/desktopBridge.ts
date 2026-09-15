@@ -6,6 +6,7 @@ import {
 } from "../contracts/desktopSnapshot";
 
 const SNAPSHOT_COMMAND = "get_desktop_snapshot" as const;
+const CHOOSE_WORKSPACE_COMMAND = "choose_workspace" as const;
 
 export async function loadDesktopSnapshot(): Promise<DesktopSnapshot> {
   try {
@@ -14,4 +15,9 @@ export async function loadDesktopSnapshot(): Promise<DesktopSnapshot> {
   } catch {
     return disconnectedSnapshot();
   }
+}
+
+export async function chooseWorkspace(): Promise<DesktopSnapshot> {
+  const raw: unknown = await invoke(CHOOSE_WORKSPACE_COMMAND);
+  return parseDesktopSnapshot(raw);
 }
