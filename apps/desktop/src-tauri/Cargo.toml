@@ -5,7 +5,7 @@ description = "Hive Coder desktop shell"
 authors = ["Hive Coder"]
 edition = "2024"
 rust-version = "1.98.1"
-license = "UNLICENSED"
+publish = false
 
 [lib]
 name = "hive_coder_desktop_lib"
