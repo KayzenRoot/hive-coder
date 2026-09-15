@@ -1,0 +1,10 @@
+{
+  "workOrderId": "HCODER-WO-0007",
+  "baseCheckpoint": "HCODER-CP-0006",
+  "baseSha": "91e0265a215d4edb179d6fcdafbbf3a05409e244",
+  "risk": "ELEVATED",
+  "taskClass": "T3",
+  "contextRadius": "C3",
+  "allowed": ["model-capability-metadata", "skill-metadata", "untrusted-skill-content", "deterministic-evaluation"],
+  "forbidden": ["provider-credentials", "remote-control", "automatic-install", "permission-expansion", "desktop-mutation"]
+}
