@@ -31,12 +31,33 @@ describe("DesktopSnapshot contract", () => {
 
   it("rejects unbounded presentation strings", () => {
     const snapshot = disconnectedSnapshot();
-    snapshot.runtime.detail = "x".repeat(241);
+    snapshot.runtime.detail = "x".repeat(321);
     expect(() => parseDesktopSnapshot(snapshot)).toThrow(/runtime.detail/);
   });
 
   it("rejects schema drift", () => {
-    const snapshot = { ...disconnectedSnapshot(), schemaVersion: 2 };
+    const snapshot = { ...disconnectedSnapshot(), schemaVersion: 3 };
     expect(() => parseDesktopSnapshot(snapshot)).toThrow(/unsupported/);
+  });
+
+  it("rejects selected workspace without application-owned identity", () => {
+    const snapshot = disconnectedSnapshot();
+    snapshot.workspace.selected = true;
+    snapshot.workspace.name = "demo";
+    snapshot.workspace.root = "C:/demo";
+    expect(() => parseDesktopSnapshot(snapshot)).toThrow(/trusted identity/);
+  });
+
+  it("rejects Git identity on a non-repository state", () => {
+    const snapshot = disconnectedSnapshot();
+    snapshot.git.head = "0123456789abcdef0123456789abcdef01234567";
+    expect(() => parseDesktopSnapshot(snapshot)).toThrow(/non-repository/);
+  });
+
+  it("rejects malformed Git object identity", () => {
+    const snapshot = disconnectedSnapshot();
+    snapshot.git.repository = true;
+    snapshot.git.head = "not-an-object-id";
+    expect(() => parseDesktopSnapshot(snapshot)).toThrow(/git.head/);
   });
 });
