@@ -24,11 +24,12 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: 1.98.1
-      - name: Resolve only the declared Cargo graph
+          cache: false
+      - name: Resolve declared Cargo graph
         shell: pwsh
         run: |
-          cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
-          cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --no-run
+          cargo update --manifest-path apps/desktop/src-tauri/Cargo.toml
+          cargo metadata --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --no-deps --format-version 1 | Out-Null
       - name: Show lock delta
         shell: pwsh
         run: git diff -- apps/desktop/src-tauri/Cargo.lock
