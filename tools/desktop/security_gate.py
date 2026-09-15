@@ -21,6 +21,9 @@ FORBIDDEN_TEXT = {
     "OPENAI_API_KEY": "provider credential reference",
     "ANTHROPIC_API_KEY": "provider credential reference",
     "GEMINI_API_KEY": "provider credential reference",
+    "-apple-system": "Apple-specific UI font reference",
+    "BlinkMacSystemFont": "Apple-specific UI font reference",
+    "SFMono-Regular": "Apple-specific UI font reference",
 }
 
 ALLOWED_INVOKE_FILE = (DESKTOP / "src" / "lib" / "desktopBridge.ts").resolve()
@@ -30,7 +33,7 @@ EXPECTED_WINDOW = "main"
 
 
 def text_files() -> list[Path]:
-    suffixes = {".rs", ".ts", ".tsx", ".json", ".toml"}
+    suffixes = {".rs", ".ts", ".tsx", ".json", ".toml", ".css"}
     return [p for p in DESKTOP.rglob("*") if p.is_file() and p.suffix in suffixes]
 
 
@@ -149,6 +152,7 @@ def main() -> int:
     print(f"CAPABILITY={EXPECTED_CAPABILITY}")
     print(f"WINDOW_SCOPE={EXPECTED_WINDOW}")
     print("CAPABILITY_PERMISSIONS=0")
+    print("APPLE_SPECIFIC_FONT_REFERENCES=0")
     print("LOCKFILES=COMMITTED")
     return 0
 
