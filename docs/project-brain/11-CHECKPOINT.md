@@ -1,12 +1,13 @@
 # Checkpoint — Hive Coder
 
 **Checkpoint:** `HCODER-CP-0015`  
-**Status:** APPROVED — FINAL EXACT-HEAD VALIDATION REQUIRED BEFORE MERGE  
+**Status:** APPROVED — CANONICAL ON `main`  
 **Date:** 2026-09-15  
 **Repository:** `KayzenRoot/hive-coder`  
 **Approved Work Order:** `HCODER-WO-0015`  
-**PR:** `#32`  
-**Base checkpoint:** `HCODER-CP-0014`
+**PR:** `#32` — SQUASH MERGED  
+**Base checkpoint:** `HCODER-CP-0014`  
+**Canonical merge SHA:** `018710f35460dc3dd3ffa47e433717230383564b`
 
 ## Proven canonical state
 - All approved authority/security boundaries from HCODER-CP-0005 through HCODER-CP-0014 remain authoritative and unchanged.
@@ -43,6 +44,20 @@ Exact candidate evidence:
 - Desktop Shell run `34985024599` (#25): security gate PASS; TypeScript PASS; Vitest **8/8 PASS**; Vite production build PASS; npm audit **0 vulnerabilities**; RustSec audit command PASS over 431 locked crate dependencies with the same 7 recorded warning-class advisories; Rust **3/3 PASS**; `cargo check --locked` PASS; Tauri release build PASS; `DESKTOP_LAUNCH_SMOKE=PASS`.
 - HEDS promotion review `5211785907`: **APPROVED FOR FINAL APPROVAL MUTATION**, unresolved HIGH/CRITICAL **0**.
 
+Final approved PR head `e0434fe364fa017f77e636d31fc3aa37d782a3a1`:
+- Governance run `34986243282` (#190): Ubuntu **256/256 PASS**, Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**.
+- Desktop Shell run `34986243340` (#26): security gate PASS; TypeScript PASS; Vitest **8/8 PASS**; Vite production build PASS; npm audit **0 vulnerabilities**; RustSec audit command PASS with the recorded warning-class advisories; Rust **3/3 PASS**; `cargo check --locked` PASS; Tauri release build PASS; `DESKTOP_LAUNCH_SMOKE=PASS`.
+- HEDS final review `5211880613`: **APPROVED FOR SQUASH MERGE**, unresolved HIGH/CRITICAL **0**.
+
+## Canonical merge and post-merge validation
+PR `#32` squash-merged the exact reviewed head into canonical `main` as `018710f35460dc3dd3ffa47e433717230383564b`.
+
+Push-triggered validation on that exact canonical SHA:
+- Governance run `34986624437` (#191): **SUCCESS**. Ubuntu `source-pack` ran **256/256 PASS**; Windows Server 2025 HIGH_ASSURANCE `control-plane-windows` ran **56/56 PASS**.
+- Desktop Shell run `34986624466` (#27): **SUCCESS**. Desktop security gate PASS; TypeScript PASS; Vitest **8/8 PASS**; Vite production build PASS; npm audit **0 vulnerabilities**; RustSec audit command PASS with the same recorded warning-class advisories; Rust **3/3 PASS**; `cargo check --locked` PASS; Tauri Windows release build PASS; `DESKTOP_LAUNCH_SMOKE=PASS`.
+- Issue `#31` closed automatically by the merged PR.
+- `HCODER-WO-0015` therefore satisfies its STOP CONDITION and is **COMPLETE**.
+
 ## Explicit residual boundaries
 - RustSec still reports seven warning-class transitive advisories. The Cargo graph is not claimed warning-free; dependency refresh/target-chain analysis remains follow-up debt.
 - Desktop CSP still permits `style-src 'unsafe-inline'`; stricter style CSP remains later hardening.
@@ -52,8 +67,7 @@ Exact candidate evidence:
 - No real provider credentials, privileged computer-use mutation, remote control, automatic skill activation, autonomous billing/purchases or permission expansion is approved.
 - Final Hive Coder project license remains undecided and is a release gate.
 
-## Final validation / merge rule
-This APPROVED checkpoint mutation is documentation/governance-only. It must independently pass exact-head Governance + Desktop Shell and final HEDS with no unresolved HIGH/CRITICAL finding before PR #32 may leave draft and squash-merge. The merge must use the exact final reviewed head. Push-triggered Governance + Desktop Shell must then pass on canonical `main` before WO-0015 is considered closed.
-
 ## Next necessary increment
-Do not authorize `HCODER-WO-0016` until CP-0015 is canonical on `main`, post-merge validation is green, Issue #30 is refreshed and a new source-check selects the next NECESSARY product increment.
+Post-CP-0015 source-check confirms that the Python runtime, resumable agent-task engine and provider/model contracts already exist, while the desktop still reports runtime `DISCONNECTED` and provider/Git/evidence/permission `UNKNOWN`. No concrete `GitAdapter` or `ShellFileAdapter` implementation is present on canonical `main`.
+
+The next NECESSARY increment must therefore bridge truthful live **read-only** product state from Hive-owned runtime/workspace/provider/Git/evidence/permission sources into the desktop before enabling corresponding mutation surfaces. It must not bypass the Permission & Control Plane or introduce a generic shell/filesystem execution bridge.
