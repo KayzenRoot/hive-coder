@@ -3,9 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Mapping, Protocol
 from .orchestration import AgentRole, FindingSeverity, MasterPlan, PlanApprovalAuthority, ProjectDigitalTwin
-from .expert_common import _SAFE_ID, _SAFE_TOKEN, ChallengeKind
+from .expert_common import _SAFE_ID, _SAFE_TOKEN, ChallengeKind, CompetenceLevel
 from .expert_identity import AgentProfile, AgentProfileAuthority, ExpertAgentRegistry
 from .expert_evaluation import CompetenceReport, CompetenceStandard, ExperienceRouter
+
 
 @dataclass(frozen=True)
 class AgentAssignment:
@@ -18,7 +19,7 @@ class AgentAssignment:
 
 
 class AgentMesh:
-    """Binds sealed MasterPlan steps to measured specialist profiles."""
+    """Binds sealed MasterPlan steps to measured DISTINGUISHED specialist profiles."""
 
     OVERSIGHT_ROLES = frozenset({AgentRole.SECURITY, AgentRole.QA, AgentRole.REVIEWER})
 
@@ -30,6 +31,10 @@ class AgentMesh:
         self.registry = registry
         self.router = router
         self.standards = dict(standards)
+        for standard in self.standards.values():
+            standard.validate()
+            if standard.level is not CompetenceLevel.DISTINGUISHED:
+                raise ValueError("AgentMesh production assignments require DISTINGUISHED competence standards")
 
     def assign(self, master: MasterPlan) -> tuple[AgentAssignment, ...]:
         if not self.approval_authority.verify(master):
@@ -117,7 +122,7 @@ class ChallengePolicy:
 
 
 class AdversarialChallengeEngine:
-    """Runs measured, host-identified challengers. Findings grant no authority."""
+    """Runs DISTINGUISHED host-identified challengers. Findings grant no authority."""
 
     ALLOWED_ROLES: Mapping[ChallengeKind, frozenset[AgentRole]] = {
         ChallengeKind.COUNTERPLAN: frozenset({AgentRole.PLANNER, AgentRole.ARCHITECT, AgentRole.REVIEWER}),
@@ -135,6 +140,10 @@ class AdversarialChallengeEngine:
         self.router = router
         self.standards = dict(standards)
         self.policy = policy
+        for standard in self.standards.values():
+            standard.validate()
+            if standard.level is not CompetenceLevel.DISTINGUISHED:
+                raise ValueError("adversarial challengers require DISTINGUISHED competence standards")
 
     def run(self, master: MasterPlan,
             challengers: Mapping[ChallengeKind, tuple[AgentProfile, ChallengePort]]) -> ChallengeReport:
