@@ -54,9 +54,29 @@ Fresh hidden/project-specific suites should use multiple verified independent so
 
 HIGH_ASSURANCE laboratory tests must include exact-head CI, runner/grader independence, endpoint collapse, grade-proof absence, concurrent reservation, signed rollback, case replay, StackGenome drift, SuiteLineage gaming, contamination blocks, EvidenceDNA tamper/transplant and unchanged Windows control-plane regression.
 
+## Elite Specialist Forge & Arena policy
+
+`HCODER-WO-0014` adds HIGH_ASSURANCE specialist composition, anti-overfit challenge admission and quality-first routing controls:
+- ForgeSeal tests must reject unsealed AgentProfiles, specialization provenance tamper, exact StackGenome mismatch, SkillGenome transplant, repository snapshot drift, Semantic Twin transplant and stale/invalid certification.
+- SkillGenome fingerprint must equal the certified StackGenome skillset digest before blueprint issuance.
+- ChallengeMorph tests must prove challenge identity remains bound to trusted ShadowBench and sealed SuiteLineage while provider-visible material receives no oracle authority.
+- Anti-Overfit Horizon tests must reject exact challenge replay, prompt replay and source/base-lineage replay. Mastery admission must independently re-enforce sealed base-lineage diversity so bypassing the horizon helper cannot inflate mastery.
+- ArenaEvidence tests must reject telemetry tamper, GradeProof mismatch, blueprint/challenge transplant and repository/twin mismatch.
+- Mastery Lattice must reject duplicate blueprint/challenge evidence and compute quality/reliability only from admitted trusted evidence.
+- Diversity Quorum, minimum quality and minimum reliability floors are irreducible and must reject caller attempts to weaken them.
+- Pareto Crown must directly reverify AgentProfile authority and current certification context at routing time.
+- Critical, policy and tamper incidents must block candidate selection regardless of lower cost or latency.
+- Cost/latency tests must prove optimization occurs only among candidates already satisfying all hard security, quality, reliability and diversity floors.
+- Reliability Shadow tests must prove negative outcomes can block/demote/force recertification while positive outcomes cannot create mastery, benchmark evidence or authority.
+- Deterministic selection must be identical for identical sealed evidence and policy inputs.
+
+WO-0014 promotion requires exact-head Governance, full Ubuntu discovery with `ResourceWarning` fatal, unchanged Windows Server 2025 HIGH_ASSURANCE regression, adversarial HEDS, no unresolved HIGH/CRITICAL finding, and a documentation delta that does not overclaim real-provider evidence.
+
+Technical head `54d19f3acbac6e20f34287d5fe12cc2316d89e23` established **256/256 Ubuntu PASS** and **56/56 Windows HIGH_ASSURANCE PASS** before promotion-document staging. The final promotion candidate must independently re-run those gates on its own exact head.
+
 ## Explicit evaluation limits
 
-Hosted CI uses deterministic mock provider runners/graders and contains no production provider credentials. Passing laboratory contract tests is therefore not evidence that a real model/provider stack has earned `DISTINGUISHED`.
+Hosted CI uses deterministic mock provider runners/graders and contains no production provider credentials. Passing laboratory or arena contract tests is therefore not evidence that a real model/provider stack has earned `DISTINGUISHED` or elite status.
 
 The CP-0013 durable journal provides thread-safe atomic reservation inside one process. Cross-process/distributed reservation requires a later transactional/lease-backed laboratory service and is not approved by this checkpoint.
 
@@ -64,4 +84,6 @@ The host-injected `MonotonicAnchor` is a contract, not yet a production platform
 
 Semantic Twin evidence is conservative static analysis. APIVein observations can include framework-like decorator patterns and Dataflow Echo is not dynamic taint analysis. These observations improve task construction/context but do not become architecture or security truth merely by existing.
 
-Future benchmark upgrades should add language/framework Specialist Packs, live provider qualification through locally provisioned credentials, adaptive fresh trials, cost/latency and repair-quality metrics, stronger contamination estimation, cross-process transactional trial reservation and externally attested monotonic chronology. Never report unmeasured gains as facts.
+WO-0014 `ArenaTelemetry` trust is an injected verifier contract. Hosted CI does not prove real provider billing/latency/reliability telemetry provenance. Mastery Lattice, Horizon state and Reliability Shadow are process/session-bounded in WO-0014; durable rollback-resistant reputation is not approved.
+
+Future benchmark upgrades may add live provider qualification through locally provisioned credentials, stronger contamination estimation, cross-process transactional trial reservation, externally attested monotonic chronology, authenticated real-provider telemetry and durable mastery memory. `TelemetrySeal` and `MasteryVault` remain future direction only until separately governed. Never report unmeasured gains as facts.

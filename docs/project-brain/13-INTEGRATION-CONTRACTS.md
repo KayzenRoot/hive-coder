@@ -105,6 +105,27 @@ A grader decision requires GradeProof before Hive may create a `TrialReceipt`. P
 
 Auditable certification reports bind the exact EvidenceDNA set plus CP-0012 certification evidence. Certification remains competence evidence only. It never creates a CP-0005 permission, execution permit, credential, remote-control authority or skill activation.
 
+## Elite Specialist Forge & Autonomous Engineering Arena boundary
+`SpecializationPack` is trusted-host provenance-bound descriptive specialization doctrine. It carries no permission, execution, activation or competence-grant authority.
+
+`SkillGenome` is the exact specialist skill-composition descriptor. Forge admission requires its fingerprint to equal the certified `StackGenome.skillset_digest`; a caller cannot transplant a genome onto another execution stack by relabeling skills.
+
+`ForgeSealAuthority` issues a specialist blueprint only after revalidating the sealed AgentProfile, exact StackGenome, repository snapshot, Semantic Repository Twin, trusted SpecializationPack, exact SkillGenome and compatible trusted certification evidence. Repository/twin/certification transplant fails closed.
+
+`ChallengeMorph` accepts trusted ShadowBench + sealed SuiteLineage context and produces bounded variants without turning challenge text into authority. Anti-Overfit Horizon rejects exact/prompt/source-lineage replay, and Mastery Lattice independently re-enforces the sealed base-lineage root so helper bypass cannot manufacture independent mastery.
+
+`ArenaEvidence` is sealed to the exact specialist blueprint/challenge/repository/twin context. GradeProof and telemetry must verify before admission. The telemetry verifier is injected by the trusted host; caller/model-provided cost, latency or reliability values have no trust by themselves.
+
+`MasteryLattice` admits each blueprint/challenge pair once and computes confidence-adjusted quality/reliability under irreducible floors plus Diversity Quorum. Caller policy may strengthen but cannot weaken required security/quality/reliability/diversity floors.
+
+`ReliabilityShadow` is negative-only operational regression memory. It can block/demote/accelerate recertification but cannot mint positive benchmark evidence, competence, permission or authority.
+
+`ParetoCrown` directly revalidates `AgentProfileAuthority`, exact certification context and admitted mastery evidence before routing. Critical/policy/tamper incidents and hard quality/reliability/diversity failures are filtered before cost/latency optimization. Optimization operates only across already-qualified candidates and is deterministic for identical trusted inputs.
+
+WO-0014 does not add CP-0005 permissions, execution permits, automatic skill activation, arbitrary repository execution, remote control or autonomous purchase/billing authority. Hosted CI uses deterministic/mock provider/evaluation surfaces and does not prove a real provider/model stack elite or `DISTINGUISHED`.
+
+WO-0014 mastery/horizon/reliability state is process/session-bounded and production arena telemetry relies on a trusted verifier contract rather than a proven provider-attestation implementation. Durable mastery/reputation and authenticated provider telemetry remain later governed boundaries.
+
 ## Remote-control boundary
 Remote Hive control will be a separate HIGH_ASSURANCE subsystem. It must use authenticated encrypted device/session semantics, least privilege, revocation, audit and emergency stop. A raw Cua/RDP/VNC endpoint must never be exposed directly to the public internet by Hive.
 

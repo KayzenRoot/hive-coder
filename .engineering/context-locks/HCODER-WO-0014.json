@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "hive-context-lock-v1",
+  "workOrderId": "HCODER-WO-0014",
+  "repository": "KayzenRoot/hive-coder",
+  "baseSha": "c30531c6d53f252a3a8f965a55f17fe37b58468d",
+  "checkpoint": "HCODER-CP-0013",
+  "risk": "HIGH_ASSURANCE",
+  "taskClass": "T3",
+  "contextRadius": "C4",
+  "objective": "Build the Elite Specialist Forge and Autonomous Engineering Arena without expanding execution authority.",
+  "authorityBoundaries": [
+    "CP-0005 permission authority remains unchanged",
+    "CP-0007/0008 capability truth remains unchanged",
+    "CP-0009 execution/checkpoint authority remains unchanged",
+    "CP-0010 planning/evidence authority remains unchanged",
+    "CP-0011 competence floors remain unchanged",
+    "CP-0012 repository-intelligence and recertification boundaries remain authoritative",
+    "CP-0013 certification-lab, StackGenome, SuiteLineage and EvidenceDNA boundaries remain authoritative"
+  ],
+  "forbidden": [
+    "real paid provider credentials in hosted CI",
+    "automatic permission or capability changes",
+    "automatic skill activation or promotion",
+    "arbitrary repository execution",
+    "remote control",
+    "distributed benchmark farms",
+    "cost or latency overriding safety/quality floors",
+    "model/self-description granting specialist rank",
+    "claiming a real model/provider is elite without trusted provider-backed evidence"
+  ]
+}

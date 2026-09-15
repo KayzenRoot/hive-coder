@@ -22,3 +22,20 @@ Certification evidence is security-sensitive because it may influence which spec
 - No certification record, benchmark result, Semantic Twin node or provider capability claim may grant a CP-0005 permission, create an execution permit, activate a skill or bypass emergency/takeover controls.
 
 Cross-process/distributed trial reservation and a production secure monotonic anchor are not approved in CP-0013. Production adoption of either requires its own threat model, deterministic/adversarial tests and governed promotion.
+
+## Elite Specialist Forge & Arena security boundary
+WO-0014 treats specialist composition, arena evidence and routing as security-sensitive competence metadata, never as execution authority.
+
+- `SpecializationPack`, `SkillGenome`, specialist labels, model/provider names and self-description contain zero permission or rank authority.
+- ForgeSeal must verify the sealed AgentProfile and bind the exact StackGenome, repository snapshot, Semantic Repository Twin, trusted SpecializationPack, exact SkillGenome and trusted certification evidence. Unknown/tampered/transplanted context fails closed.
+- SkillGenome must fingerprint-match the StackGenome skillset digest before a specialist blueprint can exist. Caller-controlled skill labels cannot transplant competence to another stack.
+- ChallengeMorph may vary a trusted ShadowBench challenge only under sealed SuiteLineage. Challenge variants do not create independent mastery when they share one sealed base source lineage.
+- Anti-Overfit Horizon protections are enforced again when evidence enters Mastery Lattice. Bypassing the helper cannot manufacture diversity.
+- ArenaEvidence is admitted only when GradeProof, challenge/blueprint identity, repository/twin bindings and telemetry verification all match.
+- Arena telemetry is non-authoritative until a trusted host-injected verifier accepts it. Cost/latency observations can never relax security, quality or reliability floors.
+- Reliability Shadow is negative-only. Operational regressions may block/demote/force recertification but positive observations cannot mint benchmark evidence or rank.
+- Pareto Crown directly revalidates AgentProfile authority and exact certification context at final routing time. Critical, policy and tamper incidents block selection before optimization.
+- Competence artifacts cannot create CP-0005 permits, activate skills, grant credentials, authorize purchases/billing, expose remote control or bypass emergency/takeover controls.
+- Hosted CI remains mock/deterministic. It proves contracts and adversarial invariants only, not the security or elite quality of any real provider stack.
+
+Production attestation for real provider billing/latency/reliability telemetry and durable cross-restart mastery/reputation are not approved in WO-0014. Any future `TelemetrySeal` or `MasteryVault` must receive a separate HIGH_ASSURANCE threat model, rollback protection, adversarial tests and governed promotion before use.
