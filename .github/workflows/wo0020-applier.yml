@@ -1,0 +1,32 @@
+name: WO0020 Exact Patch Applier
+
+on:
+  push:
+    branches: [feat/HCODER-WO-0020-desktop-runtime-status-bridge]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[wo20-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/HCODER-WO-0020-desktop-runtime-status-bridge
+          fetch-depth: 0
+      - name: Apply exact guarded patch
+        run: python tools/engineering/apply_wo0020.py
+      - name: Verify patch shape
+        run: |
+          git diff --check
+          git status --short
+          test -n "$(git status --short)"
+      - name: Commit guarded patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/desktop/src-tauri/src/lib.rs apps/desktop/src/lib/desktopBridge.ts apps/desktop/src/App.tsx apps/desktop/src/components/ShellView.tsx apps/desktop/src/components/RuntimeStatusSurface.test.tsx tools/desktop/security_gate.py
+          git commit -m "[wo20-applied] HCODER-WO-0020: integrate fixed runtime status bridge"
+          git push origin HEAD:feat/HCODER-WO-0020-desktop-runtime-status-bridge
