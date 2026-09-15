@@ -1,0 +1,126 @@
+name: WO0016 CR002 Apply
+
+on:
+  push:
+    branches:
+      - feat/HCODER-WO-0016-trusted-workspace-git-read
+
+permissions:
+  contents: write
+
+jobs:
+  apply-correction:
+    if: github.repository == 'KayzenRoot/hive-coder'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: true
+      - name: Verify exact-head checkout
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "EXACT_HEAD_OK=$EXPECTED_SHA"
+      - name: Apply physical bounded-read correction
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/desktop/src-tauri/src/lib.rs')
+          text = path.read_text(encoding='utf-8')
+          original = text
+
+          old = '''fn read_bounded_text(path: &Path, max_bytes: u64) -> Result<String, String> {
+              let metadata = fs::metadata(path).map_err(|_| "bounded file metadata unavailable".to_owned())?;
+              if !metadata.is_file() || metadata.len() > max_bytes {
+                  return Err("bounded file is invalid or exceeds size limit".to_owned());
+              }
+              let mut file = File::open(path).map_err(|_| "bounded file is unreadable".to_owned())?;
+              let mut text = String::new();
+              file.read_to_string(&mut text)
+                  .map_err(|_| "bounded file is not valid UTF-8 text".to_owned())?;
+              Ok(text)
+          }
+          '''
+          old = old.replace('          ', '')
+          new = '''fn read_bounded_text(path: &Path, max_bytes: u64) -> Result<String, String> {
+              let metadata = fs::symlink_metadata(path).map_err(|_| "bounded file metadata unavailable".to_owned())?;
+              if is_link_or_reparse(&metadata) || !metadata.is_file() || metadata.len() > max_bytes {
+                  return Err("bounded file is invalid or exceeds size limit".to_owned());
+              }
+              let file = File::open(path).map_err(|_| "bounded file is unreadable".to_owned())?;
+              let mut bytes = Vec::new();
+              file.take(max_bytes.saturating_add(1))
+                  .read_to_end(&mut bytes)
+                  .map_err(|_| "bounded file is unreadable".to_owned())?;
+              if bytes.len() as u64 > max_bytes {
+                  return Err("bounded file exceeded size limit during read".to_owned());
+              }
+              String::from_utf8(bytes).map_err(|_| "bounded file is not valid UTF-8 text".to_owned())
+          }
+          '''
+          new = new.replace('          ', '')
+          if old in text:
+              text = text.replace(old, new, 1)
+
+          marker = 'fn bounded_text_rejects_growth_beyond_physical_ceiling()'
+          if marker not in text:
+              insertion = r'''
+
+              #[test]
+              fn bounded_text_rejects_growth_beyond_physical_ceiling() {
+                  let root = temp_root("bounded-read");
+                  let file = root.join("bounded.txt");
+                  fs::write(&file, b"123456789").unwrap();
+                  assert!(read_bounded_text(&file, 8).is_err());
+                  assert_eq!(read_bounded_text(&file, 9).unwrap(), "123456789");
+                  cleanup(&root);
+              }
+          '''
+              insertion = insertion.replace('          ', '')
+              pos = text.rfind('\n}')
+              if pos < 0:
+                  raise SystemExit('test module closing brace not found')
+              text = text[:pos] + insertion + text[pos:]
+
+          required = [
+              'fs::symlink_metadata(path)',
+              'file.take(max_bytes.saturating_add(1))',
+              'read_to_end(&mut bytes)',
+              'bytes.len() as u64 > max_bytes',
+              marker,
+          ]
+          missing = [needle for needle in required if needle not in text]
+          if missing:
+              raise SystemExit(f'correction incomplete: {missing}')
+
+          if text != original:
+              path.write_text(text, encoding='utf-8')
+              print('CR002_CHANGED=1')
+          else:
+              print('CR002_CHANGED=0')
+          PY
+      - name: Validate and commit correction only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git diff --name-only)
+          if [ "${#changed[@]}" -eq 0 ]; then
+            echo "CR002_COMMITTED=0"
+            exit 0
+          fi
+          if [ "${#changed[@]}" -ne 1 ] || [ "${changed[0]}" != "apps/desktop/src-tauri/src/lib.rs" ]; then
+            printf 'unexpected correction delta: %s\n' "${changed[*]}" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/desktop/src-tauri/src/lib.rs
+          git commit -m "HCODER-WO-0016-CR-002: enforce physical bounded reads"
+          git push origin HEAD:feat/HCODER-WO-0016-trusted-workspace-git-read
+          echo "CR002_COMMITTED=1"
