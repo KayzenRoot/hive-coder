@@ -31,26 +31,19 @@ If the user says `continue`, `continue do chat anterior`, or equivalent for Hive
 4. Continue autonomously from its `NEXT EXACT ACTIONS`; do not ask the user to restate recoverable context.
 
 ## Current execution state
-Canonical `main` remains `HCODER-CP-0018` at `c0a44d43546b9f176125b9e7099b8422d6b62ba3` until WO-0019 merges and passes post-merge validation.
+Canonical `main` is `HCODER-CP-0019` at `e4bc74d1ae6c4054cd98cd34b16e6357f911224c` until WO-0020 is fully promoted and closed out.
 
-Active increment: `HCODER-WO-0019 — Runtime Status Sidecar Helper`, Issue `#47`, PR `#48`, branch `feat/HCODER-WO-0019-runtime-status-sidecar-canonical`.
+Active increment: `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface`, Issue `#51`, branch `feat/HCODER-WO-0020-desktop-runtime-status-supervisor-canonical`.
 
-Technical exact head `ba10ba72f76316806cd820dc0d205e68105f61bb` passed Governance #250 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #86 (security gate, frontend **23/23**, npm audit 0, locked Rust checks, Windows release build and launch smoke). HEDS technical review `5216093993` is **APPROVED FOR PROMOTION**, unresolved HIGH/CRITICAL `0`.
+Historical PR #39 / branch `feat/HCODER-WO-0020-desktop-runtime-status-bridge` is non-authoritative supporting evidence only and MUST NOT be merged or cherry-picked.
 
-`HCODER-WO-0019-CR-001` LOW and `HCODER-WO-0019-CR-002` LOW are resolved. `HCODER-CP-0019` and `DEC-023 — Runtime Status Sidecar Helper Boundary` are promotion candidates only, **NOT CANONICAL**.
-
-Historical PR #38 / branch `feat/HCODER-WO-0019-runtime-status-sidecar` is non-authoritative supporting evidence only. It MUST NOT be merged or cherry-picked.
-
-WO-0019 authority remains presentation-only and one-shot: fixed `--stdio-status-v1`, canonical CP-0018 request/response, prebuilt truthful `DISCONNECTED` snapshot, no daemon/listener/generic RPC, no provider/model calls, no credential access, no Permission & Control Plane mutation, no filesystem/Git/computer-use mutation, no remote control and no billing/purchase authority. Desktop/Tauri process spawn is explicitly out of scope.
+WO-0020 authority is presentation-only: exactly one fixed sidecar supervisor process site, fixed sibling basename, fixed `--stdio-status-v1`, cleared child environment, canonical CP-0018 request, bounded output, strict raw-wire decoder, argument-free Tauri command, and read-only Runtime/Provider/Task/Permission System Truth. No generic process/shell capability, caller-controlled process path/args/env, provider/model execution, credential authority, task/permission mutation, filesystem/Git/terminal/computer-use mutation, remote control, skill activation or billing/purchase authority is allowed.
 
 ### NEXT EXACT ACTIONS
-1. Validate the promotion candidate exact head with Governance + Desktop Shell.
-2. Perform HEDS promotion review; stop on unresolved HIGH/CRITICAL.
-3. If approved, create the minimum final-approval state mutation without declaring CP-0019 canonical.
-4. Run final exact-head Governance + Desktop Shell and HEDS.
-5. Mark PR #48 ready only after all final gates are green.
-6. Squash merge using expected-head protection.
-7. Require push-triggered Governance + Desktop Shell success on the product merge SHA.
-8. Create documentation-only canonical closeout, gate/HEDS it, squash merge, and require push validation before CP-0019 is fully sealed.
-9. Only after canonical CP-0019, source-check and reconstruct WO-0020; never merge its historical stacked ancestry directly.
-10. Refresh Issue #30 at each major state transition.
+1. Validate the exact technical head with Governance + Desktop Shell.
+2. Perform HEDS technical review; stop on unresolved HIGH/CRITICAL.
+3. Same-WO corrections only if findings exist.
+4. If approved, create Evidence Bundle + governed promotion candidate without declaring CP-0020 canonical.
+5. Run promotion and final exact-head gates/HEDS.
+6. Squash merge with expected-head protection, require post-merge Governance + Desktop Shell, then documentation-only canonical closeout and push validation.
+7. Refresh Issue #30 at each major state transition.
