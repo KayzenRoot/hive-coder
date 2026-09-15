@@ -40,7 +40,7 @@ class ForgeFixture:
         self.profile_authority = AgentProfileAuthority(b"p" * 32)
         self.pack_authority = SpecializationPackAuthority(b"s" * 32)
         self.suite_authority = SuiteLineageAuthority(b"u" * 32)
-        self.certifier = lambda profile, evidence, repository: evidence == CERT and repository == REPO
+        self.certifier = lambda profile, evidence, repository, twin: evidence == CERT and repository == REPO and twin == TWIN
         self.forge = SpecialistForge(b"f" * 32, self.profile_authority, self.pack_authority, self.certifier)
         self.skill_genome = SkillGenome(("python-debugger",), (D("skill"),))
         self.pack = self.pack_authority.seal(SpecializationPack(
@@ -119,6 +119,14 @@ class SpecialistForgeTests(unittest.TestCase):
                 certification_evidence_fingerprint=D("fake-cert"),
             )
 
+    def test_forge_rejects_semantic_twin_certification_transplant(self):
+        with self.assertRaises(PermissionError):
+            self.fx.forge.forge(
+                "bad.twin", self.fx.profile, self.fx.descriptor, self.fx.pack, self.fx.skill_genome,
+                repository_snapshot_digest=REPO, semantic_twin_fingerprint=D("other-twin"),
+                certification_evidence_fingerprint=CERT,
+            )
+
     def test_skill_genome_must_match_stack_genome_skillset(self):
         other = SkillGenome(("other-skill",), (D("other-skill"),))
         with self.assertRaises(ValueError):
@@ -140,18 +148,16 @@ class SpecialistForgeTests(unittest.TestCase):
         horizon.admit(challenge)
         with self.assertRaises(ValueError):
             horizon.admit(challenge)
-        suite = self.fx.suite_a
         same_case = self.fx.case(2)
-        variant = self.fx.morph.create(self.fx.blueprint, self.fx.pack, same_case, suite, morph_index=3)
+        variant = self.fx.morph.create(self.fx.blueprint, self.fx.pack, same_case, self.fx.suite_a, morph_index=3)
         with self.assertRaises(ValueError):
             horizon.admit(variant)
 
     def test_evidence_seal_covers_telemetry_grade_outcome_and_lineage(self):
         challenge = self.fx.challenge(3)
-        telemetry = ArenaTelemetry(1200, 5000)
         evidence = self.fx.evidence_authority.issue(
             "ev.3", self.fx.blueprint, challenge, passed=True, critical_failure=False,
-            policy_violation=False, tamper_event=False, telemetry=telemetry,
+            policy_violation=False, tamper_event=False, telemetry=ArenaTelemetry(1200, 5000),
             grade_proof_digest=GRADE,
         )
         self.assertEqual(evidence.source_lineage_root, challenge.base_lineage_root)
@@ -177,12 +183,8 @@ class SpecialistForgeTests(unittest.TestCase):
     def test_horizon_gate_is_mandatory_inside_mastery_lattice(self):
         lattice = MasteryLattice(self.fx.evidence_authority)
         case = self.fx.case(6)
-        first_challenge = self.fx.morph.create(
-            self.fx.blueprint, self.fx.pack, case, self.fx.suite_a, morph_index=0
-        )
-        second_challenge = self.fx.morph.create(
-            self.fx.blueprint, self.fx.pack, case, self.fx.suite_b, morph_index=1
-        )
+        first_challenge = self.fx.morph.create(self.fx.blueprint, self.fx.pack, case, self.fx.suite_a, morph_index=0)
+        second_challenge = self.fx.morph.create(self.fx.blueprint, self.fx.pack, case, self.fx.suite_b, morph_index=1)
         self.assertNotEqual(first_challenge.fingerprint(), second_challenge.fingerprint())
         first = self.fx.evidence_authority.issue(
             "ev.lineage.one", self.fx.blueprint, first_challenge, passed=True,
@@ -199,25 +201,20 @@ class SpecialistForgeTests(unittest.TestCase):
             lattice.add(second)
 
     def test_policy_floors_cannot_be_weakened(self):
-        with self.assertRaises(ValueError):
-            ArenaSelectionPolicy(min_trials_per_dimension=19).validate()
-        with self.assertRaises(ValueError):
-            ArenaSelectionPolicy(min_quality_lower_bound=0.79).validate()
-        with self.assertRaises(ValueError):
-            ArenaSelectionPolicy(min_reliability_lower_bound=0.69).validate()
-        with self.assertRaises(ValueError):
-            ArenaSelectionPolicy(min_independent_families=1).validate()
+        with self.assertRaises(ValueError): ArenaSelectionPolicy(min_trials_per_dimension=19).validate()
+        with self.assertRaises(ValueError): ArenaSelectionPolicy(min_quality_lower_bound=0.79).validate()
+        with self.assertRaises(ValueError): ArenaSelectionPolicy(min_reliability_lower_bound=0.69).validate()
+        with self.assertRaises(ValueError): ArenaSelectionPolicy(min_independent_families=1).validate()
 
     def _populate(self, lattice: MasteryLattice, blueprint, start: int, *, latency: int, cost: int, passed: bool = True, retries: int = 0):
         for offset in range(40):
             i = start + offset
             challenge = self.fx.challenge(i, blueprint=blueprint)
-            evidence = self.fx.evidence_authority.issue(
+            lattice.add(self.fx.evidence_authority.issue(
                 f"ev.{blueprint.blueprint_id}.{i}", blueprint, challenge,
                 passed=passed, critical_failure=False, policy_violation=False, tamper_event=False,
                 telemetry=ArenaTelemetry(latency, cost, retries=retries), grade_proof_digest=GRADE,
-            )
-            lattice.add(evidence)
+            ))
 
     def test_pareto_crown_prefers_quality_then_reliability_before_cost(self):
         lattice = MasteryLattice(self.fx.evidence_authority)
@@ -231,10 +228,8 @@ class SpecialistForgeTests(unittest.TestCase):
         self._populate(lattice, better, 100, latency=200, cost=1000)
         self._populate(lattice, cheaper, 200, latency=50, cost=10, retries=1)
         crown = ParetoCrown(self.fx.forge, lattice, shadow, self.fx.certifier)
-        selection = crown.select(
-            ((cheaper, self.fx.profile), (better, self.fx.profile)),
-            frozenset({BenchmarkDimension.DEBUGGING}),
-        )
+        selection = crown.select(((cheaper, self.fx.profile), (better, self.fx.profile)),
+                                 frozenset({BenchmarkDimension.DEBUGGING}))
         self.assertEqual(selection.selected_blueprint_fingerprint, better.fingerprint())
 
     def test_regression_memory_is_negative_only_and_can_block_selection(self):
@@ -253,15 +248,13 @@ class SpecialistForgeTests(unittest.TestCase):
         lattice = MasteryLattice(self.fx.evidence_authority)
         for i in range(400, 440):
             challenge = self.fx.challenge(i)
-            evidence = self.fx.evidence_authority.issue(
+            lattice.add(self.fx.evidence_authority.issue(
                 f"ev.bad.{i}", self.fx.blueprint, challenge, passed=True,
                 critical_failure=False, policy_violation=(i == 439), tamper_event=False,
                 telemetry=ArenaTelemetry(1, 1), grade_proof_digest=GRADE,
-            )
-            lattice.add(evidence)
-        crown = ParetoCrown(
-            self.fx.forge, lattice, ReliabilityShadow(RegressionAuthority(b"r" * 32)), self.fx.certifier
-        )
+            ))
+        crown = ParetoCrown(self.fx.forge, lattice,
+                            ReliabilityShadow(RegressionAuthority(b"r" * 32)), self.fx.certifier)
         with self.assertRaises(LookupError):
             crown.select(((self.fx.blueprint, self.fx.profile),), frozenset({BenchmarkDimension.DEBUGGING}))
 
@@ -270,7 +263,7 @@ class SpecialistForgeTests(unittest.TestCase):
         self._populate(lattice, self.fx.blueprint, 500, latency=100, cost=100)
         revoked = ParetoCrown(
             self.fx.forge, lattice, ReliabilityShadow(RegressionAuthority(b"r" * 32)),
-            lambda profile, evidence, repository: False,
+            lambda profile, evidence, repository, twin: False,
         )
         with self.assertRaises(LookupError):
             revoked.select(((self.fx.blueprint, self.fx.profile),), frozenset({BenchmarkDimension.DEBUGGING}))

@@ -122,7 +122,7 @@ class SpecialistBlueprint:
                      "certification": self.certification_evidence_fingerprint})
 
 
-CertificationVerifier = Callable[[AgentProfile, str, str], bool]
+CertificationVerifier = Callable[[AgentProfile, str, str, str], bool]
 
 
 class SpecialistForge:
@@ -154,8 +154,9 @@ class SpecialistForge:
             raise ValueError("invalid repository/twin binding")
         if not _SHA256.fullmatch(certification_evidence_fingerprint):
             raise ValueError("invalid certification evidence fingerprint")
-        if self.certification_verifier(profile, certification_evidence_fingerprint, repository_snapshot_digest) is not True:
-            raise PermissionError("specialist lacks trusted exact-repository certification")
+        if self.certification_verifier(profile, certification_evidence_fingerprint,
+                                       repository_snapshot_digest, semantic_twin_fingerprint) is not True:
+            raise PermissionError("specialist lacks trusted exact repository/twin certification")
         unsigned = SpecialistBlueprint(blueprint_id, profile.fingerprint(), descriptor.fingerprint(),
                                        repository_snapshot_digest, semantic_twin_fingerprint,
                                        pack.fingerprint(), skill_fp, certification_evidence_fingerprint, "")
@@ -487,7 +488,10 @@ class ParetoCrown:
             if fp in seen: raise ValueError("duplicate Pareto Crown candidate")
             seen.add(fp)
             if profile.fingerprint() != blueprint.profile_fingerprint: continue
-            if self.certification_verifier(profile, blueprint.certification_evidence_fingerprint, blueprint.repository_snapshot_digest) is not True: continue
+            if self.certification_verifier(profile, blueprint.certification_evidence_fingerprint,
+                                           blueprint.repository_snapshot_digest,
+                                           blueprint.semantic_twin_fingerprint) is not True:
+                continue
             if self.reliability_shadow.blocked(blueprint): continue
             metrics = [self.lattice.metric(blueprint, d) for d in sorted(required_dimensions, key=lambda x: x.value)]
             if any(m.samples < policy.min_trials_per_dimension for m in metrics): continue
