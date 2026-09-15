@@ -40,18 +40,36 @@ WO-0014 treats specialist composition, arena evidence and routing as security-se
 
 Production attestation for real provider billing/latency/reliability telemetry and durable cross-restart mastery/reputation are not approved in WO-0014. Any future `TelemetrySeal` or `MasteryVault` must receive a separate HIGH_ASSURANCE threat model, rollback protection, adversarial tests and governed promotion before use.
 
-## Desktop shell security boundary — WO-0015 candidate
-The first desktop shell is intentionally non-privileged.
+## Desktop shell security boundary — WO-0015 / WO-0016
+The desktop shell remains intentionally non-privileged.
 
-- The frontend has one named invoke path only: `get_desktop_snapshot`.
-- The native command accepts no arbitrary command, path, process, shell string, provider credential or desktop-input payload.
-- The command revalidates the caller WebView label as `main` even though the declarative capability is also scoped to `main`.
+- The frontend exposes only the named read/workspace-selection invoke paths governed by the desktop security gate.
+- Native read commands accept no arbitrary command, process, shell string, provider credential or desktop-input payload.
+- Commands revalidate the caller WebView label as `main`; the declarative capability is also scoped to `main`.
 - Tauri capability `desktop-read-only` grants zero plugin permissions; shell/filesystem/process plugins are prohibited by the desktop security gate.
+- `choose_workspace` accepts no caller-controlled target/path argument and is initiated by explicit user interaction through the native picker.
+- Bounded workspace/Git/evidence observations remain read-only and presentation-only.
 - The UI cannot mint or consume CP permits, activate skills, write arbitrary files, inject keyboard/mouse input, access credentials, expose remote control or authorize billing/purchases.
-- `DesktopSnapshot v1` is non-authoritative presentation state. Unknown/disconnected live subsystems must remain visibly unknown/disconnected rather than being inferred READY.
+- Unknown/disconnected live subsystems must remain visibly unknown/disconnected rather than being inferred READY.
 - Safety actions remain disabled until an actionable trusted session exists.
-- The desktop security gate rejects generic process execution, unsafe HTML sinks, extra frontend invoke sites, unapproved Tauri commands, nonempty capability permissions, missing lockfiles and Apple-specific font references.
+- The desktop security gate rejects generic process execution, unsafe HTML sinks, extra unapproved invoke sites, nonempty capability permissions, missing lockfiles and Apple-specific font references.
 
-Supply-chain evidence for the candidate includes npm audit with zero vulnerabilities and RustSec scan success over the locked Cargo graph. RustSec nevertheless reports seven warning-class advisories, including an unsoundness warning in transitive `glib 0.18.5`; these remain explicit dependency debt and the Rust graph is not claimed warning-free.
+Supply-chain evidence includes npm audit with zero vulnerabilities and RustSec scanning over the locked Cargo graph. RustSec nevertheless reports seven warning-class advisories, including an unsoundness warning in transitive `glib 0.18.5`; these remain explicit dependency debt and the Rust graph is not claimed warning-free.
 
 The current local CSP still permits `style-src 'unsafe-inline'`. That is a known LOW hardening residual, not approval for untrusted HTML/style injection. Stricter CSP requires later validation.
+
+## Runtime observability security boundary — WO-0017 candidate
+Runtime status is security-sensitive because UI state can mislead a user or future orchestrator even when it carries no direct mutation primitive. WO-0017 therefore treats status as hostile-at-the-boundary presentation data rather than trusted authority.
+
+- `RuntimeStatusSnapshot v1` contains no credentials, raw prompts, model outputs, permits, approval tokens, audit secret material or trusted-host signing keys.
+- Status cannot be consumed as authorization. A `READY` label can never grant a CP capability, create a permit, activate a skill, start a provider/model, mutate task state or enable computer use.
+- Provider READY means only a concrete bounded catalog observation. It is explicitly distinct from provider reachability/authentication and from CP-0007 VERIFIED capability evidence.
+- Permission status must not scrape private Permission & Control Plane sessions/challenges/permits. If no safe public observer exists, the truthful state is UNKNOWN/DISCONNECTED with null counters.
+- Canonical provenance is fixed per Hive subsystem and rejects caller-defined provenance labels.
+- JSON input is bounded before parse, requires UTF-8, rejects duplicate keys and unknown object fields, enforces exact schema/state/counter/collection bounds and rejects booleans as counters.
+- In-memory records also require governed typed `StatusState` values so Python type hints cannot be bypassed at runtime.
+- Fake READY provider summaries without concrete observed models fail closed.
+- Invalid encode/decode paths reduce only to a fixed generic DEGRADED snapshot; rejected values and exception details are not echoed back into presentation state.
+- The safe CLI exports a deterministic disconnected snapshot only. It does not enumerate credentials, invoke providers, execute models, spawn subprocesses or mutate runtime/control-plane state.
+
+WO-0017 introduces no Tauri command and no desktop IPC/process authority. Any future sidecar launch, child-process identity, transport authentication/framing or live status wiring is a separate security boundary requiring a later governed Work Order and fresh adversarial review.

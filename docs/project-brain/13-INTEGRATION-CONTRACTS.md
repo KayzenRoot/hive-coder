@@ -126,6 +126,19 @@ WO-0014 does not add CP-0005 permissions, execution permits, automatic skill act
 
 WO-0014 mastery/horizon/reliability state is process/session-bounded and production arena telemetry relies on a trusted verifier contract rather than a proven provider-attestation implementation. Durable mastery/reputation and authenticated provider telemetry remain later governed boundaries.
 
+## Runtime status presentation boundary — WO-0017 candidate
+`RuntimeStatusSnapshot v1` (`hive-runtime-status-v1`) is the Hive-owned bounded presentation contract for runtime/provider/task/permission observations. It is non-authoritative and must never be consumed as permission, execution-permit, skill-activation or VERIFIED capability evidence.
+
+The serialized/input boundary is capped at **32,768 bytes**. At most **16** providers, **64** models per provider and **256** task nodes may be represented. Text/counters are bounded, booleans are invalid numeric counters, JSON duplicate keys and unknown object fields fail closed, and state values are restricted to `READY`, `UNKNOWN`, `DISCONNECTED`, `DEGRADED`.
+
+Provenance is canonical by subsystem rather than caller-defined: `hive-runtime-status`, `hive-provider-catalog`, `hive-agent-task-runtime`, and `hive-permission-control-plane`. A mismatched provenance label invalidates the payload.
+
+Provider READY means only a concrete bounded observation already present in Hive's provider catalog. It does not prove network health, authentication or CP-0007 capability verification. Task status is reduced from public `TaskSnapshot` progress and excludes prompts, outputs, plan fingerprints, attempts and events. Permission status must not inspect private control-plane state; without an approved public observer it remains UNKNOWN/DISCONNECTED with null counters.
+
+Strict decode validates UTF-8, exact shapes and all semantic invariants. Failed encode/decode may reduce to one fixed generic DEGRADED snapshot that reflects neither exception text nor rejected values. The WO-0017 CLI is a deterministic disconnected exporter and performs no provider/model/process/network/mutation operation.
+
+Desktop child-process launch, helper identity/authenticity, transport framing, IPC lifecycle and live wiring are not part of this contract and require a later governed Work Order after CP-0017 is canonical.
+
 ## Remote-control boundary
 Remote Hive control will be a separate HIGH_ASSURANCE subsystem. It must use authenticated encrypted device/session semantics, least privilege, revocation, audit and emergency stop. A raw Cua/RDP/VNC endpoint must never be exposed directly to the public internet by Hive.
 
