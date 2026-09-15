@@ -24,6 +24,24 @@ class RecertificationStatus(str, Enum):
     EXPIRED = "expired"
 
 
+class ChronoSealClock:
+    """Trusted-host logical epoch that can only move forward inside a runtime instance."""
+
+    def __init__(self, start_epoch: int = 0) -> None:
+        if not isinstance(start_epoch, int) or start_epoch < 0:
+            raise ValueError("invalid ChronoSeal start epoch")
+        self._epoch = start_epoch
+
+    def now(self) -> int:
+        return self._epoch
+
+    def advance(self, to_epoch: int) -> int:
+        if not isinstance(to_epoch, int) or to_epoch < self._epoch:
+            raise ValueError("ChronoSeal epoch cannot move backwards")
+        self._epoch = to_epoch
+        return self._epoch
+
+
 @dataclass(frozen=True)
 class ShadowBenchCase:
     case_id: str
@@ -115,7 +133,7 @@ class ShadowBenchFactory:
         )
         mutation_options = self._MUTATIONS[dimension]
         cases: list[ShadowBenchCase] = []
-        for index, fact in enumerate(ranked[:count]):
+        for fact in ranked[:count]:
             mutation_selector = int(self._hmac(
                 f"mutation|{epoch_label}|{snapshot_digest}|{dimension.value}|{fact.fact_id}"
             )[:8], 16)
@@ -127,7 +145,7 @@ class ShadowBenchFactory:
                 "source_fact": fact.fact_id,
             })
             lineage_id = f"sb.{lineage_root[:28]}"
-            nonce = self._hmac(f"nonce|{epoch_label}|{lineage_root}|{index}")
+            nonce = self._hmac(f"nonce|{epoch_label}|{lineage_root}")
             prompt_digest = _sha({
                 "technology": self.VERSION,
                 "snapshot": snapshot_digest,
@@ -139,20 +157,13 @@ class ShadowBenchFactory:
             oracle_digest = self._hmac(
                 f"oracle|{self.VERSION}|{epoch_label}|{snapshot_digest}|{dimension.value}|{mutation}|{fact.fingerprint()}|{nonce}"
             )
-            case_digest = self._hmac(f"case|{epoch_label}|{lineage_root}|{mutation}|{prompt_digest}|{oracle_digest}")
+            case_digest = self._hmac(f"case|{epoch_label}|{lineage_root}|{mutation}|{prompt_digest}|{oracle_digest}|{nonce}")
             case = ShadowBenchCase(
-                case_id=f"shadow.{case_digest[:28]}",
-                lineage_id=lineage_id,
-                lineage_root=lineage_root,
-                factory_version=self.VERSION,
-                epoch_label=epoch_label,
-                repository_snapshot_digest=snapshot_digest,
-                dimension=dimension,
-                mutation_kind=mutation,
-                source_fact_ids=(fact.fact_id,),
-                prompt_digest=prompt_digest,
-                oracle_digest=oracle_digest,
-                hidden_nonce_digest=nonce,
+                case_id=f"shadow.{case_digest[:28]}", lineage_id=lineage_id,
+                lineage_root=lineage_root, factory_version=self.VERSION, epoch_label=epoch_label,
+                repository_snapshot_digest=snapshot_digest, dimension=dimension,
+                mutation_kind=mutation, source_fact_ids=(fact.fact_id,), prompt_digest=prompt_digest,
+                oracle_digest=oracle_digest, hidden_nonce_digest=nonce,
             )
             case.validate()
             cases.append(case)
@@ -171,29 +182,32 @@ class ShadowBenchFactory:
         except StopIteration:
             return False
         expected_root = _sha({
-            "factory": self.VERSION,
-            "snapshot": case.repository_snapshot_digest,
-            "dimension": case.dimension.value,
-            "source_fact": fact.fact_id,
+            "factory": self.VERSION, "snapshot": case.repository_snapshot_digest,
+            "dimension": case.dimension.value, "source_fact": fact.fact_id,
         })
         if not hmac.compare_digest(case.lineage_root, expected_root):
             return False
         if case.lineage_id != f"sb.{expected_root[:28]}":
             return False
+        expected_nonce = self._hmac(f"nonce|{case.epoch_label}|{expected_root}")
+        if not hmac.compare_digest(case.hidden_nonce_digest, expected_nonce):
+            return False
         expected_prompt = _sha({
-            "technology": self.VERSION,
-            "snapshot": case.repository_snapshot_digest,
-            "dimension": case.dimension.value,
-            "mutation": case.mutation_kind,
-            "source_fact": fact.fact_id,
-            "source_fingerprint": fact.fingerprint(),
+            "technology": self.VERSION, "snapshot": case.repository_snapshot_digest,
+            "dimension": case.dimension.value, "mutation": case.mutation_kind,
+            "source_fact": fact.fact_id, "source_fingerprint": fact.fingerprint(),
         })
         if not hmac.compare_digest(case.prompt_digest, expected_prompt):
             return False
         expected_oracle = self._hmac(
-            f"oracle|{self.VERSION}|{case.epoch_label}|{case.repository_snapshot_digest}|{case.dimension.value}|{case.mutation_kind}|{fact.fingerprint()}|{case.hidden_nonce_digest}"
+            f"oracle|{self.VERSION}|{case.epoch_label}|{case.repository_snapshot_digest}|{case.dimension.value}|{case.mutation_kind}|{fact.fingerprint()}|{expected_nonce}"
         )
-        return hmac.compare_digest(case.oracle_digest, expected_oracle)
+        if not hmac.compare_digest(case.oracle_digest, expected_oracle):
+            return False
+        expected_case = self._hmac(
+            f"case|{case.epoch_label}|{expected_root}|{case.mutation_kind}|{expected_prompt}|{expected_oracle}|{expected_nonce}"
+        )
+        return case.case_id == f"shadow.{expected_case[:28]}"
 
 
 class BenchmarkNoveltyLedger:
@@ -253,10 +267,8 @@ class CounterfactualForge:
         if not invariants:
             raise ValueError("counterfactual fact is not bound to a mined invariant")
         payload = {
-            "technology": self.VERSION,
-            "snapshot": repository_snapshot_digest,
-            "fact": fact_id,
-            "replacement": replacement_object_digest,
+            "technology": self.VERSION, "snapshot": repository_snapshot_digest,
+            "fact": fact_id, "replacement": replacement_object_digest,
             "expected_drift": list(invariants),
         }
         digest = _sha(payload)
@@ -278,8 +290,9 @@ class CertificationEvidence:
     observed_epoch: int
     benchmark_families: tuple[str, ...]
     passed: bool
+    authority_tag: str = ""
 
-    def validate(self) -> None:
+    def validate_unsigned(self) -> None:
         if not _SAFE_ID.fullmatch(self.evidence_id):
             raise ValueError("invalid certification evidence id")
         for digest in (
@@ -295,23 +308,60 @@ class CertificationEvidence:
         if len(self.benchmark_families) != len(set(self.benchmark_families)):
             raise ValueError("duplicate certification benchmark family")
 
-    @classmethod
-    def from_report(cls, evidence_id: str, report: CompetenceReport,
-                    repository_snapshot_digest: str, observed_epoch: int,
-                    benchmark_families: Iterable[str]) -> "CertificationEvidence":
-        report_fingerprint = report.fingerprint()
-        evidence = cls(
-            evidence_id,
-            report.profile_fingerprint,
-            report.standard_fingerprint,
-            report_fingerprint,
-            repository_snapshot_digest,
-            observed_epoch,
-            tuple(sorted(set(benchmark_families))),
-            report.passed,
+    def fingerprint(self) -> str:
+        self.validate_unsigned()
+        return _sha({
+            "id": self.evidence_id, "profile": self.profile_fingerprint,
+            "standard": self.standard_fingerprint, "report": self.competence_report_fingerprint,
+            "snapshot": self.repository_snapshot_digest, "epoch": self.observed_epoch,
+            "families": list(self.benchmark_families), "passed": self.passed,
+        })
+
+
+class CertificationAuthority:
+    """Trusted-host seal for recertification evidence. Callers cannot self-issue freshness."""
+
+    def __init__(self, key: bytes, clock: ChronoSealClock,
+                 profile_authority: AgentProfileAuthority) -> None:
+        if not isinstance(key, bytes) or len(key) < 32:
+            raise ValueError("certification authority key must contain at least 32 bytes")
+        self._key = bytes(key)
+        self.clock = clock
+        self.profile_authority = profile_authority
+
+    def issue(self, evidence_id: str, profile: AgentProfile, standard: CompetenceStandard,
+              report: CompetenceReport, *, repository_snapshot_digest: str) -> CertificationEvidence:
+        if not self.profile_authority.verify(profile):
+            raise PermissionError("certification profile seal invalid")
+        standard.validate()
+        if standard.level is not CompetenceLevel.DISTINGUISHED or report.level is not CompetenceLevel.DISTINGUISHED:
+            raise ValueError("production certification requires DISTINGUISHED level")
+        if not report.passed:
+            raise ValueError("failed competence report cannot become certification evidence")
+        if report.profile_fingerprint != profile.fingerprint() or report.standard_fingerprint != standard.fingerprint():
+            raise ValueError("competence report does not match certification subject")
+        if not _SHA256.fullmatch(repository_snapshot_digest):
+            raise ValueError("invalid certification repository snapshot")
+        families = tuple(sorted({family for score in report.scores for family in score.suite_families}))
+        if len(families) < standard.min_independent_suites:
+            raise ValueError("competence report lacks required benchmark-family diversity")
+        unsigned = CertificationEvidence(
+            evidence_id, profile.fingerprint(), standard.fingerprint(), report.fingerprint(),
+            repository_snapshot_digest, self.clock.now(), families, True, "",
         )
-        evidence.validate()
-        return evidence
+        tag = hmac.new(self._key, unsigned.fingerprint().encode(), hashlib.sha256).hexdigest()
+        return replace(unsigned, authority_tag=tag)
+
+    def verify(self, evidence: CertificationEvidence) -> bool:
+        if not _SHA256.fullmatch(evidence.authority_tag):
+            return False
+        unsigned = replace(evidence, authority_tag="")
+        try:
+            fingerprint = unsigned.fingerprint()
+        except ValueError:
+            return False
+        expected = hmac.new(self._key, fingerprint.encode(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(evidence.authority_tag, expected)
 
 
 @dataclass(frozen=True)
@@ -358,29 +408,33 @@ class RecertificationReport:
 class RecertificationClock:
     """Competence can age out or be forced due; this class never promotes a rank."""
 
-    def __init__(self, profile_authority: AgentProfileAuthority,
+    def __init__(self, certification_authority: CertificationAuthority,
                  policy: CompetenceHalfLifePolicy = CompetenceHalfLifePolicy()) -> None:
         policy.validate()
-        self.profile_authority = profile_authority
+        self.certification_authority = certification_authority
+        self.profile_authority = certification_authority.profile_authority
+        self.clock = certification_authority.clock
         self.policy = policy
 
     def assess(self, profile: AgentProfile, standard: CompetenceStandard,
-               *, repository_snapshot_digest: str, current_epoch: int,
+               *, repository_snapshot_digest: str,
                evidence: Iterable[CertificationEvidence], outcome: OutcomeSignal | None = None) -> RecertificationReport:
         if not self.profile_authority.verify(profile):
             raise PermissionError("recertification profile seal invalid")
         standard.validate()
         if standard.level is not CompetenceLevel.DISTINGUISHED:
             raise ValueError("production recertification requires DISTINGUISHED standard")
-        if not _SHA256.fullmatch(repository_snapshot_digest) or current_epoch < 0:
-            raise ValueError("invalid recertification snapshot/epoch")
+        if not _SHA256.fullmatch(repository_snapshot_digest):
+            raise ValueError("invalid recertification snapshot")
+        current_epoch = self.clock.now()
         profile_fp = profile.fingerprint()
         standard_fp = standard.fingerprint()
         relevant: list[CertificationEvidence] = []
         saw_matching_profile_standard = False
         saw_snapshot_mismatch = False
         for item in evidence:
-            item.validate()
+            if not self.certification_authority.verify(item):
+                raise PermissionError("untrusted certification evidence")
             if item.observed_epoch > current_epoch:
                 raise ValueError("certification evidence comes from the future")
             if item.profile_fingerprint != profile_fp or item.standard_fingerprint != standard_fp:
@@ -461,28 +515,32 @@ class OutcomeRecord:
     def fingerprint(self) -> str:
         self.validate_unsigned()
         return _sha({
-            "id": self.outcome_id,
-            "profile": self.profile_fingerprint,
-            "plan": self.master_plan_fingerprint,
-            "snapshot": self.repository_snapshot_digest,
-            "epoch": self.observed_epoch,
-            "success": self.success,
-            "regressions": self.regressions,
-            "rollbacks": self.rollbacks,
+            "id": self.outcome_id, "profile": self.profile_fingerprint,
+            "plan": self.master_plan_fingerprint, "snapshot": self.repository_snapshot_digest,
+            "epoch": self.observed_epoch, "success": self.success,
+            "regressions": self.regressions, "rollbacks": self.rollbacks,
             "evidence": self.evidence_digest,
         })
 
 
 class OutcomeAuthority:
-    """Trusted-host outcome seal. It cannot produce competence evidence."""
+    """Trusted-host outcome seal using the same monotonic ChronoSeal epoch."""
 
-    def __init__(self, key: bytes) -> None:
+    def __init__(self, key: bytes, clock: ChronoSealClock) -> None:
         if not isinstance(key, bytes) or len(key) < 32:
             raise ValueError("outcome authority key must contain at least 32 bytes")
         self._key = bytes(key)
+        self.clock = clock
 
-    def seal(self, record: OutcomeRecord) -> OutcomeRecord:
-        unsigned = replace(record, authority_tag="")
+    def issue(self, outcome_id: str, *, profile_fingerprint: str,
+              master_plan_fingerprint: str, repository_snapshot_digest: str,
+              success: bool, regressions: int, rollbacks: int,
+              evidence_digest: str) -> OutcomeRecord:
+        unsigned = OutcomeRecord(
+            outcome_id, profile_fingerprint, master_plan_fingerprint,
+            repository_snapshot_digest, self.clock.now(), success,
+            regressions, rollbacks, evidence_digest, "",
+        )
         tag = hmac.new(self._key, unsigned.fingerprint().encode(), hashlib.sha256).hexdigest()
         return replace(unsigned, authority_tag=tag)
 
@@ -512,9 +570,9 @@ class OutcomeEchoLedger:
             raise ValueError("duplicate outcome record")
         self._records[record.outcome_id] = record
 
-    def signal(self, profile_fingerprint: str, *, current_epoch: int,
-               max_age_epochs: int = 90) -> OutcomeSignal:
-        if not _SHA256.fullmatch(profile_fingerprint) or current_epoch < 0 or max_age_epochs < 1:
+    def signal(self, profile_fingerprint: str, *, max_age_epochs: int = 90) -> OutcomeSignal:
+        current_epoch = self.authority.clock.now()
+        if not _SHA256.fullmatch(profile_fingerprint) or max_age_epochs < 1:
             raise ValueError("invalid Outcome Echo query")
         records = [
             item for item in self._records.values()
