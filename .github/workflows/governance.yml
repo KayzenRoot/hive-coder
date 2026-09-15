@@ -80,9 +80,9 @@ jobs:
           $actual = (git rev-parse HEAD).Trim()
           if ($actual -ne $env:EXPECTED_SHA) { throw "exact-head mismatch: $actual != $env:EXPECTED_SHA" }
           Write-Output "EXACT_HEAD_OK=$actual"
-      - name: Compile control plane
+      - name: Compile control plane and executor
         run: python -m compileall -q hive_runtime
-      - name: Control-plane adversarial tests
+      - name: HIGH_ASSURANCE control-plane and gated-executor tests
         env:
           PYTHONWARNINGS: error::ResourceWarning
-        run: python -m unittest tests.control_plane.test_control_plane tests.control_plane.test_surface
+        run: python -m unittest tests.control_plane.test_control_plane tests.control_plane.test_surface tests.runtime.test_cua_executor
