@@ -30,20 +30,23 @@ If the user says `continue`, `continue do chat anterior`, or equivalent for Hive
 3. GitHub/canonical truth wins if Issue #30 is stale.
 4. Continue autonomously from its `NEXT EXACT ACTIONS`; do not ask the user to restate recoverable context.
 
-## Current promotion state
-Active increment: `HCODER-WO-0015 — Desktop Shell Foundation & Safe Workspace Read Model`, PR `#32`, branch `feat/HCODER-WO-0015-desktop-shell`.
+## Current execution state
+Canonical checkpoint: `HCODER-CP-0018` on `main` at `c0a44d43546b9f176125b9e7099b8422d6b62ba3`.
 
-Technical head `9e212c6f8c959f3d3cb19cc5146485f39bd6c8fd` passed Governance #187 + Desktop Shell #23 and HEDS technical review `5211566651`.
+CP-0018 closeout is sealed: product PR #45 and closeout PR #46 were squash-merged; final closeout HEDS review `5215922407` had unresolved HIGH/CRITICAL `0`; push Governance #246 and Desktop Shell #82 passed on the canonical main SHA, including Tauri Windows release build and launch smoke.
 
-Promotion candidate `e3b24420f7057272fbe15a4ddae88ce65a190e50` passed Governance #189 + Desktop Shell #25 and HEDS promotion review `5211785907`, with unresolved HIGH/CRITICAL findings `0`. DEC-019 / HCODER-CP-0015 are now recorded APPROVED, subject to exact-head validation of this final approval mutation before merge.
+Active increment: `HCODER-WO-0019 — Runtime Status Sidecar Helper`, Issue `#47`, canonical branch `feat/HCODER-WO-0019-runtime-status-sidecar-canonical`.
 
-WO-0015 desktop authority remains read-only: one `get_desktop_snapshot` command scoped to `main`, zero Tauri plugin permissions, no generic command bridge, arbitrary filesystem mutation, computer-use mutation, provider credentials, skill activation, remote control or billing authority.
+Historical PR #38 / branch `feat/HCODER-WO-0019-runtime-status-sidecar` is non-authoritative supporting evidence only. It MUST NOT be merged or cherry-picked because it predates final CP-0018 protocol hardening.
+
+WO-0019 authority remains presentation-only and one-shot: fixed `--stdio-status-v1`, canonical CP-0018 request/response, truthful default `DISCONNECTED`, no daemon/listener/generic RPC, no provider/model calls, no credential access, no Permission & Control Plane mutation, no filesystem/Git/computer-use mutation, no remote control and no billing/purchase authority. Desktop/Tauri process spawn is explicitly out of scope.
 
 ### NEXT EXACT ACTIONS
-1. Require exact-head Governance + Desktop Shell success on the final APPROVED documentation mutation.
-2. Perform final HEDS on that exact head; stop on any HIGH/CRITICAL finding.
-3. Mark PR #32 ready only after those gates are green.
-4. Squash merge using expected-head protection.
-5. Require push-triggered Governance + Desktop Shell success on canonical `main`.
-6. Refresh Issue #30 and close WO-0015/Issue #31 only after post-merge proof.
-7. Do not create WO-0016 before post-merge source-check of CP-0015.
+1. Materialize the reconstructed WO-0019 Work Order, Context Lock, sidecar and process-level tests on the canonical branch.
+2. Open a draft PR against `main` and require exact-head Governance + Desktop Shell success.
+3. Produce evidence and perform HEDS exact-head review; stop on unresolved HIGH/CRITICAL findings.
+4. Apply any correction delta on the same Work Order and repeat exact-head gates.
+5. Promote CP-0019/decision documentation only after technical proof if warranted.
+6. Squash merge using expected-head protection.
+7. Require push-triggered Governance + Desktop Shell success on canonical `main` before CP-0019 closeout.
+8. Refresh Issue #30 at each major state transition.
