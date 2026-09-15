@@ -74,7 +74,7 @@ Runtime status is security-sensitive because UI state can mislead a user or futu
 
 WO-0017 introduces no Tauri command and no desktop IPC/process authority. CP-0017 is canonical; live transport/process lifecycle remains separately governed.
 
-## Cross-runtime status IPC security boundary — WO-0018 promotion candidate
+## Cross-runtime status IPC security boundary — WO-0018
 WO-0018 treats the wire itself as hostile input and freezes it before any runtime process lifecycle is approved.
 
 - Protocol identity is exactly `hive-runtime-status-ipc-v1`; the only operation is `status.snapshot`.
@@ -89,4 +89,4 @@ WO-0018 treats the wire itself as hostile input and freezes it before any runtim
 
 A valid status envelope is never authorization. It cannot grant a CP capability, create/consume a permit, approve a request, activate a skill, certify a model capability, mutate a task/permission state, access credentials or authorize filesystem/Git/terminal/computer-use action.
 
-WO-0018 intentionally does not prove helper binary authenticity, child-process containment, restart/shutdown policy or desktop supervisor behavior. Those are later HIGH_ASSURANCE process-boundary concerns and must not be inferred from IPC validity.
+CP-0018 canonicalizes only this wire security boundary. It does not prove helper binary authenticity, child-process containment, restart/shutdown policy or desktop supervisor behavior. Those remain later HIGH_ASSURANCE process-boundary concerns and must not be inferred from IPC validity.
