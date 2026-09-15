@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import unittest
+from dataclasses import replace
 
 from hive_runtime.runtime_status import MAX_STATUS_BYTES, disconnected_snapshot
 from hive_runtime.runtime_status_protocol import (
@@ -57,6 +58,15 @@ class RuntimeStatusProtocolTests(unittest.TestCase):
         self.assertEqual(set(parsed), {"ok", "protocol", "requestId", "snapshot"})
         self.assertEqual(parsed["snapshot"]["runtime"]["provenance"], "hive-runtime-status")
         self.assertEqual(parsed["snapshot"]["permission"]["provenance"], "hive-permission-control-plane")
+
+    def test_response_wire_is_ascii_canonical_for_unicode_presentation_text(self) -> None:
+        snapshot = disconnected_snapshot()
+        snapshot = replace(snapshot, runtime=replace(snapshot.runtime, detail="café 🍯"))
+        raw = encode_response("unicode", snapshot)
+        self.assertTrue(raw.isascii())
+        self.assertIn("caf\\u00e9 \\ud83c\\udf6f", raw)
+        parsed = parse_response(raw)
+        self.assertEqual(parsed.snapshot.runtime.detail, "café 🍯")
 
     def test_response_duplicate_key_and_noncanonical_wire_fail_closed(self) -> None:
         raw = encode_response("r-3", disconnected_snapshot())

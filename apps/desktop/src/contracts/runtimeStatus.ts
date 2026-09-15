@@ -160,7 +160,7 @@ export function encodeRuntimeStatusRequest(id: string): string {
   return encoded;
 }
 
-export function parseRuntimeStatusEnvelope(input: unknown): RuntimeStatusEnvelope {
+function parseRuntimeStatusEnvelope(input: unknown): RuntimeStatusEnvelope {
   const root = record(input, ["ok", "protocol", "requestId", "snapshot"]);
   if (root.protocol !== RUNTIME_STATUS_PROTOCOL || root.ok !== true) throw new Error("unsupported runtime status envelope");
   const normalizedRequestId = requestId(root.requestId);
