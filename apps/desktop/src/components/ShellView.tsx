@@ -39,12 +39,22 @@ export function ShellView({ snapshot }: { snapshot: DesktopSnapshot }) {
       <aside className="rail" aria-label="Primary navigation">
         <div className="rail__brand"><HiveMark compact /></div>
         <nav className="rail__nav">
-          {NAV_ITEMS.map((item, index) => (
-            <button key={item} className={index === 0 ? "rail-button rail-button--active" : "rail-button"} type="button" disabled={index > 1}>
-              <span className="rail-button__glyph" aria-hidden="true">{item.slice(0, 1)}</span>
-              <span>{item}</span>
-            </button>
-          ))}
+          {NAV_ITEMS.map((item, index) => {
+            const active = index === 0;
+            return (
+              <button
+                key={item}
+                className={active ? "rail-button rail-button--active" : "rail-button"}
+                type="button"
+                disabled={!active}
+                aria-disabled={!active}
+                aria-current={active ? "page" : undefined}
+              >
+                <span className="rail-button__glyph" aria-hidden="true">{item.slice(0, 1)}</span>
+                <span>{item}</span>
+              </button>
+            );
+          })}
         </nav>
         <div className="rail__footer"><span className="avatar">K</span></div>
       </aside>
@@ -96,13 +106,13 @@ export function ShellView({ snapshot }: { snapshot: DesktopSnapshot }) {
             <div className="task-surface">
               <div className="task-surface__glow" />
               <span className="section-kicker">TASK / CONVERSATION</span>
-              <h3>Ready for a governed session</h3>
+              <h3>No execution session attached</h3>
               <p>
-                No active execution session is attached to the desktop shell yet. Connective and mutating workflows
-                arrive only through later approved application boundaries.
+                Task execution is intentionally unavailable in this read-only desktop increment. Connective and
+                mutating workflows arrive only through later approved application boundaries.
               </p>
               <div className="composer" aria-label="Inactive task composer">
-                <span>Describe a task…</span>
+                <span>Task input unavailable in read-only mode</span>
                 <button type="button" disabled>Run</button>
               </div>
             </div>
