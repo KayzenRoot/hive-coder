@@ -44,6 +44,16 @@ function shortHead(head: string | null): string {
   return head ? head.slice(0, 12) : "Unavailable";
 }
 
+function permissionDetail(permission: RuntimeStatusEnvelope["snapshot"]["permission"]): string {
+  if (permission.state !== "READY") {
+    return "No actionable permission authority is exposed through the runtime status channel.";
+  }
+  if (permission.activeSessions === null || permission.pendingApprovals === null) {
+    return "Permission plane reports READY, but session/approval counters are unavailable in this observation.";
+  }
+  return `Read-only status: ${permission.activeSessions} active session(s), ${permission.pendingApprovals} pending approval(s).`;
+}
+
 export function ShellView({
   snapshot,
   runtimeStatus = null,
@@ -72,17 +82,15 @@ export function ShellView({
         detail: live.providers.length > 0
           ? `${live.providers.length} provider${live.providers.length === 1 ? "" : "s"} / ${providerModels} observed model${providerModels === 1 ? "" : "s"}. Capability authority remains evidence-driven.`
           : "No provider catalog is connected through the runtime status channel.",
-        provenance: "runtime-status-ipc-v1",
+        provenance: live.providers[0]?.provenance ?? live.runtime.provenance,
       }
     : snapshot.provider;
   const permissionSignal: StatusSignal = live
     ? {
         state: live.permission.state,
         label: "Permission plane",
-        detail: live.permission.state === "READY"
-          ? `Read-only status: ${live.permission.activeSessions ?? 0} active session(s), ${live.permission.pendingApprovals ?? 0} pending approval(s).`
-          : "No actionable permission authority is exposed through the runtime status channel.",
-        provenance: "runtime-status-ipc-v1",
+        detail: permissionDetail(live.permission),
+        provenance: live.permission.provenance,
       }
     : snapshot.permission;
   const statusSignals = [runtimeSignal, providerSignal, snapshot.git.signal, snapshot.evidence.signal, permissionSignal];

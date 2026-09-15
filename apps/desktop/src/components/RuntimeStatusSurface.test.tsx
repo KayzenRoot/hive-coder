@@ -49,6 +49,8 @@ describe("Runtime System Truth surface", () => {
     );
     expect(html).toContain("Runtime observer connected.");
     expect(html).toContain("1 provider / 1 observed model");
+    expect(html).toContain("hive-provider-catalog");
+    expect(html).toContain("hive-permission-control-plane");
     expect(html).toContain("task-20 · running");
     expect(html).toContain("1/3 nodes succeeded");
     expect(html).toContain("Mutation remains unavailable");
@@ -63,5 +65,23 @@ describe("Runtime System Truth surface", () => {
     expect(html).toContain("READY");
     expect(html).toContain("Execution input unavailable in trusted read mode");
     expect(html.match(/aria-disabled="true"/g)?.length ?? 0).toBeGreaterThanOrEqual(7);
+  });
+
+  it("does not fabricate zero permission counters when READY counters are unknown", () => {
+    const status: RuntimeStatusEnvelope = {
+      ...liveStatus,
+      snapshot: {
+        ...liveStatus.snapshot,
+        permission: {
+          ...liveStatus.snapshot.permission,
+          state: "READY",
+        },
+      },
+    };
+    const html = renderToStaticMarkup(
+      <ShellView snapshot={disconnectedSnapshot()} runtimeStatus={status} />,
+    );
+    expect(html).toContain("session/approval counters are unavailable");
+    expect(html).not.toContain("0 active session(s), 0 pending approval(s)");
   });
 });
