@@ -32,5 +32,31 @@ from .expert_mesh import (
     ChallengeReport,
 )
 from .expert_doctrine import build_default_expertise_capsules
+from .repository_intelligence import (
+    ExpertiseCapsuleExtension,
+    GenomePulseMiner,
+    GenomePulseResult,
+    IndexedRepository,
+    RepoDNAIndexer,
+    RepositoryFileRecord,
+    RepositorySnapshot,
+    TruthWeave,
+)
+from .evaluation_runtime import (
+    BenchmarkNoveltyLedger,
+    CertificationEvidence,
+    CompetenceHalfLifePolicy,
+    CounterfactualForge,
+    CounterfactualProbe,
+    OutcomeAuthority,
+    OutcomeEchoLedger,
+    OutcomeRecord,
+    OutcomeSignal,
+    RecertificationClock,
+    RecertificationReport,
+    RecertificationStatus,
+    ShadowBenchCase,
+    ShadowBenchFactory,
+)
 
 __all__ = [name for name in globals() if not name.startswith("_")]
