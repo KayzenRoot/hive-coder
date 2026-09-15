@@ -20,4 +20,19 @@ Promotion must use suite diversity rather than a single public leaderboard. Exte
 
 Benchmark result trust belongs to a host verifier and evidence digest. Raw model/provider claims remain non-authoritative. Evaluation records must preserve suite/version identity, sample counts, incidents and evidence references.
 
-Future benchmark upgrades should add dynamic/fresh task generation, language/framework suites, cost/latency telemetry, repair quality, regression severity, benchmark decay and post-upgrade re-certification. Never report unmeasured gains as facts.
+## Freshness, novelty and repository binding
+
+`HCODER-WO-0012` adds repository-aware evaluation controls:
+- RepoDNA snapshot identity binds evaluation to exact indexed repository content.
+- ShadowBench case generation is host-keyed and derived from verified repository facts.
+- Hidden oracle material is represented by host-bound digests rather than model-visible answer text.
+- Benchmark novelty is lineage based. Cosmetic case IDs, epoch changes or trivial mutations over the same fact lineage do not count as independent novelty.
+- Counterfactual Forge creates structure-bound what-if probes without mutating repository code.
+- Production certification evidence is bound to exact Agent Profile fingerprint, Competence Standard fingerprint and repository snapshot.
+- Competence Half-Life makes certification time-bounded. Evidence may become `DUE` or `EXPIRED` even when it was previously valid.
+- Repository snapshot or execution-stack changes invalidate reuse of older certification unless a later governed compatibility rule explicitly proves equivalence.
+- Outcome Echo is advisory-only. Negative regressions/rollbacks may force earlier recertification; positive production outcomes cannot mint benchmark evidence or promote competence.
+
+Fresh hidden/project-specific suites should use multiple independent source lineages and preserve generation-version identity. A generator change is an evaluation protocol change and requires regression evidence. Never treat generated-case novelty as sufficient proof by itself: trusted execution, grading and evidence binding remain mandatory before a case contributes to Experience Ledger competence.
+
+Future benchmark upgrades should add stronger language/framework-specific task materialization, cost/latency telemetry, repair quality, regression severity, contamination estimation, benchmark decay calibration and provider-backed re-certification. Never report unmeasured gains as facts.
