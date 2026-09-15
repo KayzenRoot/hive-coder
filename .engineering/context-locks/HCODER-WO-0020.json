@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "hive-context-lock-v1",
+  "workOrder": "HCODER-WO-0020",
+  "status": "LOCKED_FOR_EXECUTION_HIGH_ASSURANCE",
+  "repository": "KayzenRoot/hive-coder",
+  "issue": 51,
+  "base": {
+    "checkpoint": "HCODER-CP-0019",
+    "sha": "e4bc74d1ae6c4054cd98cd34b16e6357f911224c",
+    "tree": "6d9a93325f551403ae59645daf094c47ed299f13"
+  },
+  "sources": {
+    "checkpoint": {"path": "docs/project-brain/11-CHECKPOINT.md", "blob": "85a0966799848baa26440a775d7b530042b46b6e"},
+    "architecture": {"path": "docs/project-brain/04-ARCHITECTURE.md", "blob": "446a0c47f9ac1be4ce4817c97cd258e7b749129e"},
+    "security": {"path": "docs/project-brain/05-SECURITY.md", "blob": "1cede4091b2f27523eccca4e3febe1eb3c1bc248"},
+    "runtimeStatusContract": {"path": "apps/desktop/src/contracts/runtimeStatus.ts", "blob": "5535708368eae0417daf931974b625de4d0464f9"},
+    "statusSidecar": {"path": "tools/runtime/status_sidecar.py", "blob": "641edbab040c850aa0e417b7d84ae9c12502cbc4"},
+    "desktopSecurityGate": {"path": "tools/desktop/security_gate.py", "blob": "98d24a90dfdb1d2e4465c1f3343d21e572f086d1"},
+    "desktopRustBridge": {"path": "apps/desktop/src-tauri/src/lib.rs", "blob": "21902315cd8b99c77fd58f28d59ef4bc4be8fc34"},
+    "desktopBridge": {"path": "apps/desktop/src/lib/desktopBridge.ts", "blob": "d6d48eea2539323e8e05ed641dc14405e9c57907"},
+    "app": {"path": "apps/desktop/src/App.tsx", "blob": "5774d292a21c760d2ffa972261de1bd78b3befb5"},
+    "shellView": {"path": "apps/desktop/src/components/ShellView.tsx", "blob": "8595e74f2b7c254d23e15da78a1d3f4eb895ed95"}
+  },
+  "historicalEvidenceOnly": {
+    "pullRequest": 39,
+    "head": "19b097793a588f725c11d5f77d0022e06fc19bf4",
+    "mergeAllowed": false,
+    "cherryPickAllowed": false
+  },
+  "authorityBoundary": {
+    "presentationOnly": true,
+    "fixedSidecarSpawn": true,
+    "genericProcess": false,
+    "frontendProcessPathArgsEnv": false,
+    "ambientEnvForwarding": false,
+    "providerCalls": false,
+    "modelExecution": false,
+    "permissionMutation": false,
+    "taskMutation": false,
+    "filesystemMutation": false,
+    "gitMutation": false,
+    "computerUseMutation": false,
+    "remoteControl": false,
+    "billingPurchases": false
+  }
+}
