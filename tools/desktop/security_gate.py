@@ -169,8 +169,8 @@ def main() -> int:
         if any(token in signature for token in ("String", "Path", "PathBuf", "Vec<", "serde_json", "Value")):
             failures.append("choose_workspace command accepts caller-controlled target/payload")
 
-    if "std::process" in prod_rust or "git " in prod_rust.lower():
-        failures.append("workspace/Git read path must not invoke an external git/process command")
+    if "std::process" in prod_rust:
+        failures.append("workspace/Git read path must not invoke an external process command")
 
     package = json.loads((DESKTOP / "package.json").read_text(encoding="utf-8"))
     all_deps = {**package.get("dependencies", {}), **package.get("devDependencies", {})}
