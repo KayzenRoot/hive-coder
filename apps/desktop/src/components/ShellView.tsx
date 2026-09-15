@@ -1,4 +1,5 @@
 import type { DesktopSnapshot, OperationalState, StatusSignal } from "../contracts/desktopSnapshot";
+import type { RuntimeStatusEnvelope } from "../contracts/runtimeStatus";
 import { HiveMark } from "./HiveMark";
 
 const NAV_ITEMS = ["Workspace", "Tasks", "Code", "Computer", "Evidence"] as const;
@@ -33,6 +34,7 @@ function SafetyButton({ label, enabled, kind = "default" }: { label: string; ena
 
 interface ShellViewProps {
   snapshot: DesktopSnapshot;
+  runtimeStatus?: RuntimeStatusEnvelope | null;
   choosingWorkspace?: boolean;
   workspaceError?: string | null;
   onChooseWorkspace?: () => void | Promise<void>;
@@ -42,13 +44,56 @@ function shortHead(head: string | null): string {
   return head ? head.slice(0, 12) : "Unavailable";
 }
 
+function permissionDetail(permission: RuntimeStatusEnvelope["snapshot"]["permission"]): string {
+  if (permission.state !== "READY") {
+    return "No actionable permission authority is exposed through the runtime status channel.";
+  }
+  if (permission.activeSessions === null || permission.pendingApprovals === null) {
+    return "Permission plane reports READY, but session/approval counters are unavailable in this observation.";
+  }
+  return `Read-only status: ${permission.activeSessions} active session(s), ${permission.pendingApprovals} pending approval(s).`;
+}
+
 export function ShellView({
   snapshot,
+  runtimeStatus = null,
   choosingWorkspace = false,
   workspaceError = null,
   onChooseWorkspace,
 }: ShellViewProps) {
-  const statusSignals = [snapshot.runtime, snapshot.provider, snapshot.git.signal, snapshot.evidence.signal, snapshot.permission];
+  const live = runtimeStatus?.snapshot ?? null;
+  const runtimeSignal: StatusSignal = live
+    ? { state: live.runtime.state, label: "Runtime", detail: live.runtime.detail, provenance: live.runtime.provenance }
+    : snapshot.runtime;
+  const providerState: OperationalState = !live
+    ? snapshot.provider.state
+    : live.runtime.state === "DISCONNECTED"
+      ? "DISCONNECTED"
+      : live.providers.some((provider) => provider.state === "DEGRADED")
+        ? "DEGRADED"
+        : live.providers.some((provider) => provider.state === "READY")
+          ? "READY"
+          : "UNKNOWN";
+  const providerModels = live?.providers.reduce((total, provider) => total + provider.modelIds.length, 0) ?? 0;
+  const providerSignal: StatusSignal = live
+    ? {
+        state: providerState,
+        label: "Provider",
+        detail: live.providers.length > 0
+          ? `${live.providers.length} provider${live.providers.length === 1 ? "" : "s"} / ${providerModels} observed model${providerModels === 1 ? "" : "s"}. Capability authority remains evidence-driven.`
+          : "No provider catalog is connected through the runtime status channel.",
+        provenance: live.providers[0]?.provenance ?? live.runtime.provenance,
+      }
+    : snapshot.provider;
+  const permissionSignal: StatusSignal = live
+    ? {
+        state: live.permission.state,
+        label: "Permission plane",
+        detail: permissionDetail(live.permission),
+        provenance: live.permission.provenance,
+      }
+    : snapshot.permission;
+  const statusSignals = [runtimeSignal, providerSignal, snapshot.git.signal, snapshot.evidence.signal, permissionSignal];
   const workspaceName = snapshot.workspace.name ?? "No workspace selected";
   const workspaceRoot = snapshot.workspace.root ?? "Choose a folder explicitly to establish trusted read-only project context.";
   const branch = snapshot.git.detached ? "Detached HEAD" : snapshot.git.branch ?? "Unavailable";
@@ -137,10 +182,11 @@ export function ShellView({
             <div className="task-surface">
               <div className="task-surface__glow" />
               <span className="section-kicker">TASK / CONVERSATION</span>
-              <h3>No execution session attached</h3>
+              <h3>{live?.task ? `${live.task.taskId} · ${live.task.state}` : "No execution session attached"}</h3>
               <p>
-                Workspace and Git observations are read-only. Task execution, shell commands, file mutation and
-                computer input remain unavailable until later governed application boundaries are promoted.
+                {live?.task
+                  ? `Read-only task progress: ${live.task.nodeSucceeded}/${live.task.nodeTotal} nodes succeeded, ${live.task.executions} execution(s), ${live.task.failures} failure(s). Mutation remains unavailable.`
+                  : "Workspace, Git and runtime status observations are read-only. Task execution, shell commands, file mutation and computer input remain unavailable."}
               </p>
               <div className="composer" aria-label="Inactive task composer">
                 <span>Execution input unavailable in trusted read mode</span>

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "hive-context-lock-v1",
+  "workOrder": "HCODER-WO-0020",
+  "status": "LOCKED_FOR_EXECUTION_HIGH_ASSURANCE",
+  "repository": "KayzenRoot/hive-coder",
+  "canonicalBase": {
+    "checkpoint": "HCODER-CP-0019",
+    "mainSha": "e4bc74d1ae6c4054cd98cd34b16e6357f911224c",
+    "checkpointBlob": "85a0966799848baa26440a775d7b530042b46b6e",
+    "decisionsBlob": "edf92e4d44bdd42a0056fca2cfd407a74e3ccdd6",
+    "architectureBlob": "446a0c47f9ac1be4ce4817c97cd258e7b749129e",
+    "securityBlob": "1cede4091b2f27523eccca4e3febe1eb3c1bc248",
+    "backlogBlob": "ab7dce55ad845537aaa455045b2009659a73150a",
+    "integrationContractsBlob": "1d42c3086d70308559aeebd40ad96d79c6cad168",
+    "runtimeStatusContractBlob": "5535708368eae0417daf931974b625de4d0464f9",
+    "desktopSecurityGateBlob": "98d24a90dfdb1d2e4465c1f3343d21e572f086d1"
+  },
+  "issue": 51,
+  "historicalEvidenceOnly": {
+    "pr": 39,
+    "head": "19b097793a588f725c11d5f77d0022e06fc19bf4"
+  },
+  "authorityBoundary": {
+    "presentationOnly": true,
+    "fixedSidecarSpawn": true,
+    "genericProcess": false,
+    "frontendProcessArgs": false,
+    "ambientEnvForwarding": false,
+    "providerCalls": false,
+    "modelExecution": false,
+    "permissionMutation": false,
+    "taskMutation": false,
+    "filesystemMutation": false,
+    "gitMutation": false,
+    "computerUseMutation": false,
+    "remoteControl": false,
+    "billingPurchase": false
+  },
+  "stopOn": ["unresolved HIGH", "unresolved CRITICAL", "generic process expansion", "caller-controlled process identity", "fake readiness"]
+}

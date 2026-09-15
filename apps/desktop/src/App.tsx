@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { ShellView } from "./components/ShellView";
 import { type DesktopSnapshot, disconnectedSnapshot } from "./contracts/desktopSnapshot";
-import { chooseWorkspace, loadDesktopSnapshot } from "./lib/desktopBridge";
+import type { RuntimeStatusEnvelope } from "./contracts/runtimeStatus";
+import { chooseWorkspace, loadDesktopSnapshot, loadRuntimeStatusEnvelope } from "./lib/desktopBridge";
 
 export default function App() {
   const [snapshot, setSnapshot] = useState<DesktopSnapshot>(() => disconnectedSnapshot());
+  const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatusEnvelope | null>(null);
   const [choosingWorkspace, setChoosingWorkspace] = useState(false);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
 
@@ -12,6 +14,9 @@ export default function App() {
     let active = true;
     void loadDesktopSnapshot().then((next) => {
       if (active) setSnapshot(next);
+    });
+    void loadRuntimeStatusEnvelope().then((next) => {
+      if (active) setRuntimeStatus(next);
     });
     return () => { active = false; };
   }, []);
@@ -32,6 +37,7 @@ export default function App() {
   return (
     <ShellView
       snapshot={snapshot}
+      runtimeStatus={runtimeStatus}
       choosingWorkspace={choosingWorkspace}
       workspaceError={workspaceError}
       onChooseWorkspace={handleChooseWorkspace}
