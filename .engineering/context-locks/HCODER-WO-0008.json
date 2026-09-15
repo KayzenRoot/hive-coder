@@ -1,0 +1,10 @@
+{
+  "workOrderId": "HCODER-WO-0008",
+  "baseCheckpoint": "HCODER-CP-0007",
+  "baseSha": "5af12a77106467bd6838eb545ef2b94ac4265fc5",
+  "risk": "ELEVATED",
+  "taskClass": "T3",
+  "contextRadius": "C3",
+  "allowed": ["provider-metadata", "model-catalog", "capability-probes", "credential-boundary", "acp-prompt"],
+  "forbidden": ["committed-provider-secret", "billing", "remote-control", "automatic-skill-install", "new-desktop-capability"]
+}

@@ -1,26 +1,25 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** HCODER-CP-0007  
+**Checkpoint:** HCODER-CP-0008  
 **Status:** APPROVED  
 **Date:** 2026-09-14  
 **Repository:** `KayzenRoot/hive-coder`  
-**Approved Work Order:** `HCODER-WO-0007`  
-**PR:** `#15`
+**Approved Work Order:** `HCODER-WO-0008`  
+**PR:** `#17`
 
 ## Proven canonical state
-- CP-0006 Cua integration and CP-0005 permission boundaries remain authoritative.
-- Model capability negotiation is Hive-owned and fail-closed; only `verified` evidence enables a capability.
-- Model names, declarations, marketing labels and model/skill prose do not grant capability.
-- Hive skill identity/version/provenance/digest and lifecycle boundaries exist.
-- MCP skill resources are always ingested as untrusted content.
-- CR-001 removed caller-controlled evaluation/grant promotion inputs. Evaluator and capability authorizer are trusted host construction dependencies.
-- Skill activation requires deterministic evaluation and cannot exceed the trusted authorizer's existing grant.
-- Duplicate skill versions and digest mismatch fail closed; rollback is explicit.
-- Corrected exact head `a902c71a9669848493862eaceee45960b35766c0` passed Governance `34915868010`: Ubuntu 94/94 PASS and Windows HIGH_ASSURANCE 56/56 PASS.
-- No provider credential, network remote control, automatic skill install or new desktop mutation capability is introduced.
-
-## Product direction retained
-Capability-aware UI/runtime, governed skill learning, long-running resumable agents and secure Remote Hive Control remain planned.
+- CP-0007 capability/skills boundary remains authoritative.
+- Hive-owned provider/model contracts and normalized catalog exist.
+- Raw provider observations cannot self-assert VERIFIED; only a trusted host verifier may promote capability evidence.
+- Deterministic router refuses capability downgrade and fails closed when no verified model qualifies.
+- OpenCode Go is a first-class provider identity with zero implied capability.
+- Credentials have an explicit redacted scope and are not placed into model/skill metadata.
+- Open Interpreter ACP now has bounded `session/prompt` lifecycle with strict result validation.
+- Prompt execution creates no desktop capability grant or Cua permit.
+- HEDS CR-001 HIGH and CR-002 MEDIUM are resolved.
+- Corrected exact head `263a920cd1ced4c24955f29ed97e29c0fe3f2d93` passed Governance run `34916503775`: Ubuntu **105/105 PASS** and Windows HIGH_ASSURANCE **56/56 PASS**.
+- No live OpenCode Go credentials/capability probes are claimed by this checkpoint.
+- No remote control, billing, automatic skill install or new desktop mutation is introduced.
 
 ## Next necessary increment
-Implement **Provider & Model Runtime Integration**, starting with OpenCode Go behind a Hive-owned provider adapter and capability probes. Credentials must be explicitly scoped and never enter skill content/audit. Model routing must consume CP-0007 verified capability evidence. Open Interpreter prompt execution may then be introduced behind this provider/model boundary, without granting desktop permissions. Secure Remote Hive Control remains a separate HIGH_ASSURANCE subsystem after identity/device-session architecture is frozen.
+Build the **Resumable Agent Task Runtime**: durable task graph/state machine, checkpoints, budgets, provider/model selection, governed skill invocation, cancellation/recovery and observable execution history. It must remain subordinate to CP-0005 permissions and CP-0007/0008 capability truth. Remote Hive Control remains a separate HIGH_ASSURANCE subsystem.
