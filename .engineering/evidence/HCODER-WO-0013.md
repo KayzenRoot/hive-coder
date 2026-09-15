@@ -19,34 +19,38 @@
 - no CP-0005..CP-0012 authority expansion.
 
 ## Technical candidate evidence
-Corrected implementation head `bf2cf866dad70d63a0808545ce8aabd968b8ca64` passed Governance run `34929170906`.
+Corrected implementation head `bf2cf866dad70d63a0808545ce8aabd968b8ca64` passed Governance run `34929170906`:
+- Ubuntu full suite: **241/241 PASS** with exact-head verification and `ResourceWarning` fatal.
+- Windows Server 2025 HIGH_ASSURANCE: **56/56 PASS** with exact-head verification.
 
-### Ubuntu source-pack
-- exact-head checkout: **PASS** (`EXACT_HEAD_OK=bf2cf866dad70d63a0808545ce8aabd968b8ca64`)
-- foundation lock / inventory: **PASS**
-- Python compileall: **PASS**
-- full unit suite: **241/241 PASS**
-- `PYTHONWARNINGS=error::ResourceWarning`: enabled
+## Promotion candidate evidence
+Exact implementation/documentation head `91fec0821f8cececed2cfeb44a18ce508aa03e42` passed Governance run `34953929007`:
+- Ubuntu exact-head guard: **PASS**.
+- foundation lock/inventory: **PASS**.
+- Python compileall: **PASS**.
+- Ubuntu full suite: **241/241 PASS** with `PYTHONWARNINGS=error::ResourceWarning`.
+- Windows Server 2025 exact-head guard: **PASS**.
+- Windows HIGH_ASSURANCE regression: **56/56 PASS**.
 
-### Windows Server 2025 HIGH_ASSURANCE
-- exact-head checkout: **PASS** (`EXACT_HEAD_OK=bf2cf866dad70d63a0808545ce8aabd968b8ca64`)
-- compile: **PASS**
-- existing permission/control/Cua HIGH_ASSURANCE regression: **56/56 PASS**
+Comparison from `bf2cf866dad70d63a0808545ce8aabd968b8ca64` to `91fec0821f8cececed2cfeb44a18ce508aa03e42` contained documentation/governance changes only; no runtime or test code changed after the corrected technical candidate.
 
 ## HEDS correction history
-### CR-001 HIGH — RESOLVED IN CANDIDATE
+### CR-001 HIGH — RESOLVED
 HEDS identified a non-atomic trial replay check, incomplete physical endpoint separation between runner/grader, missing grader rationale evidence and an unbounded provider response. The correction added atomic journal `reserve_once()`, EndpointSeal, GradeProof, a 4 MiB provider-response ceiling and adversarial concurrency/endpoint-collapse tests.
 
-### CR-002 HIGH — RESOLVED IN CANDIDATE
+### CR-002 HIGH — RESOLVED
 HEDS identified that a CP-0011 BenchmarkResult by itself did not bind repository snapshot/Semantic Twin and could therefore be transplanted into a later certification request. The correction added the EvidenceDNA envelope and made certification accept only verified envelopes matching the current sealed profile, StackGenome, repository snapshot, Semantic Twin and SuiteLineage.
 
-## HEDS adversarial coverage
-Reviewed attack classes include provider self-grading, runner/grader lineage collapse, endpoint collapse, trial reroll after execution failure, concurrent duplicate reservation, cosmetic benchmark-family diversity, signed-journal rollback, journal tamper, oracle leakage, missing GradeProof, forged/tampered benchmark evidence, repository/twin/stack evidence transplant, contamination score inflation and paths that could convert evaluation/repository evidence into permission authority.
+## HEDS exact-head review
+Review anchor: `91fec0821f8cececed2cfeb44a18ce508aa03e42`  
+Review ID: `5208260699`  
+Verdict: **APPROVED**  
+Open HIGH/CRITICAL findings in scope: **0**.
 
-## Candidate verdict
-**TECHNICAL CANDIDATE GREEN.** No unresolved HIGH/CRITICAL technical finding remained after CR-002 at `bf2cf866dad70d63a0808545ce8aabd968b8ca64`.
+Adversarial review covered provider self-grading, runner/grader lineage collapse, endpoint collapse, trial reroll after execution failure, concurrent duplicate reservation, cosmetic benchmark-family diversity, signed-journal rollback, journal tamper, oracle leakage, missing GradeProof, forged/tampered benchmark evidence, repository/twin/stack evidence transplant, contamination score inflation and any path that could convert evaluation/repository evidence into permission authority.
 
-**FINAL HEDS VERDICT: PENDING.** The promotion/documentation head must pass a fresh exact-head Governance run. After that run, HEDS must review the exact promotion head before DEC-017 / CP-0013 can become APPROVED.
+## Final Work Order verdict
+**APPROVED FOR MERGE.** DEC-017 and HCODER-CP-0013 are promoted in the promotion commit. The promotion commit itself must pass fresh exact-head Governance before merge. Merge must be SHA-locked and post-merge Governance on `main` must succeed before the WO stop condition is considered fully satisfied.
 
 ## Residuals not claimed as PASS
 - Cross-process/distributed atomic reservation: **NOT APPROVED**.

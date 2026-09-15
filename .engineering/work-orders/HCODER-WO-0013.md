@@ -1,6 +1,6 @@
 # HCODER-WO-0013 — Provider Certification Lab & Semantic Repository Twin
 
-**Status:** IN PROGRESS  
+**Status:** APPROVED FOR MERGE  
 **Issue:** #26  
 **Risk:** HIGH_ASSURANCE  
 **Task class:** T3  
@@ -16,12 +16,14 @@ CP-0012 provides RepoDNA, TruthWeave, GenomePulse, ShadowBench, ChronoSeal, sign
 - Semantic Repository Twin from static RepoDNA text.
 - SchemaSense, APIVein, Dataflow Echo and Dependency Cortex.
 - Provider Certification Lab with sealed runner/grader identities.
-- StackSeal exact-stack trial binding.
+- StackGenome and StackSeal exact-stack trial binding.
+- SuiteLineage Authority for benchmark independence roots.
 - TrialForge model-visible materialization with hidden oracle boundary.
-- Blind grader contract.
+- Blind grader contract with GradeProof.
+- One-Shot Trial Law with atomic reservation.
 - Contamination Radar downgrade/block-only semantics.
 - DurableAttestationJournal and Durable ChronoSeal using a host-injected monotonic anchor.
-- Trial receipts, benchmark attestation and auditable certification reports.
+- Trial receipts, EvidenceDNA benchmark attestation and auditable certification reports.
 - Deterministic mocks and adversarial tests.
 
 ## OUT OF SCOPE
@@ -39,12 +41,12 @@ Real provider credentials in CI, billing, arbitrary code execution during indexi
 - `hive_runtime/evaluation_runtime.py`
 
 ## REQUIREMENTS
-1. Runner and grader identities are host-sealed and lineage-separated.
-2. Trial identity binds exact sealed Agent Profile/execution stack, provider/model, repository snapshot, semantic twin, benchmark dimension/family, hidden case and evaluation protocol.
+1. Runner and grader identities are host-sealed and lineage/endpoint separated.
+2. Trial identity binds exact sealed Agent Profile/execution stack, provider/model, repository snapshot, semantic twin, trusted suite lineage, hidden case and evaluation protocol.
 3. Provider/model output cannot grade or certify itself.
 4. Model-visible trial material contains no plaintext or host oracle secret.
 5. Trial evidence is host-sealed before it can become BenchmarkResult evidence.
-6. Benchmark evidence is verifiable by CP-0011 ExperienceLedger without trusting provider prose.
+6. Benchmark evidence is verifiable by CP-0011 ExperienceLedger without trusting provider prose and cannot be transplanted across stack/repository/twin contexts.
 7. Persistent chronology must be HMAC authenticated and use a host-injected monotonic floor to detect signed rollback.
 8. Semantic extraction is static/no-exec and deterministically fingerprinted.
 9. Contamination signals only block/lower confidence.
@@ -68,19 +70,31 @@ Real provider credentials in CI, billing, arbitrary code execution during indexi
 - Dependency Cortex provides bounded graph impact traversal.
 - Durable chronology survives restart and rejects rollback below trusted anchor floor.
 - StackSeal rejects profile/stack or actor independence mismatch.
-- Trial replay is rejected durably for the same profile/case lineage.
+- Trial replay is rejected durably for the same profile/case lineage inside the journal authority domain.
 - Contamination Radar blocks known exposure and cannot add score.
-- Sealed trial receipts aggregate into verifiable BenchmarkResult evidence.
+- Sealed trial receipts aggregate into EvidenceDNA-wrapped verifiable BenchmarkResult evidence.
+- EvidenceDNA prevents repository/twin/stack evidence transplant.
 - Broad regression and Windows HIGH_ASSURANCE remain green.
 
 ## TESTS
 Unit, adversarial filesystem/chronology/identity/tamper/replay tests, compileall, full Linux discovery suite and existing Windows HIGH_ASSURANCE regression.
 
 ## DELIVERABLES
-Runtime code, tests, canonical docs, evidence, correction deltas if required, DEC-017, CP-0013 and checkpoint delta.
+Runtime code, tests, canonical docs, evidence, correction deltas, DEC-017, CP-0013 and checkpoint delta.
 
 ## REVIEW FORMAT
 HEDS_DELTA exact-head. UNKNOWN is not PASS. HIGH/CRITICAL findings block promotion.
 
+## CLOSURE EVIDENCE
+- Corrected technical head `bf2cf866dad70d63a0808545ce8aabd968b8ca64`: Governance `34929170906`, Ubuntu **241/241 PASS**, Windows HIGH_ASSURANCE **56/56 PASS**.
+- Exact promotion candidate head `91fec0821f8cececed2cfeb44a18ce508aa03e42`: Governance `34953929007`, Ubuntu **241/241 PASS**, Windows HIGH_ASSURANCE **56/56 PASS**.
+- HEDS exact-head review `5208260699`: **APPROVED**.
+- `HCODER-WO-0013-CR-001`: **RESOLVED**.
+- `HCODER-WO-0013-CR-002`: **RESOLVED**.
+- Open HIGH/CRITICAL findings: **0**.
+- DEC-017 / HCODER-CP-0013: promoted to **APPROVED** in the promotion commit.
+
 ## STOP CONDITION
 Exact-head Governance green; HEDS APPROVED; no open HIGH/CRITICAL; DEC-017 and CP-0013 APPROVED; squash merge; post-merge Governance green.
+
+The Work Order is approved for merge. The STOP CONDITION is fully satisfied only after the SHA-locked squash merge and successful post-merge Governance on `main`.

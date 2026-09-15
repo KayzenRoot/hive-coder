@@ -1,7 +1,7 @@
 # HCODER-WO-0013-CR-001 — Atomic trial reservation and independence hardening
 
 **Severity:** HIGH  
-**Status:** RESOLVED IN CANDIDATE  
+**Status:** RESOLVED  
 **Work Order:** `HCODER-WO-0013`
 
 ## Finding
@@ -20,5 +20,5 @@ The first Provider Certification Lab candidate was functionally green but HEDS f
 - Preserved **One-Shot Trial Law**: lineage is durably consumed before provider execution, so provider/grader errors cannot be exploited to reroll the same hidden case.
 - Added concurrent adversarial reservation tests plus endpoint-collapse and missing-GradeProof tests.
 
-## Closure gate
-RESOLVED becomes final only after exact-head Governance passes on the corrected candidate and HEDS finds no remaining HIGH/CRITICAL issue in scope.
+## Closure evidence
+Exact implementation/documentation head `91fec0821f8cececed2cfeb44a18ce508aa03e42` passed Governance run `34953929007`: Ubuntu **241/241 PASS**, Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**, both exact-head verified. HEDS review `5208260699` returned **APPROVED** with zero open HIGH/CRITICAL findings in scope.

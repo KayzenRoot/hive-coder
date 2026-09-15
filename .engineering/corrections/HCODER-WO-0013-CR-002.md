@@ -1,7 +1,7 @@
 # HCODER-WO-0013-CR-002 — EvidenceDNA repository/twin/stack transplant prevention
 
 **Severity:** HIGH  
-**Status:** RESOLVED IN CANDIDATE  
+**Status:** RESOLVED  
 **Work Order:** `HCODER-WO-0013`
 
 ## Finding
@@ -16,5 +16,5 @@ The CP-0011 `BenchmarkResult` schema intentionally measures competence but has n
 - AuditableCertificationReport records the EvidenceDNA envelope fingerprints, not only portable BenchmarkResult fingerprints.
 - Added adversarial tests proving envelope tamper rejection and rejection of a valid benchmark result transplanted to a different repository/twin.
 
-## Closure gate
-RESOLVED becomes final only after exact-head Governance passes the corrected candidate and final HEDS reports zero open HIGH/CRITICAL findings.
+## Closure evidence
+Exact implementation/documentation head `91fec0821f8cececed2cfeb44a18ce508aa03e42` passed Governance run `34953929007`: Ubuntu **241/241 PASS**, Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**, both exact-head verified. HEDS review `5208260699` returned **APPROVED** with zero open HIGH/CRITICAL findings in scope.
