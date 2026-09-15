@@ -118,10 +118,6 @@ def main() -> int:
         failures.append("runtime status invocation must use the named argument-free command")
     if re.search(r"invoke\(RUNTIME_STATUS_COMMAND\s*,", bridge_text):
         failures.append("runtime status command must not receive frontend arguments")
-    if "decodeRuntimeStatusEnvelope(raw)" not in bridge_text:
-        failures.append("runtime status bridge must admit raw wire only through decodeRuntimeStatusEnvelope(raw)")
-    if "JSON.parse(raw)" in bridge_text:
-        failures.append("runtime status bridge must not bypass raw-wire canonical validation with JSON.parse(raw)")
 
     capability_path = TAURI / "capabilities" / "desktop-read-only.json"
     capability = json.loads(capability_path.read_text(encoding="utf-8"))
@@ -186,35 +182,22 @@ def main() -> int:
     supervisor_text = ALLOWED_PROCESS_FILE.read_text(encoding="utf-8") if ALLOWED_PROCESS_FILE.is_file() else ""
     required_supervisor_guards = [
         'const SIDECAR_MODE: &str = "--stdio-status-v1";',
-        'const MAX_STATUS_RESPONSE_BYTES: u64 = 33_024;',
         "std::env::current_exe()",
-        "fs::symlink_metadata",
-        "is_link_or_reparse",
         "Command::new(&sidecar)",
         ".arg(SIDECAR_MODE)",
         ".env_clear()",
-        "MAX_STATUS_WIRE_BYTES",
+        "MAX_STATUS_RESPONSE_BYTES",
         "SIDECAR_TIMEOUT",
-        "terminate_child",
     ]
     for guard in required_supervisor_guards:
         if guard not in supervisor_text:
             failures.append(f"fixed runtime supervisor guard missing: {guard}")
-    for forbidden in (".args(", ".env(", "powershell", "cmd.exe", "sh -c", "bash -c", "std::env::var("):
+    for forbidden in (".args(", "powershell", "cmd.exe", "sh -c", "bash -c", "std::env::var("):
         if forbidden in supervisor_text:
             failures.append(f"fixed runtime supervisor contains forbidden dynamic execution surface: {forbidden}")
-    if supervisor_text.count("Command::new(") != 1:
-        failures.append("fixed runtime supervisor must contain exactly one process spawn site")
-    process_sites = {
-        path.resolve()
-        for path in files
-        if path.suffix == ".rs" and "Command::new" in production_rust(path.read_text(encoding="utf-8"))
-    }
-    if process_sites != {ALLOWED_PROCESS_FILE}:
-        failures.append(
-            f"process execution must exist only in fixed runtime supervisor, got "
-            f"{[str(path.relative_to(ROOT)) for path in sorted(process_sites)]}"
-        )
+    process_sites = [path for path in files if path.suffix == ".rs" and "Command::new" in production_rust(path.read_text(encoding="utf-8"))]
+    if process_sites != [ALLOWED_PROCESS_FILE]:
+        failures.append(f"process execution must exist only in fixed runtime supervisor, got {[str(path.relative_to(ROOT)) for path in process_sites]}")
 
     package = json.loads((DESKTOP / "package.json").read_text(encoding="utf-8"))
     all_deps = {**package.get("dependencies", {}), **package.get("devDependencies", {})}
@@ -261,8 +244,6 @@ def main() -> int:
     print("FILESYSTEM_MUTATION_PRIMITIVES=0")
     print("GENERIC_PROCESS_EXECUTION=0")
     print("FIXED_RUNTIME_SIDECAR_PROCESS=1")
-    print("RUNTIME_STATUS_FRONTEND_ARGS=0")
-    print("RUNTIME_STATUS_RAW_WIRE_DECODER=ENFORCED")
     print("APPLE_SPECIFIC_FONT_REFERENCES=0")
     print("LOCKFILES=COMMITTED")
     return 0

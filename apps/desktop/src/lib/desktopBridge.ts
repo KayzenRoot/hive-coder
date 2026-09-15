@@ -4,7 +4,10 @@ import {
   disconnectedSnapshot,
   parseDesktopSnapshot,
 } from "../contracts/desktopSnapshot";
-import { decodeRuntimeStatusEnvelope, type RuntimeStatusEnvelope } from "../contracts/runtimeStatus";
+import {
+  decodeRuntimeStatusEnvelope,
+  type RuntimeStatusEnvelope,
+} from "../contracts/runtimeStatus";
 
 const SNAPSHOT_COMMAND = "get_desktop_snapshot" as const;
 const CHOOSE_WORKSPACE_COMMAND = "choose_workspace" as const;

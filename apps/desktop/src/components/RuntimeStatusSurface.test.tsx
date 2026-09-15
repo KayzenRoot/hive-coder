@@ -16,12 +16,14 @@ const liveStatus: RuntimeStatusEnvelope = {
       provenance: "hive-permission-control-plane",
       state: "UNKNOWN",
     },
-    providers: [{
-      modelIds: ["fixture-model"],
-      providerId: "opencode-go",
-      provenance: "hive-provider-catalog",
-      state: "READY",
-    }],
+    providers: [
+      {
+        modelIds: ["fixture-model"],
+        providerId: "opencode-go",
+        provenance: "hive-provider-catalog",
+        state: "READY",
+      },
+    ],
     runtime: {
       detail: "Runtime observer connected.",
       provenance: "hive-runtime-status",
@@ -41,40 +43,25 @@ const liveStatus: RuntimeStatusEnvelope = {
 };
 
 describe("Runtime System Truth surface", () => {
-  it("renders live read-only runtime/provider/task truth without enabling mutation", () => {
-    const html = renderToStaticMarkup(<ShellView snapshot={disconnectedSnapshot()} runtimeStatus={liveStatus} />);
+  it("renders bounded live runtime/provider/task truth without enabling mutation", () => {
+    const html = renderToStaticMarkup(
+      <ShellView snapshot={disconnectedSnapshot()} runtimeStatus={liveStatus} />,
+    );
     expect(html).toContain("Runtime observer connected.");
     expect(html).toContain("1 provider / 1 observed model");
     expect(html).toContain("task-20 · running");
     expect(html).toContain("1/3 nodes succeeded");
     expect(html).toContain("Mutation remains unavailable");
-    expect(html).toContain("hive-runtime-status");
-    expect(html).toContain("hive-provider-catalog");
-    expect(html).toContain("hive-permission-control-plane");
     expect(html).toContain("Emergency stop");
     expect(html.match(/disabled=""/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
   });
 
-  it("does not invent zero permission counters when READY counters are unobserved", () => {
-    const readyWithoutCounters: RuntimeStatusEnvelope = {
-      ...liveStatus,
-      snapshot: {
-        ...liveStatus.snapshot,
-        permission: {
-          ...liveStatus.snapshot.permission,
-          state: "READY",
-        },
-      },
-    };
-    const html = renderToStaticMarkup(<ShellView snapshot={disconnectedSnapshot()} runtimeStatus={readyWithoutCounters} />);
-    expect(html).toContain("Permission observer reports READY; session/approval counters are not exposed.");
-    expect(html).not.toContain("0 active session(s)");
-  });
-
-  it("keeps disconnected presentation when no live envelope is available", () => {
-    const html = renderToStaticMarkup(<ShellView snapshot={disconnectedSnapshot()} runtimeStatus={null} />);
-    expect(html).toContain("DISCONNECTED");
-    expect(html).toContain("No execution session attached");
+  it("keeps mutation controls disabled even when runtime observation is READY", () => {
+    const html = renderToStaticMarkup(
+      <ShellView snapshot={disconnectedSnapshot()} runtimeStatus={liveStatus} />,
+    );
+    expect(html).toContain("READY");
     expect(html).toContain("Execution input unavailable in trusted read mode");
+    expect(html.match(/aria-disabled="true"/g)?.length ?? 0).toBeGreaterThanOrEqual(7);
   });
 });

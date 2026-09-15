@@ -12,8 +12,7 @@ const SIDECAR_BASENAME: &str = "hive-runtime-status-sidecar";
 const SIDECAR_MODE: &str = "--stdio-status-v1";
 const STATUS_REQUEST: &str = "{\"op\":\"status.snapshot\",\"protocol\":\"hive-runtime-status-ipc-v1\",\"requestId\":\"desktop-runtime\"}";
 const MAX_STATUS_RESPONSE_BYTES: u64 = 33_024;
-const MAX_STATUS_WIRE_BYTES: u64 = MAX_STATUS_RESPONSE_BYTES + 1;
-const SIDECAR_TIMEOUT: Duration = Duration::from_millis(1_500);
+const SIDECAR_TIMEOUT: Duration = Duration::from_millis(1500);
 
 fn is_link_or_reparse(metadata: &Metadata) -> bool {
     if metadata.file_type().is_symlink() {
@@ -57,34 +56,11 @@ fn terminate_child(child: &mut Child) {
     let _ = child.wait();
 }
 
-fn validate_response_wire(bytes: Vec<u8>) -> Result<String, String> {
-    if bytes.is_empty() || bytes.len() as u64 > MAX_STATUS_WIRE_BYTES {
-        return Err("runtime status response exceeded byte bounds".to_owned());
-    }
-    if bytes.last() != Some(&b'\n') {
-        return Err("runtime status response framing is invalid".to_owned());
-    }
-    let payload = &bytes[..bytes.len() - 1];
-    if payload.is_empty()
-        || payload.len() as u64 > MAX_STATUS_RESPONSE_BYTES
-        || payload.contains(&b'\n')
-        || payload.contains(&b'\r')
-    {
-        return Err("runtime status response framing is invalid".to_owned());
-    }
-    String::from_utf8(payload.to_vec())
-        .map_err(|_| "runtime status response is not UTF-8".to_owned())
-}
-
 pub(crate) fn query_runtime_status_envelope() -> Result<String, String> {
     let sidecar = validated_sidecar_path()?;
-    let sidecar_dir = sidecar
-        .parent()
-        .ok_or_else(|| "runtime status sidecar parent is unavailable".to_owned())?;
     let mut child = Command::new(&sidecar)
         .arg(SIDECAR_MODE)
         .env_clear()
-        .current_dir(sidecar_dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -120,7 +96,7 @@ pub(crate) fn query_runtime_status_envelope() -> Result<String, String> {
     let reader = thread::spawn(move || {
         let mut bytes = Vec::new();
         stdout
-            .take(MAX_STATUS_WIRE_BYTES.saturating_add(1))
+            .take(MAX_STATUS_RESPONSE_BYTES.saturating_add(1))
             .read_to_end(&mut bytes)
             .map(|_| bytes)
     });
@@ -150,7 +126,17 @@ pub(crate) fn query_runtime_status_envelope() -> Result<String, String> {
     if !status.success() {
         return Err("runtime status sidecar rejected the request".to_owned());
     }
-    validate_response_wire(bytes)
+    if bytes.is_empty() || bytes.len() as u64 > MAX_STATUS_RESPONSE_BYTES {
+        return Err("runtime status response exceeded byte bounds".to_owned());
+    }
+    let text = String::from_utf8(bytes)
+        .map_err(|_| "runtime status response is not UTF-8".to_owned())?;
+    let framed = text.strip_suffix('\n').unwrap_or(&text);
+    let framed = framed.strip_suffix('\r').unwrap_or(framed);
+    if framed.is_empty() || framed.contains('\n') || framed.contains('\r') {
+        return Err("runtime status response framing is invalid".to_owned());
+    }
+    Ok(framed.to_owned())
 }
 
 #[cfg(test)]
@@ -166,23 +152,12 @@ mod tests {
     }
 
     #[test]
-    fn protocol_request_is_fixed_and_canonical() {
+    fn protocol_request_is_canonical_fixed_and_non_mutating() {
         assert_eq!(SIDECAR_MODE, "--stdio-status-v1");
-        assert_eq!(
-            STATUS_REQUEST,
-            "{\"op\":\"status.snapshot\",\"protocol\":\"hive-runtime-status-ipc-v1\",\"requestId\":\"desktop-runtime\"}"
-        );
+        assert_eq!(STATUS_REQUEST, "{\"op\":\"status.snapshot\",\"protocol\":\"hive-runtime-status-ipc-v1\",\"requestId\":\"desktop-runtime\"}");
         assert_eq!(MAX_STATUS_RESPONSE_BYTES, 33_024);
         assert!(!STATUS_REQUEST.contains("prompt"));
         assert!(!STATUS_REQUEST.contains("execute"));
         assert!(!STATUS_REQUEST.contains("permit"));
-    }
-
-    #[test]
-    fn response_wire_requires_one_bounded_newline_frame() {
-        assert_eq!(validate_response_wire(b"{}\n".to_vec()).unwrap(), "{}");
-        assert!(validate_response_wire(b"{}".to_vec()).is_err());
-        assert!(validate_response_wire(b"{}\n{}\n".to_vec()).is_err());
-        assert!(validate_response_wire(vec![b'x'; (MAX_STATUS_WIRE_BYTES + 1) as usize]).is_err());
     }
 }

@@ -44,25 +44,6 @@ function shortHead(head: string | null): string {
   return head ? head.slice(0, 12) : "Unavailable";
 }
 
-function providerStateFromRuntime(live: RuntimeStatusEnvelope["snapshot"]): OperationalState {
-  if (live.runtime.state === "DISCONNECTED") return "DISCONNECTED";
-  if (live.providers.some((provider) => provider.state === "DEGRADED")) return "DEGRADED";
-  if (live.providers.some((provider) => provider.state === "READY")) return "READY";
-  if (live.providers.some((provider) => provider.state === "UNKNOWN")) return "UNKNOWN";
-  if (live.providers.some((provider) => provider.state === "DISCONNECTED")) return "DISCONNECTED";
-  return "UNKNOWN";
-}
-
-function permissionDetailFromRuntime(permission: RuntimeStatusEnvelope["snapshot"]["permission"]): string {
-  if (permission.state !== "READY") {
-    return "No actionable permission authority is exposed through the runtime status channel.";
-  }
-  if (permission.activeSessions === null || permission.pendingApprovals === null) {
-    return "Permission observer reports READY; session/approval counters are not exposed.";
-  }
-  return `Read-only status: ${permission.activeSessions} active session(s), ${permission.pendingApprovals} pending approval(s).`;
-}
-
 export function ShellView({
   snapshot,
   runtimeStatus = null,
@@ -74,23 +55,34 @@ export function ShellView({
   const runtimeSignal: StatusSignal = live
     ? { state: live.runtime.state, label: "Runtime", detail: live.runtime.detail, provenance: live.runtime.provenance }
     : snapshot.runtime;
+  const providerState: OperationalState = !live
+    ? snapshot.provider.state
+    : live.runtime.state === "DISCONNECTED"
+      ? "DISCONNECTED"
+      : live.providers.some((provider) => provider.state === "DEGRADED")
+        ? "DEGRADED"
+        : live.providers.some((provider) => provider.state === "READY")
+          ? "READY"
+          : "UNKNOWN";
   const providerModels = live?.providers.reduce((total, provider) => total + provider.modelIds.length, 0) ?? 0;
   const providerSignal: StatusSignal = live
     ? {
-        state: providerStateFromRuntime(live),
+        state: providerState,
         label: "Provider",
         detail: live.providers.length > 0
-          ? `${live.providers.length} provider${live.providers.length === 1 ? "" : "s"} / ${providerModels} observed model${providerModels === 1 ? "" : "s"}. Catalog observation is not reachability, authentication or VERIFIED capability evidence.`
+          ? `${live.providers.length} provider${live.providers.length === 1 ? "" : "s"} / ${providerModels} observed model${providerModels === 1 ? "" : "s"}. Capability authority remains evidence-driven.`
           : "No provider catalog is connected through the runtime status channel.",
-        provenance: live.providers[0]?.provenance ?? "hive-provider-catalog",
+        provenance: "runtime-status-ipc-v1",
       }
     : snapshot.provider;
   const permissionSignal: StatusSignal = live
     ? {
         state: live.permission.state,
         label: "Permission plane",
-        detail: permissionDetailFromRuntime(live.permission),
-        provenance: live.permission.provenance,
+        detail: live.permission.state === "READY"
+          ? `Read-only status: ${live.permission.activeSessions ?? 0} active session(s), ${live.permission.pendingApprovals ?? 0} pending approval(s).`
+          : "No actionable permission authority is exposed through the runtime status channel.",
+        provenance: "runtime-status-ipc-v1",
       }
     : snapshot.permission;
   const statusSignals = [runtimeSignal, providerSignal, snapshot.git.signal, snapshot.evidence.signal, permissionSignal];
