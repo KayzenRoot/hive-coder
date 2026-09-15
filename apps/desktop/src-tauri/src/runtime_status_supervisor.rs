@@ -78,9 +78,13 @@ fn validate_response_wire(bytes: Vec<u8>) -> Result<String, String> {
 
 pub(crate) fn query_runtime_status_envelope() -> Result<String, String> {
     let sidecar = validated_sidecar_path()?;
+    let sidecar_dir = sidecar
+        .parent()
+        .ok_or_else(|| "runtime status sidecar parent is unavailable".to_owned())?;
     let mut child = Command::new(&sidecar)
         .arg(SIDECAR_MODE)
         .env_clear()
+        .current_dir(sidecar_dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
