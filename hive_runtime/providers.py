@@ -15,8 +15,8 @@ class ProviderModel:
 
 @dataclass(frozen=True)
 class CapabilityProbeResult:
+    """Raw provider observation. It has no authority to mark itself verified."""
     capability: str
-    verified: bool
     source: str
     detail: str = ""
 
@@ -25,6 +25,9 @@ class ProviderAdapter(Protocol):
     provider_id: str
     def list_models(self) -> Iterable[ProviderModel]: ...
     def probe(self, model_id: str) -> Iterable[CapabilityProbeResult]: ...
+
+
+CapabilityVerifier = Callable[[str, str, CapabilityProbeResult], bool]
 
 
 class CredentialScope:
@@ -45,8 +48,12 @@ class CredentialScope:
 
 
 class ProviderCatalog:
-    def __init__(self, registry: ModelCapabilityRegistry) -> None:
+    """Catalog whose verification authority is injected by the trusted Hive host."""
+    def __init__(self, registry: ModelCapabilityRegistry, verifier: CapabilityVerifier) -> None:
+        if not callable(verifier):
+            raise TypeError("trusted capability verifier is required")
         self.registry = registry
+        self._verifier = verifier
         self._models: dict[tuple[str, str], ProviderModel] = {}
 
     def refresh(self, adapter: ProviderAdapter) -> tuple[ProviderModel, ...]:
@@ -61,13 +68,14 @@ class ProviderCatalog:
                 raise ValueError("provider model ids must be unique and non-empty")
             seen.add(model_id)
             evidence = []
+            seen_caps: set[str] = set()
             for probe in adapter.probe(model_id):
-                evidence.append(CapabilityEvidence(
-                    probe.capability,
-                    EvidenceState.VERIFIED if probe.verified else EvidenceState.UNKNOWN,
-                    probe.source,
-                    probe.detail,
-                ))
+                capability = probe.capability.strip()
+                if not capability or capability in seen_caps:
+                    raise ValueError("probe capabilities must be unique and non-empty")
+                seen_caps.add(capability)
+                verified = self._verifier(provider, model_id, probe) is True
+                evidence.append(CapabilityEvidence(capability, EvidenceState.VERIFIED if verified else EvidenceState.UNKNOWN, probe.source, probe.detail))
             self.registry.register(ModelProfile(provider, model_id, tuple(evidence)))
             self._models[(provider, model_id)] = ProviderModel(model_id, model.display_name.strip() or model_id)
         return models
@@ -96,5 +104,5 @@ class ModelRouter:
 
 
 class OpenCodeGoProfile:
-    """Provider identity only. Capabilities must come from probes, never this profile/name."""
+    """Provider identity only. Capabilities must come from trusted verification, never this name."""
     provider_id = "opencode-go"
