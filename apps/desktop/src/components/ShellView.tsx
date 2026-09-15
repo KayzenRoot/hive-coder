@@ -67,7 +67,7 @@ export function ShellView({ snapshot }: { snapshot: DesktopSnapshot }) {
           </div>
           <div className="topbar__meta">
             <span className="read-only-pill"><span className="read-only-pill__dot" />READ-ONLY SHELL</span>
-            <span className="checkpoint">{snapshot.product.checkpoint}</span>
+            <span className="checkpoint">BASE {snapshot.product.baselineCheckpoint}</span>
           </div>
         </header>
 
