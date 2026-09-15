@@ -33,7 +33,9 @@ MCP skills/resources are untrusted content by construction. Hive owns skill iden
 
 Checkpoint state is workflow state only. It must not contain or mint credentials, approvals, permits, capability grants, skill contents, raw prompts or model outputs. Persisted events use normalized codes and exclude exception messages. Model execution uses `ModelRouter`; skill execution uses a trusted `SkillExecutionPort`.
 
-Interrupted model computation may be reissued only inside its attempt budget. Interrupted skills are treated as potentially side-effecting and never auto-replay after crash; explicit trusted-host recovery disposition is required. Global execution/failure budgets and per-node attempt budgets are bounded. Pause/cancel/terminal states prevent further scheduling.
+Per-node attempt ceilings and global execution/failure ceilings are bounded. Active global ceilings are part of the authenticated checkpoint. A restarted runtime must match them exactly. Increasing them requires an explicit trusted-host `extend_budget()` transition while paused; the transition is monotonic and recorded in task history. Prompt/skill ports never receive budget-extension authority.
+
+Interrupted model computation may be reissued only inside its attempt budget. Interrupted skills are treated as potentially side-effecting and never auto-replay after crash; explicit trusted-host recovery disposition is required. Pause stops future scheduling. If requested while a call is already in flight, that call may settle while the task remains PAUSED unless a terminal failure occurs. Cancellation is the cooperative interruption signal provided to execution ports and remains terminal.
 
 ## Remote-control boundary
 Remote Hive control will be a separate HIGH_ASSURANCE subsystem. It must use authenticated encrypted device/session semantics, least privilege, revocation, audit and emergency stop. A raw Cua/RDP/VNC endpoint must never be exposed directly to the public internet by Hive.
