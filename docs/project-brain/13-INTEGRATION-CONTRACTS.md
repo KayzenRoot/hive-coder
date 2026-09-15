@@ -5,6 +5,11 @@ External foundations are dependencies, not the Hive-facing architecture.
 ## Shared runtime/process boundary
 Hive owns the child-process and wire-protocol lifecycle. Foundation processes are launched without a shell, receive a least-privilege environment rather than arbitrary ambient secrets, have bounded request/shutdown behavior, and fail closed on unknown/malformed protocol state. Production constructors resolve expected versions from `foundations/foundations.lock.json` and perform exact-version preflight before protocol launch. Unsupported inbound JSON-RPC requests are denied unless a later explicit Hive handler authorizes them.
 
+## Permission & Control Plane boundary
+Every future privileged adapter/executor call must cross the Hive-owned `PermissionControlPlane`. Policy evaluation is default-deny; explicit deny wins; capability/action/target scope is bound to a control session; mandatory-approval risk classes cannot be downgraded by policy. Trusted UI/orchestrator approval resolves a request-bound challenge into a signed single-use approval. Successful authorization emits a very short-lived signed execution permit bound to request fingerprint, session, policy epoch, global emergency epoch and expiry. A future executor must consume that permit against the exact same request immediately before mutation and revalidate live target identity. Untrusted model/tool surfaces must never receive the trusted approval operation.
+
+Emergency stop, user takeover, cancellation, session expiry and policy changes invalidate ephemeral authorization. Audit events redact sensitive fields and form a SHA-256 digest chain. HCODER-WO-0004 remains authorization-only: it adds no desktop executor and grants no Cua `tools/call`.
+
 ## Interpreter runtime boundary
 Hive Coder talks to an `InterpreterAdapter` contract for task execution, tool invocation, events, cancellation, errors and runtime identity. No UI surface depends directly on upstream internals.
 
