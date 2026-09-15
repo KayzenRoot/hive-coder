@@ -32,3 +32,23 @@ class AdapterStateError(HiveRuntimeError):
 
 class RuntimePreflightError(HiveRuntimeError):
     pass
+
+
+class ControlPlaneError(HiveRuntimeError):
+    pass
+
+
+class AuthorizationDenied(ControlPlaneError):
+    pass
+
+
+class ApprovalError(ControlPlaneError):
+    pass
+
+
+class PermitError(ControlPlaneError):
+    pass
+
+
+class SessionStateError(ControlPlaneError):
+    pass

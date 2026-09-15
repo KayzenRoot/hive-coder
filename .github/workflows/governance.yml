@@ -42,6 +42,7 @@ jobs:
             docs/project-brain/12-UI-UX.md
             docs/project-brain/13-INTEGRATION-CONTRACTS.md
             docs/project-brain/14-LICENSE-PROVENANCE.md
+            docs/security/PERMISSION-CONTROL-PLANE.md
             .engineering/gef/GEF-POLICY.md
             .engineering/gef/GEF-EXECUTION-PROTOCOL.md
             .engineering/gef/GEF-REVIEW-PROTOCOL.md
@@ -64,3 +65,24 @@ jobs:
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: python -m unittest discover -s tests -p "test_*.py"
+
+  control-plane-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact-head checkout
+        shell: pwsh
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          $actual = (git rev-parse HEAD).Trim()
+          if ($actual -ne $env:EXPECTED_SHA) { throw "exact-head mismatch: $actual != $env:EXPECTED_SHA" }
+          Write-Output "EXACT_HEAD_OK=$actual"
+      - name: Compile control plane
+        run: python -m compileall -q hive_runtime
+      - name: Control-plane adversarial tests
+        env:
+          PYTHONWARNINGS: error::ResourceWarning
+        run: python -m unittest tests.control_plane.test_control_plane tests.control_plane.test_surface
