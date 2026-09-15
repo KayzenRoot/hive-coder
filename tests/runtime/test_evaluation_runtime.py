@@ -47,6 +47,9 @@ class ShadowBenchTests(unittest.TestCase):
         self.snapshot = snapshot()
         self.truth = truth()
 
+    def novelty(self):
+        return BenchmarkNoveltyLedger(lambda case: self.factory.verify_case(case, self.truth))
+
     def test_same_host_inputs_are_deterministic_and_oracle_is_digest_only(self):
         first = self.factory.generate(
             self.snapshot, self.truth, BenchmarkDimension.DEBUGGING,
@@ -71,8 +74,17 @@ class ShadowBenchTests(unittest.TestCase):
         self.assertFalse(self.factory.verify_case(replace(case, case_id="shadow." + "a" * 28), self.truth))
         self.assertFalse(self.factory.verify_case(replace(case, hidden_nonce_digest="b" * 64), self.truth))
 
+    def test_novelty_ledger_rejects_unverified_forged_case(self):
+        case = self.factory.generate(
+            self.snapshot, self.truth, BenchmarkDimension.DEBUGGING,
+            epoch_label="epoch-001",
+        )[0]
+        forged = replace(case, lineage_root=sha("fake-lineage"), lineage_id="sb." + sha("fake-lineage")[:28])
+        with self.assertRaises(PermissionError):
+            self.novelty().add(forged)
+
     def test_novelty_ledger_rejects_epoch_replay_and_trivial_lineage_variation(self):
-        ledger = BenchmarkNoveltyLedger()
+        ledger = self.novelty()
         first = self.factory.generate(
             self.snapshot, self.truth, BenchmarkDimension.CODE_REVIEW,
             epoch_label="epoch-001",
@@ -86,7 +98,7 @@ class ShadowBenchTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ledger.add(later)
         forged_id = replace(first, case_id="shadow." + "a" * 28)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(PermissionError):
             ledger.add(forged_id)
 
     def test_different_source_lineages_can_coexist(self):
@@ -94,7 +106,7 @@ class ShadowBenchTests(unittest.TestCase):
             self.snapshot, self.truth, BenchmarkDimension.REPOSITORY_REASONING,
             epoch_label="epoch-001", count=2,
         )
-        ledger = BenchmarkNoveltyLedger()
+        ledger = self.novelty()
         for case in cases:
             ledger.add(case)
         self.assertEqual(len(ledger), 2)
@@ -186,20 +198,11 @@ class RecertificationTests(ExpertAgentFixture):
             CompetenceHalfLifePolicy(warning_age_epochs=30, max_age_epochs=90),
         )
         self.clock.advance(110)
-        current = clock.assess(
-            profile, standard, repository_snapshot_digest=snapshot().fingerprint(),
-            evidence=(evidence,),
-        )
+        current = clock.assess(profile, standard, repository_snapshot_digest=snapshot().fingerprint(), evidence=(evidence,))
         self.clock.advance(140)
-        due = clock.assess(
-            profile, standard, repository_snapshot_digest=snapshot().fingerprint(),
-            evidence=(evidence,),
-        )
+        due = clock.assess(profile, standard, repository_snapshot_digest=snapshot().fingerprint(), evidence=(evidence,))
         self.clock.advance(191)
-        expired = clock.assess(
-            profile, standard, repository_snapshot_digest=snapshot().fingerprint(),
-            evidence=(evidence,),
-        )
+        expired = clock.assess(profile, standard, repository_snapshot_digest=snapshot().fingerprint(), evidence=(evidence,))
         self.assertIs(current.status, RecertificationStatus.CURRENT)
         self.assertIs(due.status, RecertificationStatus.DUE)
         self.assertIn("competence_half_life_warning", due.blocking_codes)
@@ -243,54 +246,39 @@ class RecertificationTests(ExpertAgentFixture):
     def test_negative_outcome_can_force_due_but_positive_outcome_cannot_create_certification(self):
         profile = self.profile(AgentRole.BACKEND, "backend-a")
         evidence = self.evidence(profile)
-        outcome_authority = OutcomeAuthority(
-            b"outcome-authority-key-at-least-32-bytes!", self.clock,
-        )
+        outcome_authority = OutcomeAuthority(b"outcome-authority-key-at-least-32-bytes!", self.clock)
         ledger = OutcomeEchoLedger(outcome_authority)
         self.clock.advance(105)
         record = outcome_authority.issue(
             "outcome.one",
-            profile_fingerprint=profile.fingerprint(),
-            master_plan_fingerprint=sha("plan"),
-            repository_snapshot_digest=snapshot().fingerprint(),
-            success=True,
-            regressions=1,
-            rollbacks=0,
-            evidence_digest=sha("evidence"),
+            profile_fingerprint=profile.fingerprint(), master_plan_fingerprint=sha("plan"),
+            repository_snapshot_digest=snapshot().fingerprint(), success=True,
+            regressions=1, rollbacks=0, evidence_digest=sha("evidence"),
         )
         ledger.add(record)
         self.clock.advance(110)
         signal = ledger.signal(profile.fingerprint())
         due = RecertificationClock(self.cert_authority).assess(
             profile, self.standard(AgentRole.BACKEND),
-            repository_snapshot_digest=snapshot().fingerprint(),
-            evidence=(evidence,), outcome=signal,
+            repository_snapshot_digest=snapshot().fingerprint(), evidence=(evidence,), outcome=signal,
         )
         self.assertIs(due.status, RecertificationStatus.DUE)
         self.assertTrue(signal.advisory_only)
-
         no_evidence = RecertificationClock(self.cert_authority).assess(
             profile, self.standard(AgentRole.BACKEND),
-            repository_snapshot_digest=snapshot().fingerprint(),
-            evidence=(), outcome=signal,
+            repository_snapshot_digest=snapshot().fingerprint(), evidence=(), outcome=signal,
         )
         self.assertIs(no_evidence.status, RecertificationStatus.EXPIRED)
 
     def test_outcome_tamper_is_rejected(self):
         profile = self.profile(AgentRole.BACKEND, "backend-a")
-        authority = OutcomeAuthority(
-            b"outcome-authority-key-at-least-32-bytes!", self.clock,
-        )
+        authority = OutcomeAuthority(b"outcome-authority-key-at-least-32-bytes!", self.clock)
         ledger = OutcomeEchoLedger(authority)
         record = authority.issue(
             "outcome.one",
-            profile_fingerprint=profile.fingerprint(),
-            master_plan_fingerprint=sha("plan"),
-            repository_snapshot_digest=snapshot().fingerprint(),
-            success=True,
-            regressions=0,
-            rollbacks=0,
-            evidence_digest=sha("evidence"),
+            profile_fingerprint=profile.fingerprint(), master_plan_fingerprint=sha("plan"),
+            repository_snapshot_digest=snapshot().fingerprint(), success=True,
+            regressions=0, rollbacks=0, evidence_digest=sha("evidence"),
         )
         with self.assertRaises(PermissionError):
             ledger.add(replace(record, regressions=1))
