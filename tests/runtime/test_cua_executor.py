@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from hive_runtime.control_plane import PermissionControlPlane
-from hive_runtime.control_policy import ControlPolicy
+from hive_runtime.control_policy import CapabilityRule, ControlPolicy
 from hive_runtime.control_types import ActionRequest, ActionTarget, Capability
 from hive_runtime.cua_executor import GatedCuaActionExecutor
 from hive_runtime.errors import AuthorizationDenied, PermitError, RpcProtocolError
@@ -12,17 +12,28 @@ from hive_runtime.errors import AuthorizationDenied, PermitError, RpcProtocolErr
 class FakePeer:
     def __init__(self) -> None:
         self.calls = []
+
     def request(self, method, params, timeout):
         self.calls.append((method, params, timeout))
         return {"content": [], "isError": False}
 
 
 def policy() -> ControlPolicy:
-    return ControlPolicy(
-        allowed_capabilities=frozenset({Capability.POINTER_INPUT, Capability.TEXT_INPUT}),
-        allowed_actions=frozenset({"pointer.click", "keyboard.type_text"}),
-        allowed_applications=frozenset({"notepad.exe"}),
-        allowed_window_ids=frozenset({"win-1"}),
+    return ControlPolicy.build(
+        (
+            CapabilityRule.build(
+                Capability.POINTER_INPUT,
+                allowed_actions=("pointer.click",),
+                allowed_applications=("notepad.exe",),
+                allowed_window_ids=("win-1",),
+            ),
+            CapabilityRule.build(
+                Capability.TEXT_INPUT,
+                allowed_actions=("keyboard.type_text",),
+                allowed_applications=("notepad.exe",),
+                allowed_window_ids=("win-1",),
+            ),
+        )
     )
 
 
