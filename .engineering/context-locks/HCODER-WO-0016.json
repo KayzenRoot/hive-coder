@@ -1,0 +1,46 @@
+{
+  "workOrderId": "HCODER-WO-0016",
+  "base": {
+    "branch": "main",
+    "sha": "330be799eedc3ea2478034039236d4a965f55274"
+  },
+  "sources": {
+    "requirements": {"path": "docs/project-brain/02-REQUIREMENTS.md", "gitBlobSha": "35cb36929580e215a8fa3cc04b199f5e20b76dce"},
+    "scope": {"path": "docs/project-brain/03-SCOPE.md", "gitBlobSha": "330ce490cc29fc5f3ba4e612db8935dd982d745c"},
+    "architecture": {"path": "docs/project-brain/04-ARCHITECTURE.md", "gitBlobSha": "b59aed7f524dcb85d231d820341860ea15b5dc66"},
+    "security": {"path": "docs/project-brain/05-SECURITY.md", "gitBlobSha": "2dec238575cc3162eb969fc09d57ea7a1f9d0cc7"},
+    "testPlan": {"path": "docs/project-brain/06-TEST-BENCHMARK-PLAN.md", "gitBlobSha": "9cbfe86bd9dc3f892265d388671136d99e63ff07"},
+    "backlog": {"path": "docs/project-brain/08-BACKLOG.md", "gitBlobSha": "9ab30bcccb764f90314e8f79914afe41cda75eb2"},
+    "dod": {"path": "docs/project-brain/09-DEFINITION-OF-DONE.md", "gitBlobSha": "9770301f87703ec9a24b6c17525c6b55a23da317"},
+    "decisions": {"path": "docs/project-brain/10-DECISIONS-LEDGER.md", "gitBlobSha": "d679af35bae00f7868f1b7965e96f1785f108a00"},
+    "checkpoint": {"path": "docs/project-brain/11-CHECKPOINT.md", "gitBlobSha": "9b411d2b49463e92aa545b76a2d8d0e809c68d98"},
+    "uiUx": {"path": "docs/project-brain/12-UI-UX.md", "gitBlobSha": "e2cd3dace1503b43da0c5a94ceaaef3ff2742b90"},
+    "integration": {"path": "docs/project-brain/13-INTEGRATION-CONTRACTS.md", "gitBlobSha": "40ee2811fa88295e168316b266a5c99dfce362dd"}
+  },
+  "implementationBaseline": {
+    "desktopRust": {"path": "apps/desktop/src-tauri/src/lib.rs", "gitBlobSha": "b66f5ae99cbb443b4df4c2323798d5606f51cfb2"},
+    "desktopSnapshot": {"path": "apps/desktop/src/contracts/desktopSnapshot.ts", "gitBlobSha": "5e7f2bf91b00fec4ccf9460a53ead71656bf0bf7"},
+    "shellView": {"path": "apps/desktop/src/components/ShellView.tsx", "gitBlobSha": "36e1b97455a280b07d966aca836d776635590f38"},
+    "desktopSecurityGate": {"path": "tools/desktop/security_gate.py", "gitBlobSha": "236fe44095741515dae264983fbd703507bd21bd"}
+  },
+  "preflightPolicy": {
+    "workspaceSelection": "explicit native user-mediated selection; no arbitrary path from model/task text",
+    "filesystem": "bounded read-only root-contained access; no write/delete/rename/create",
+    "git": "structured library/data parsing only; no shelling out to git",
+    "process": "no generic child-process execution and no Python runtime spawn in WO-0016",
+    "dependencyAuthority": "informational only until exact Cargo.lock/build/security evidence"
+  },
+  "staleIf": [
+    "base SHA changes before branch creation/rebase",
+    "checkpoint blob changes",
+    "decisions blob changes",
+    "scope blob changes",
+    "DoD blob changes",
+    "architecture blob changes",
+    "security boundary changes",
+    "UI/UX direction changes",
+    "integration contract changes",
+    "desktop command boundary changes outside this Work Order",
+    "desktop security-gate baseline changes outside this Work Order"
+  ]
+}
