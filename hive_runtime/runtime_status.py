@@ -43,15 +43,26 @@ def _bounded_text(value: object, *, field: str, limit: int = MAX_TEXT) -> str:
     return text
 
 
-def _state(value: object, *, field: str) -> StatusState:
-    if isinstance(value, StatusState):
-        return value
+def _parse_state(value: object, *, field: str) -> StatusState:
     if not isinstance(value, str):
         raise ValueError(f"{field} must be a runtime status state")
     try:
         return StatusState(value)
     except ValueError as exc:
         raise ValueError(f"{field} must be a runtime status state") from exc
+
+
+def _require_state(value: object, *, field: str) -> StatusState:
+    if not isinstance(value, StatusState):
+        raise ValueError(f"{field} must be a StatusState")
+    return value
+
+
+def _provenance(value: object, *, field: str, expected: str) -> str:
+    text = _bounded_text(value, field=field)
+    if text != expected:
+        raise ValueError(f"{field} must be {expected}")
+    return text
 
 
 def _counter(value: object, *, field: str, maximum: int = MAX_COUNTER) -> int:
@@ -88,8 +99,8 @@ class StatusSignal:
     detail: str
 
     def validated(self) -> "StatusSignal":
-        _state(self.state, field="runtime.state")
-        _bounded_text(self.provenance, field="runtime.provenance")
+        _require_state(self.state, field="runtime.state")
+        _provenance(self.provenance, field="runtime.provenance", expected=RUNTIME_STATUS_PROVENANCE)
         _bounded_text(self.detail, field="runtime.detail")
         return self
 
@@ -103,8 +114,8 @@ class ProviderStatus:
 
     def validated(self) -> "ProviderStatus":
         _bounded_text(self.provider_id, field="provider_id", limit=80)
-        _state(self.state, field="provider.state")
-        _bounded_text(self.provenance, field="provider.provenance")
+        _require_state(self.state, field="provider.state")
+        _provenance(self.provenance, field="provider.provenance", expected=PROVIDER_CATALOG_PROVENANCE)
         if not isinstance(self.model_ids, tuple):
             raise ValueError("provider model ids must be an immutable tuple")
         if len(self.model_ids) > MAX_MODELS_PER_PROVIDER:
@@ -133,7 +144,7 @@ class TaskStatusSummary:
     def validated(self) -> "TaskStatusSummary":
         _bounded_text(self.task_id, field="task_id", limit=128)
         _bounded_text(self.state, field="task_state", limit=32)
-        _bounded_text(self.provenance, field="task.provenance")
+        _provenance(self.provenance, field="task.provenance", expected=TASK_RUNTIME_PROVENANCE)
         node_total = _counter(self.node_total, field="task.node_total", maximum=MAX_TASK_NODES)
         node_succeeded = _counter(self.node_succeeded, field="task.node_succeeded", maximum=MAX_TASK_NODES)
         executions = _counter(self.executions, field="task.executions")
@@ -154,8 +165,12 @@ class PermissionStatusSummary:
     provenance: str
 
     def validated(self) -> "PermissionStatusSummary":
-        _state(self.state, field="permission.state")
-        _bounded_text(self.provenance, field="permission.provenance")
+        _require_state(self.state, field="permission.state")
+        _provenance(
+            self.provenance,
+            field="permission.provenance",
+            expected=PERMISSION_CONTROL_PROVENANCE,
+        )
         values = (
             _nullable_counter(self.policy_epoch, field="permission.policy_epoch"),
             _nullable_counter(self.active_sessions, field="permission.active_sessions"),
@@ -177,6 +192,8 @@ class RuntimeStatusSnapshot:
     def validated(self) -> "RuntimeStatusSnapshot":
         if self.schema != STATUS_SCHEMA:
             raise ValueError("unsupported runtime status schema")
+        if not isinstance(self.runtime, StatusSignal):
+            raise ValueError("invalid runtime status signal")
         self.runtime.validated()
         if not isinstance(self.providers, tuple):
             raise ValueError("providers must be an immutable tuple")
@@ -255,8 +272,12 @@ class RuntimeStatusSnapshot:
 
         runtime_raw = _record(root["runtime"], field="runtime", keys={"state", "provenance", "detail"})
         runtime = StatusSignal(
-            _state(runtime_raw["state"], field="runtime.state"),
-            _bounded_text(runtime_raw["provenance"], field="runtime.provenance"),
+            _parse_state(runtime_raw["state"], field="runtime.state"),
+            _provenance(
+                runtime_raw["provenance"],
+                field="runtime.provenance",
+                expected=RUNTIME_STATUS_PROVENANCE,
+            ),
             _bounded_text(runtime_raw["detail"], field="runtime.detail"),
         )
 
@@ -278,8 +299,12 @@ class RuntimeStatusSnapshot:
                 ProviderStatus(
                     _bounded_text(provider_raw["providerId"], field="provider_id", limit=80).lower(),
                     models,
-                    _state(provider_raw["state"], field="provider.state"),
-                    _bounded_text(provider_raw["provenance"], field="provider.provenance"),
+                    _parse_state(provider_raw["state"], field="provider.state"),
+                    _provenance(
+                        provider_raw["provenance"],
+                        field="provider.provenance",
+                        expected=PROVIDER_CATALOG_PROVENANCE,
+                    ),
                 ).validated()
             )
 
@@ -298,7 +323,11 @@ class RuntimeStatusSnapshot:
                 _counter(task_value["nodeSucceeded"], field="task.node_succeeded", maximum=MAX_TASK_NODES),
                 _counter(task_value["executions"], field="task.executions"),
                 _counter(task_value["failures"], field="task.failures"),
-                _bounded_text(task_value["provenance"], field="task.provenance"),
+                _provenance(
+                    task_value["provenance"],
+                    field="task.provenance",
+                    expected=TASK_RUNTIME_PROVENANCE,
+                ),
             ).validated()
 
         permission_raw = _record(
@@ -307,11 +336,15 @@ class RuntimeStatusSnapshot:
             keys={"state", "policyEpoch", "activeSessions", "pendingApprovals", "provenance"},
         )
         permission = PermissionStatusSummary(
-            _state(permission_raw["state"], field="permission.state"),
+            _parse_state(permission_raw["state"], field="permission.state"),
             _nullable_counter(permission_raw["policyEpoch"], field="permission.policy_epoch"),
             _nullable_counter(permission_raw["activeSessions"], field="permission.active_sessions"),
             _nullable_counter(permission_raw["pendingApprovals"], field="permission.pending_approvals"),
-            _bounded_text(permission_raw["provenance"], field="permission.provenance"),
+            _provenance(
+                permission_raw["provenance"],
+                field="permission.provenance",
+                expected=PERMISSION_CONTROL_PROVENANCE,
+            ),
         ).validated()
 
         return cls(runtime, tuple(providers), task, permission).validated()
@@ -372,7 +405,7 @@ def summarize_task(snapshot: TaskSnapshot) -> TaskStatusSummary:
 
 
 def unobserved_permission(state: StatusState) -> PermissionStatusSummary:
-    if state not in {StatusState.UNKNOWN, StatusState.DISCONNECTED}:
+    if not isinstance(state, StatusState) or state not in {StatusState.UNKNOWN, StatusState.DISCONNECTED}:
         raise ValueError("unobserved permission state must be UNKNOWN or DISCONNECTED")
     return PermissionStatusSummary(state, None, None, None, PERMISSION_CONTROL_PROVENANCE).validated()
 
