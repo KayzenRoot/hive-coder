@@ -25,16 +25,9 @@ jobs:
           node-version: 24.21.0
       - name: Desktop security gate
         run: python tools/desktop/security_gate.py
-      - name: Resolve exact npm graph during bootstrap
+      - name: Install exact npm graph
         working-directory: apps/desktop
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f package-lock.json ]; then
-            npm ci --ignore-scripts --no-audit
-          else
-            npm install --ignore-scripts --no-audit
-          fi
+        run: npm ci --ignore-scripts --no-audit
       - name: Typecheck
         working-directory: apps/desktop
         run: npm run typecheck
@@ -71,27 +64,13 @@ jobs:
           cache: false
       - name: Generate deterministic Hive desktop icon
         run: python tools/desktop/generate_icon.py
-      - name: Resolve exact npm graph during bootstrap
+      - name: Install exact npm graph
         working-directory: apps/desktop
-        shell: pwsh
-        run: |
-          if (Test-Path package-lock.json) {
-            npm ci --ignore-scripts --no-audit
-          } else {
-            npm install --ignore-scripts --no-audit
-          }
-      - name: Rust unit tests and lock resolution
-        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
+        run: npm ci --ignore-scripts --no-audit
+      - name: Rust unit tests with locked graph
+        run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Rust check with locked graph
+        run: cargo check --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Tauri Windows build without bundle
         working-directory: apps/desktop
         run: npm run tauri -- build --no-bundle
-      - name: Upload bootstrap lockfiles
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: desktop-lockfiles
-          if-no-files-found: warn
-          retention-days: 1
-          path: |
-            apps/desktop/package-lock.json
-            apps/desktop/src-tauri/Cargo.lock
