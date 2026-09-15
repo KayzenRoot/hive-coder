@@ -55,7 +55,7 @@ Architectural rules for this contract:
 
 WO-0017 intentionally stops before process identity, sidecar launch, wire framing/lifecycle and desktop transport. CP-0017 is canonical and the next layer must preserve these authority limits.
 
-## Cross-runtime runtime-status IPC boundary — WO-0018 promotion candidate
+## Cross-runtime runtime-status IPC boundary — WO-0018
 WO-0018 freezes the cross-language presentation wire before any desktop process lifecycle is admitted:
 
 `RuntimeStatusSnapshot v1 -> hive-runtime-status-ipc-v1/status.snapshot -> strict raw TypeScript decoder -> presentation only`
@@ -69,4 +69,4 @@ Architecture rules:
 - The protocol introduces no generic RPC namespace, socket listener, WebSocket, HTTP service or Tauri command.
 - Status transport remains non-authoritative and cannot become a permit, capability verifier, task command or permission decision.
 
-The separately governed runtime sidecar/supervisor layer may later consume this frozen status protocol, but it may not expand it silently. Process launch, identity/authenticity, restart/shutdown and containment remain outside WO-0018.
+CP-0018 canonicalizes this frozen IPC boundary only. The separately governed runtime sidecar/supervisor layer may later consume this protocol, but it may not expand it silently. Process launch, identity/authenticity, restart/shutdown and containment remain outside WO-0018.
