@@ -34,6 +34,7 @@ class RepoDNAIndexerTests(unittest.TestCase):
         (root / "docs" / "README.md").write_text("# Example\n", encoding="utf-8")
         (root / "package.json").write_text('{"dependencies":{"alpha":"1.0.0"}}', encoding="utf-8")
         (root / ".env").write_text("SECRET=do-not-index\n", encoding="utf-8")
+        (root / ".npmrc").write_text("//registry/:_authToken=do-not-index\n", encoding="utf-8")
         (root / "image.png").write_bytes(b"\x89PNG\x00binary")
 
     def test_snapshot_is_deterministic_and_secret_binary_files_are_excluded(self):
@@ -45,11 +46,12 @@ class RepoDNAIndexerTests(unittest.TestCase):
             self.assertEqual(first.snapshot.fingerprint(), second.snapshot.fingerprint())
             paths = {item.path for item in first.snapshot.files}
             self.assertNotIn(".env", paths)
+            self.assertNotIn(".npmrc", paths)
             self.assertNotIn("image.png", paths)
             self.assertIn("src/api.py", paths)
             self.assertEqual(tuple(sorted(paths)), tuple(item.path for item in first.snapshot.files))
 
-    def test_indexer_skips_symlink_and_never_imports_repository_code(self):
+    def test_indexer_skips_file_symlink_and_never_imports_repository_code(self):
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside:
             root = Path(tmp); self.make_repo(root)
             marker = Path(outside) / "executed.txt"
@@ -58,15 +60,29 @@ class RepoDNAIndexerTests(unittest.TestCase):
                 f"from pathlib import Path\nPath({str(marker)!r}).write_text('boom')\n",
                 encoding="utf-8",
             )
+            outside_file = Path(outside) / "outside.py"
+            outside_file.write_text("VALUE=9\n", encoding="utf-8")
             link = root / "external-link.py"
             try:
-                os.symlink(Path(outside) / "outside.py", link)
+                os.symlink(outside_file, link)
             except (OSError, NotImplementedError):
                 link = None
             indexed = RepoDNAIndexer().scan(root, repository_id="demo")
             self.assertFalse(marker.exists())
             if link is not None:
                 self.assertNotIn("external-link.py", {item.path for item in indexed.snapshot.files})
+
+    def test_root_symlink_is_rejected_when_platform_supports_it(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as parent:
+            root = Path(tmp)
+            (root / "api.py").write_text("VALUE=1\n", encoding="utf-8")
+            link = Path(parent) / "repo-link"
+            try:
+                os.symlink(root, link, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("directory symlink unavailable on this platform")
+            with self.assertRaises(ValueError):
+                RepoDNAIndexer().scan(link)
 
     def test_resource_ceilings_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -75,10 +91,18 @@ class RepoDNAIndexerTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 RepoDNAIndexer(max_file_bytes=1024, max_total_bytes=4096).scan(root)
 
-    def test_snapshot_rejects_unsafe_direct_path(self):
-        record = RepositoryFileRecord("../escape.py", sha("x"), 1, "python", "source")
-        with self.assertRaises(ValueError):
-            RepositorySnapshot("demo", (record,)).fingerprint()
+    def test_snapshot_rejects_unsafe_or_noncanonical_direct_paths(self):
+        for path in ("../escape.py", "src\\api.py", "C:/escape.py"):
+            record = RepositoryFileRecord(path, sha("x"), 1, "python", "source")
+            with self.assertRaises(ValueError, msg=path):
+                RepositorySnapshot("demo", (record,)).fingerprint()
+
+    def test_indexed_text_mapping_is_immutable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); (root / "api.py").write_text("VALUE=1\n", encoding="utf-8")
+            indexed = RepoDNAIndexer().scan(root)
+            with self.assertRaises(TypeError):
+                indexed.texts["api.py"] = "VALUE=2\n"
 
 
 class TruthWeaveTests(unittest.TestCase):
@@ -131,25 +155,48 @@ class TruthWeaveTests(unittest.TestCase):
 
 
 class GenomePulseTests(unittest.TestCase):
+    def build_pulse(self):
+        tmp = tempfile.TemporaryDirectory()
+        root = Path(tmp.name); (root / "src").mkdir(); (root / "tests").mkdir()
+        (root / "src" / "api.py").write_text("import json\n", encoding="utf-8")
+        (root / "tests" / "test_api.py").write_text("from src import api\n", encoding="utf-8")
+        first = RepoDNAIndexer().scan(root, repository_id="demo")
+        truth = TruthWeave(first).truth_map()
+        twin = ProjectDigitalTwin((
+            DigitalTwinNode("api", "service"),
+            DigitalTwinNode("tests", "tests", ("api",)),
+        ))
+        pulse = GenomePulseMiner().mine(twin, truth, {"api": "src", "tests": "tests"}, critical_nodes={"api"})
+        return tmp, root, truth, twin, pulse
+
     def test_genomepulse_binds_verified_repository_footprint_and_detects_drift(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp); (root / "src").mkdir(); (root / "tests").mkdir()
-            (root / "src" / "api.py").write_text("import json\n", encoding="utf-8")
-            (root / "tests" / "test_api.py").write_text("from src import api\n", encoding="utf-8")
-            first = RepoDNAIndexer().scan(root, repository_id="demo")
-            truth = TruthWeave(first).truth_map()
-            twin = ProjectDigitalTwin((
-                DigitalTwinNode("api", "service"),
-                DigitalTwinNode("tests", "tests", ("api",)),
-            ))
-            pulse = GenomePulseMiner().mine(twin, truth, {"api": "src", "tests": "tests"}, critical_nodes={"api"})
+        tmp, root, truth, twin, pulse = self.build_pulse()
+        try:
             self.assertEqual(pulse.covered_nodes, ("api", "tests"))
             self.assertTrue(pulse.fact_to_invariants)
             self.assertEqual(pulse.genome.detect_drift(twin, truth), tuple())
-
             (root / "src" / "api.py").write_text("import os\n", encoding="utf-8")
             changed_truth = TruthWeave(RepoDNAIndexer().scan(root, repository_id="demo")).truth_map()
             self.assertIn("genome.api", pulse.genome.detect_drift(twin, changed_truth))
+        finally:
+            tmp.cleanup()
+
+    def test_genomepulse_fact_binding_map_is_immutable(self):
+        tmp, _root, _truth, _twin, pulse = self.build_pulse()
+        try:
+            fact_id = next(iter(pulse.fact_to_invariants))
+            with self.assertRaises(TypeError):
+                pulse.fact_to_invariants[fact_id] = ("genome.fake",)
+        finally:
+            tmp.cleanup()
+
+    def test_genomepulse_rejects_unsafe_path_binding(self):
+        fact = TruthFact("fact.one", "src/api.py", "file_content", sha("x"), sha("p"), frozenset({"repository"}))
+        truth = CodeTruthMap((fact,), lambda _fact: True)
+        twin = ProjectDigitalTwin((DigitalTwinNode("api", "service"),))
+        for prefix in ("../src", "src\\nested", "C:/src"):
+            with self.assertRaises(ValueError, msg=prefix):
+                GenomePulseMiner().mine(twin, truth, {"api": prefix})
 
     def test_unverified_fact_cannot_seed_genomepulse(self):
         fact = TruthFact("fact.one", "src/api.py", "file_content", sha("x"), sha("p"), frozenset({"repository"}))
