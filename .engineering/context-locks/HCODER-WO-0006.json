@@ -1,0 +1,11 @@
+{
+  "workOrderId": "HCODER-WO-0006",
+  "baseCheckpoint": "HCODER-CP-0005",
+  "baseSha": "02034116ed0d3fcfcf8650e7b53555fad567b6dc",
+  "risk": "HIGH_ASSURANCE",
+  "taskClass": "T3",
+  "contextRadius": "C4",
+  "allowedMutationCapabilities": ["pointer.input", "text.input"],
+  "forbidden": ["shell", "filesystem", "clipboard", "destructive", "privileged", "remote-network-control", "automatic-install"],
+  "physicalE2EPolicy": "OPT_IN_OR_UNKNOWN"
+}

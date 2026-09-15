@@ -1,34 +1,32 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** HCODER-CP-0005  
+**Checkpoint:** HCODER-CP-0006  
 **Status:** APPROVED  
 **Date:** 2026-09-14  
 **Repository:** `KayzenRoot/hive-coder`  
-**Approved Work Order:** `HCODER-WO-0005`  
-**PR:** `#11`
+**Approved Work Order:** `HCODER-WO-0006`  
+**PR:** `#13`
 
 ## Proven canonical state
-- HCODER-CP-0004 authorization/control-plane state remains authoritative.
-- `GatedCuaActionExecutor` is the only approved Hive code surface that may issue Cua `tools/call`.
-- Every dispatch consumes a request-bound, session/epoch-bound, expiring single-use permit from `PermissionControlPlane`.
-- Initial allowlist: `pointer.click` mapped to `pointer.input` and `keyboard.type_text` mapped to `text.input` only.
-- Exact argument schemas are enforced: click accepts bounded numeric `x/y`; text accepts bounded non-NUL `text`.
-- Live normalized application/window identity is revalidated after permit consumption and immediately before dispatch. Drift denies and burns the permit.
-- Parallel mutations in one control session are denied.
-- Emergency stop/user takeover/cancellation mark the executor session cancelled and close the Cua peer, waking a blocking Hive JSON-RPC request and preventing later dispatch through that peer.
-- Cua error results and failed post-action verification fail closed.
-- `HCODER-WO-0005-CR-001` resolved stale policy test construction, broad argument forwarding, incomplete Windows executor coverage and non-interrupting RPC cancellation.
-- Exact-head candidate `28e696f57882bbca9e3e3a47184ca3d35e19f058` passed Ubuntu broad regression 74/74 and Windows Server 2025 HIGH_ASSURANCE targeted tests 48/48 with ResourceWarning fatal.
+- CP-0005 permit-gated mutation boundary remains authoritative.
+- Production Cua modern MCP uses `server/discover` then canonical `tools/list`; schemas, capability tokens and annotations are validated.
+- Every modern `tools/call` carries MCP `2026-07-28` per-request metadata plus Hive request fingerprint.
+- Hive semantic click/type actions resolve to exactly one compatible concrete Cua tool using trusted advertised capability + required schema. Model/task text cannot choose the binding.
+- Real harness requires `HIVE_ENABLE_REAL_CUA=1`, explicit binary, exact pinned-version preflight and explicit sandbox application.
+- Foreground target identity is obtained from typed Win32 HWND/PID/process-image APIs and revalidated by the existing executor.
+- Harness wires the trusted Cua peer and bindings into `GatedCuaActionExecutor`; all mutations still require CP-0005 approval + single-use permit.
+- No new mutation capability was added.
+- HEDS CR-001 resolved production inventory mismatch, missing modern mutation metadata, unsafe name coupling and 64-bit Win32 ctypes signatures.
+- Implementation candidate `0c8a18609fe2414cf892ccbeff25c3923d58c2d4` passed Governance run `34914734955`: Ubuntu 82/82 PASS; Windows Server 2025 HIGH_ASSURANCE 56/56 PASS; ResourceWarning fatal.
 
-## Product state
-Hive Coder now has validated foundation pins, runtime bridge, permission/control plane and a first permit-gated Cua action executor contract. The executor is proven against deterministic/mock Cua peers on Ubuntu and Windows. No claim is made that CI physically mutated a Windows desktop with the pinned Cua Driver.
+## Physical E2E state
+**UNKNOWN.** Hosted CI does not have the pinned Cua Driver plus a controlled interactive Windows desktop sandbox. This checkpoint does not claim that a physical click or keystroke was executed. The harness is ready for an explicitly provisioned safe environment proof.
 
-## Safety state
-- Shell, filesystem mutation, clipboard, destructive, privileged and unmapped Cua tools remain blocked.
-- Both approved mutation capabilities retain mandatory trusted approval.
-- Model/task text cannot mint approvals or permits.
-- Peer closure proves cancellation at the Hive RPC boundary but cannot roll back an OS input already accepted by Cua.
-- Automatic foundation installation remains disabled and provenance pins remain unchanged.
+## Product direction captured
+- Model Capability Negotiator so Hive adapts features/tools to the selected LLM's proven abilities.
+- Hive Skills Engine with discovery, provenance, versioning, evaluation, activation, rollback and governed learning of reusable skills.
+- Long-running/resumable autonomous agent workflows.
+- Secure Remote Hive Control from another authorized computer with encrypted authenticated device sessions, least privilege, approval relay, audit, revocation and emergency stop. No raw public Cua/RDP/VNC exposure.
 
 ## Next necessary increment
-Build an opt-in real-Cua Windows integration harness for pinned Cua Driver `0.28.1`. Prove discovery-to-executor wiring, actual tool-name/argument mapping, live target resolver behavior, safe sandboxed pointer/text actions, emergency-stop behavior and post-action evidence without broadening the allowlist. Fail closed when the pinned binary or sandbox target is unavailable.
+Implement the **Model Capability Registry + Skills Foundation** before broad autonomous execution. Normalize provider/model capabilities, define the Hive skill manifest/store/loader boundary, ingest verified MCP skill resources as untrusted content, and add deterministic skill validation/evaluation hooks. Keep skill activation unable to grant permissions. Remote Control follows as its own HIGH_ASSURANCE subsystem after identity/device-session architecture is frozen.
