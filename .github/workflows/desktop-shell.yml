@@ -37,9 +37,9 @@ jobs:
       - name: Production web build
         working-directory: apps/desktop
         run: npm run build:web
-      - name: Production dependency audit
+      - name: Full npm dependency audit
         working-directory: apps/desktop
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --audit-level=high
 
   desktop-windows:
     runs-on: windows-latest
