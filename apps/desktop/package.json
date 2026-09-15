@@ -13,6 +13,7 @@
     "test": "vitest run",
     "build:web": "vite build",
     "build": "npm run typecheck && npm run test && npm run build:web",
+    "pretauri": "python ../../tools/desktop/generate_icon.py",
     "tauri": "tauri"
   },
   "dependencies": {
