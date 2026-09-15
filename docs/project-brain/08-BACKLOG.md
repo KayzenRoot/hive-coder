@@ -16,14 +16,15 @@
 13. `HCODER-WO-0013` Provider Certification Lab + Semantic Repository Twin — DONE.
 14. `HCODER-WO-0014` Elite Specialist Forge + Autonomous Engineering Arena — DONE.
 15. `HCODER-WO-0015` Desktop Shell Foundation & Safe Workspace Read Model — DONE. Canonical `HCODER-CP-0015`.
-16. `HCODER-WO-0016` Trusted Workspace & Git Read Surface — **DONE / CANONICAL `HCODER-CP-0016`**. Product PR #35 squash-merged as `6483ed36393b02f45e286590e75bc9fb36d48727`; post-merge Governance #215 and Desktop Shell #51 SUCCESS.
-17. `HCODER-WO-0017` Runtime Observability Contract & Safe Status Export — **STAGED NEXT**. Historical stacked implementation/evidence exists but must be reconciled onto canonical CP-0016 and revalidated before promotion.
-18. `HCODER-WO-0018` Cross-Runtime Status IPC Contract — **STACKED / BLOCKED BY CP-0017**.
-19. `HCODER-WO-0019` Runtime Status Sidecar Helper — **STACKED / BLOCKED BY CP-0018**.
-20. `HCODER-WO-0020` Desktop Runtime Status Supervisor & System Truth Surface — **STACKED / BLOCKED BY CP-0019**. Technical corrected head exists; no canonical promotion yet.
+16. `HCODER-WO-0016` Trusted Workspace & Git Read Surface — **DONE / CANONICAL `HCODER-CP-0016`**. Canonical closeout SHA `442733aeae6bd2f615dc0bc4c76dda024455c212`; push Governance #218 and Desktop Shell #54 SUCCESS.
+17. `HCODER-WO-0017` Runtime Observability Contract & Safe Status Export — **PROMOTION CANDIDATE / CP-0017 NOT YET CANONICAL**. Technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef` passed Governance #225, Desktop Shell #61 and HEDS technical review `5215028501`; CR-001 MEDIUM resolved.
+18. `HCODER-WO-0018` Cross-Runtime Status IPC Contract — **HISTORICAL STACK EXISTS / BLOCKED UNTIL CP-0017 CANONICAL**. Must be reconstructed against the strict canonical RuntimeStatusSnapshot v1 contract rather than merging the old divergent branch.
+19. `HCODER-WO-0019` Runtime Status Sidecar Helper — **HISTORICAL STACK EXISTS / BLOCKED BY CP-0018**.
+20. `HCODER-WO-0020` Desktop Runtime Status Supervisor & System Truth Surface — **HISTORICAL STACK EXISTS / BLOCKED BY CP-0019**. Corrected technical head exists; no canonical promotion yet.
 
 ## Product capability roadmap
 - **Desktop Shell/UI:** governed native substrate plus canonical explicit user-mediated workspace opening and truthful bounded workspace/Git/evidence reads.
+- **Runtime Observability:** strict bounded `RuntimeStatusSnapshot v1` is a CP-0017 promotion candidate. Presentation state is non-authoritative and uses canonical provenance plus fail-closed UNKNOWN/DISCONNECTED/DEGRADED semantics.
 - **Model Capability Negotiator:** normalize provider/model capabilities and expose only verified capability state.
 - **Hive Skills Engine:** discover, verify, install, version, activate, compose and learn reusable skills under the permission boundary.
 - **Agent Runtime:** long-running task UX over the approved resumable runtime, checkpoints, plans, subagents and evidence.
@@ -34,12 +35,14 @@
 - **Integrated Build Loop:** code -> test -> launch -> observe -> computer-use validate -> repair -> evidence -> PR/review.
 - **Packaging/Updates:** signed Windows packaging, controlled acquisition, update channels, rollback and health diagnostics.
 
-## Next NECESSARY product increment after canonical CP-0016
-Reconcile and promote `HCODER-WO-0017`, preserving truthful live **runtime/provider/task/permission presentation state** through existing Hive-owned engines without enabling their corresponding mutation surfaces. Existing staged implementation must be rebased/reconstructed on canonical CP-0016 rather than treating pre-squash ancestry as authoritative.
+## Next NECESSARY product increment
+First finish canonical promotion of `HCODER-WO-0017`. After CP-0017 is canonical, reconstruct `HCODER-WO-0018 — Cross-Runtime Status IPC Contract` on the new canonical main. The IPC layer must consume the corrected strict schema/provenance rules and must not treat status as authorization.
 
 Any next increment must preserve:
 - presentation state as non-authoritative;
-- explicit provenance and UNKNOWN/DISCONNECTED/DEGRADED instead of fake readiness;
+- canonical provenance and UNKNOWN/DISCONNECTED/DEGRADED instead of fake readiness;
+- provider catalog observation distinct from VERIFIED capability evidence;
+- no private Permission & Control Plane state serialization when no safe public observer exists;
 - `UI -> Application/Orchestrator -> Permission & Control Plane -> Capability Adapters`;
 - no generic shell execution or arbitrary filesystem/desktop mutation;
 - disabled mutation controls until a later governed permit-gated path exists.
@@ -50,7 +53,8 @@ Any next increment must preserve:
 - Native picker/full desktop interaction E2E, Windows reparse fixture, visual screenshot/pixel validation and accessibility automation.
 - Stronger handle-relative/no-follow workspace capability I/O before privileged file/Git mutation.
 - Installer/signing/updater/release packaging and rollback/roll-forward proof.
-- Live runtime/provider/permission adapter integration through staged WO-0017..0020 sequence.
+- Live runtime transport/supervision integration through staged WO-0018..0020 sequence.
+- Safe public permission/status observation only if later objectively needed; never serialize private authorization internals as a shortcut.
 - Final project license and release attribution decision.
 
-Only the next NECESSARY increment enters canonical promotion automatically; later stacked Work Orders remain blocked until their predecessor checkpoint is canonical.
+Only the next NECESSARY increment enters canonical promotion automatically; later historical stacked Work Orders remain blocked until their predecessor checkpoint is canonical.
