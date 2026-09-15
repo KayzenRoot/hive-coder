@@ -61,6 +61,23 @@ Expertise is descriptive competence, not execution authority. `ExpertiseCapsule`
 
 CounterPlan and Failure Oracle challengers are host-identified, independence-separated advisory/review surfaces. Their output can block according to policy but can never grant authority or weaken CP-0005/0007/0008/0009/0010 controls.
 
+## Repository intelligence and elite-evaluation boundary
+`RepoDNAIndexer` is a read-only discovery surface. It may hash/classify bounded UTF-8 repository files, but it must not import modules, invoke package managers, run hooks, execute manifests or follow repository symlinks. Secret-like files and common binary artifacts are excluded by default; resource ceilings fail closed rather than silently truncating authoritative snapshots.
+
+`TruthWeave` derives descriptive Code Truth facts from exact RepoDNA content and extraction-rule identity. Its verifier accepts only facts whose fingerprints exactly match the facts reproducible from the same snapshot. Repository text, comments and imperative strings remain data and cannot become Hive instruction authority.
+
+`GenomePulse` combines verified Code Truth facts with explicit trusted node/path bindings and the existing Project Digital Twin. It mines evidence-bound repository-footprint invariants; it does not ask a model to invent authoritative architecture. Drift evidence cannot grant a permission or rewrite the Digital Twin by itself.
+
+`ShadowBench` generates host-keyed hidden evaluation identities from verified repository facts. Generated cases are proposals until a trusted benchmark runner/grader creates CP-0011-compatible evidence. Oracle material is represented as host-bound digests, not model-visible answer text. `BenchmarkNoveltyLedger` rejects exact, semantic and source-lineage replay so cosmetic case IDs or epoch churn cannot fake evaluation diversity.
+
+`CounterfactualForge` creates non-mutating structural probes that bind a hypothetical fact replacement to the GenomePulse invariants expected to drift. It never edits repository source.
+
+`RecertificationClock` is negative/expiry authority only: it may classify an existing production certification as `CURRENT`, `DUE` or `EXPIRED` according to exact profile/standard/repository binding and Competence Half-Life. It cannot promote an agent. A changed execution-stack digest changes the sealed Agent Profile fingerprint and prevents silent reuse of older certification evidence.
+
+`OutcomeEchoLedger` accepts only trusted-host sealed operational outcomes. Its signal is advisory-only. Regressions/rollbacks may force earlier recertification; positive outcomes cannot mint benchmark evidence, change a Competence Standard or promote rank.
+
+`ExpertiseCapsuleExtension` is descriptive language/framework doctrine bound to a base capsule fingerprint and provenance digest. It contains no permission or rank and has no automatic activation path.
+
 ## Remote-control boundary
 Remote Hive control will be a separate HIGH_ASSURANCE subsystem. It must use authenticated encrypted device/session semantics, least privilege, revocation, audit and emergency stop. A raw Cua/RDP/VNC endpoint must never be exposed directly to the public internet by Hive.
 
