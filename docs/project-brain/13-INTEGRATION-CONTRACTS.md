@@ -37,6 +37,15 @@ Per-node attempt ceilings and global execution/failure ceilings are bounded. Act
 
 Interrupted model computation may be reissued only inside its attempt budget. Interrupted skills are treated as potentially side-effecting and never auto-replay after crash; explicit trusted-host recovery disposition is required. Pause stops future scheduling. If requested while a call is already in flight, that call may settle while the task remains PAUSED unless a terminal failure occurs. Cancellation is the cooperative interruption signal provided to execution ports and remains terminal.
 
+## Planner and Orchestrator intelligence boundary
+`DeepPlanEngine` accepts powerful planner output only as proposal data. VERIFIED assumptions require an independent trusted-host verifier, and required Council reviewer identity is assigned by Hive rather than accepted from model output. The ELEVATED Council profile requires Architect, Security, QA and Reviewer assessments and blocks MEDIUM/HIGH/CRITICAL findings.
+
+The approved `MasterPlan` is sealed with HMAC-SHA256 by a trusted-host `PlanApprovalAuthority`. Its fingerprint binds the objective, semantic step graph, constraints, assumptions/evidence references, Council findings, bounded Change Radius and the exact `ProjectDigitalTwin` fingerprint. `PlanGraphCompiler`, `AgentOrchestrator` and bounded self-correction reject forged/unsealed plans or a current Digital Twin that differs from the approved planning snapshot.
+
+`EvidenceGraph` is plan-scoped. Evidence producers cannot mark their own records trusted; trust is decided by a host verifier. Evidence is bound to the exact MasterPlan fingerprint and separately linked to acceptance criteria, objective constraints and STOP conditions. `STOP Intelligence` cannot declare completion until trusted evidence covers those obligations, and the Orchestrator additionally requires all CP-0009 task nodes to have succeeded. Model prose, Council prose and planner assertions have no completion authority.
+
+`SelfCorrectionLedger` is bounded globally/per-step and can only request changes inside the targets already approved for that step. In CP-0010 it is session-bounded; automatic cross-restart self-correction is disabled until a later trusted persistence contract exists.
+
 ## Remote-control boundary
 Remote Hive control will be a separate HIGH_ASSURANCE subsystem. It must use authenticated encrypted device/session semantics, least privilege, revocation, audit and emergency stop. A raw Cua/RDP/VNC endpoint must never be exposed directly to the public internet by Hive.
 
