@@ -227,15 +227,19 @@ fn safe_existing_path(root: &Path, relative: &Path) -> Result<Option<PathBuf>, S
 }
 
 fn read_bounded_text(path: &Path, max_bytes: u64) -> Result<String, String> {
-    let metadata = fs::metadata(path).map_err(|_| "bounded file metadata unavailable".to_owned())?;
-    if !metadata.is_file() || metadata.len() > max_bytes {
+    let metadata = fs::symlink_metadata(path).map_err(|_| "bounded file metadata unavailable".to_owned())?;
+    if is_link_or_reparse(&metadata) || !metadata.is_file() || metadata.len() > max_bytes {
         return Err("bounded file is invalid or exceeds size limit".to_owned());
     }
-    let mut file = File::open(path).map_err(|_| "bounded file is unreadable".to_owned())?;
-    let mut text = String::new();
-    file.read_to_string(&mut text)
-        .map_err(|_| "bounded file is not valid UTF-8 text".to_owned())?;
-    Ok(text)
+    let file = File::open(path).map_err(|_| "bounded file is unreadable".to_owned())?;
+    let mut bytes = Vec::new();
+    file.take(max_bytes.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|_| "bounded file is unreadable".to_owned())?;
+    if bytes.len() as u64 > max_bytes {
+        return Err("bounded file exceeded size limit during read".to_owned());
+    }
+    String::from_utf8(bytes).map_err(|_| "bounded file is not valid UTF-8 text".to_owned())
 }
 
 fn workspace_model(selection: &WorkspaceSelection) -> WorkspaceReadModel {
@@ -878,6 +882,17 @@ mod tests {
 
         cleanup(&root);
         cleanup(&outside);
+    }
+
+
+    #[test]
+    fn bounded_text_rejects_growth_beyond_physical_ceiling() {
+        let root = temp_root("bounded-read");
+        let file = root.join("bounded.txt");
+        fs::write(&file, b"123456789").unwrap();
+        assert!(read_bounded_text(&file, 8).is_err());
+        assert_eq!(read_bounded_text(&file, 9).unwrap(), "123456789");
+        cleanup(&root);
     }
 
 }
