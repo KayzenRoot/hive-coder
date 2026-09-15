@@ -90,3 +90,20 @@ WO-0018 treats the wire itself as hostile input and freezes it before any runtim
 A valid status envelope is never authorization. It cannot grant a CP capability, create/consume a permit, approve a request, activate a skill, certify a model capability, mutate a task/permission state, access credentials or authorize filesystem/Git/terminal/computer-use action.
 
 CP-0018 canonicalizes only this wire security boundary. It does not prove helper binary authenticity, child-process containment, restart/shutdown policy or desktop supervisor behavior. Those remain later HIGH_ASSURANCE process-boundary concerns and must not be inferred from IPC validity.
+
+## Runtime-status sidecar security boundary — WO-0019 promotion candidate
+WO-0019 proves a fixed one-shot helper process while deliberately refusing desktop supervision or live execution authority.
+
+- Exact argv must be only `--stdio-status-v1`; missing, unknown or extra arguments are rejected before protocol handling.
+- The helper constructs the canonical disconnected snapshot locally and does not inspect provider/network/credential/task/control-plane state.
+- Accepted wire remains frozen CP-0018 canonical wire; no fallback JSON normalization or expanded operation namespace exists.
+- A process invocation serves one request then exits. Buffered second-request proof prevents the helper from silently becoming a long-running command channel.
+- Malformed, noncanonical, duplicate-key, future-protocol, unsupported-operation, oversized and unterminated requests fail closed without a fake response or payload-derived stderr.
+- Test launch uses `ManagedStdioProcess`, which sets `shell=False` and builds a least-privilege child environment. The WO-0019 spec provides no environment overrides.
+- Representative ambient `OPENAI_API_KEY` is proven absent from the child environment and sidecar output.
+- Windows HIGH_ASSURANCE executes the status-sidecar process suite with ResourceWarning fatal; cross-platform behavior is proven rather than assumed.
+- No Tauri process command/plugin or desktop generic launcher is added by WO-0019; the desktop security gate continues to report `GENERIC_PROCESS_EXECUTION=0` and capability permissions 0.
+
+The sidecar remains non-authoritative presentation infrastructure. It cannot create/consume CP permits, approve requests, activate skills, execute providers/models, mutate tasks/permissions/files/Git, invoke terminal/computer-use, expose remote control or authorize billing/purchases.
+
+CP-0019 candidate does not prove packaged helper authenticity, signing, process containment, restart/shutdown policy, trusted desktop supervisor identity or live observation. Those are explicit prerequisites for the later separately governed WO-0020 desktop supervisor and must not be inferred from the helper's one-shot safety proof.

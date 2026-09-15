@@ -30,20 +30,27 @@ If the user says `continue`, `continue do chat anterior`, or equivalent for Hive
 3. GitHub/canonical truth wins if Issue #30 is stale.
 4. Continue autonomously from its `NEXT EXACT ACTIONS`; do not ask the user to restate recoverable context.
 
-## Current promotion state
-Active increment: `HCODER-WO-0015 — Desktop Shell Foundation & Safe Workspace Read Model`, PR `#32`, branch `feat/HCODER-WO-0015-desktop-shell`.
+## Current execution state
+Canonical `main` remains `HCODER-CP-0018` at `c0a44d43546b9f176125b9e7099b8422d6b62ba3` until WO-0019 merges and passes post-merge validation.
 
-Technical head `9e212c6f8c959f3d3cb19cc5146485f39bd6c8fd` passed Governance #187 + Desktop Shell #23 and HEDS technical review `5211566651`.
+Active increment: `HCODER-WO-0019 — Runtime Status Sidecar Helper`, Issue `#47`, PR `#48`, branch `feat/HCODER-WO-0019-runtime-status-sidecar-canonical`.
 
-Promotion candidate `e3b24420f7057272fbe15a4ddae88ce65a190e50` passed Governance #189 + Desktop Shell #25 and HEDS promotion review `5211785907`, with unresolved HIGH/CRITICAL findings `0`. DEC-019 / HCODER-CP-0015 are now recorded APPROVED, subject to exact-head validation of this final approval mutation before merge.
+Technical exact head `ba10ba72f76316806cd820dc0d205e68105f61bb` passed Governance #250 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #86 (security gate, frontend **23/23**, npm audit 0, locked Rust checks, Windows release build and launch smoke). HEDS technical review `5216093993` is **APPROVED FOR PROMOTION**, unresolved HIGH/CRITICAL `0`.
 
-WO-0015 desktop authority remains read-only: one `get_desktop_snapshot` command scoped to `main`, zero Tauri plugin permissions, no generic command bridge, arbitrary filesystem mutation, computer-use mutation, provider credentials, skill activation, remote control or billing authority.
+`HCODER-WO-0019-CR-001` LOW and `HCODER-WO-0019-CR-002` LOW are resolved. `HCODER-CP-0019` and `DEC-023 — Runtime Status Sidecar Helper Boundary` are promotion candidates only, **NOT CANONICAL**.
+
+Historical PR #38 / branch `feat/HCODER-WO-0019-runtime-status-sidecar` is non-authoritative supporting evidence only. It MUST NOT be merged or cherry-picked.
+
+WO-0019 authority remains presentation-only and one-shot: fixed `--stdio-status-v1`, canonical CP-0018 request/response, prebuilt truthful `DISCONNECTED` snapshot, no daemon/listener/generic RPC, no provider/model calls, no credential access, no Permission & Control Plane mutation, no filesystem/Git/computer-use mutation, no remote control and no billing/purchase authority. Desktop/Tauri process spawn is explicitly out of scope.
 
 ### NEXT EXACT ACTIONS
-1. Require exact-head Governance + Desktop Shell success on the final APPROVED documentation mutation.
-2. Perform final HEDS on that exact head; stop on any HIGH/CRITICAL finding.
-3. Mark PR #32 ready only after those gates are green.
-4. Squash merge using expected-head protection.
-5. Require push-triggered Governance + Desktop Shell success on canonical `main`.
-6. Refresh Issue #30 and close WO-0015/Issue #31 only after post-merge proof.
-7. Do not create WO-0016 before post-merge source-check of CP-0015.
+1. Validate the promotion candidate exact head with Governance + Desktop Shell.
+2. Perform HEDS promotion review; stop on unresolved HIGH/CRITICAL.
+3. If approved, create the minimum final-approval state mutation without declaring CP-0019 canonical.
+4. Run final exact-head Governance + Desktop Shell and HEDS.
+5. Mark PR #48 ready only after all final gates are green.
+6. Squash merge using expected-head protection.
+7. Require push-triggered Governance + Desktop Shell success on the product merge SHA.
+8. Create documentation-only canonical closeout, gate/HEDS it, squash merge, and require push validation before CP-0019 is fully sealed.
+9. Only after canonical CP-0019, source-check and reconstruct WO-0020; never merge its historical stacked ancestry directly.
+10. Refresh Issue #30 at each major state transition.

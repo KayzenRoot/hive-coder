@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "hive-context-lock-v1",
+  "workOrder": "HCODER-WO-0019",
+  "status": "LOCKED_FOR_EXECUTION",
+  "repository": "KayzenRoot/hive-coder",
+  "base": {
+    "type": "canonical-main",
+    "checkpoint": "HCODER-CP-0018",
+    "sha": "c0a44d43546b9f176125b9e7099b8422d6b62ba3"
+  },
+  "sourceBlobs": {
+    "checkpoint": "3d358c6eee4e32349643a962a21aa40e0214f603",
+    "decisions": "edf92e4d44bdd42a0056fca2cfd407a74e3ccdd6",
+    "requirements": "35cb36929580e215a8fa3cc04b199f5e20b76dce",
+    "scope": "330ce490cc29fc5f3ba4e612db8935dd982d745c",
+    "architecture": "75ddb518f2fa0d3befaf97f136203010a1b60c8a",
+    "security": "f9902b586fca69ef8b6e9cdc87ea563e9963e116",
+    "testPlan": "9cbfe86bd9dc3f892265d388671136d99e63ff07",
+    "backlog": "3e0cb144e9613ef3f30af8cd2af20aee5ec1e24a",
+    "definitionOfDone": "9770301f87703ec9a24b6c17525c6b55a23da317",
+    "uiUx": "3be6f160491a347a235a5db4ff7c33f8c81788a7",
+    "integrationContracts": "1d42c3086d70308559aeebd40ad96d79c6cad168",
+    "ipcContractDoc": "6a1b42b44bebd6a8333548f63ea634fc0d834962",
+    "runtimeStatusContract": "f5b80a1ddac847f861a50a08c663c88ddaa735d4",
+    "runtimeStatusProtocol": "c2e5bf48672dff6485bec350f58f84f8020b921b",
+    "processBoundary": "75875ae9a07ada8a5bb692e6dfa9278ba3dcfcdd"
+  },
+  "historicalEvidence": {
+    "pullRequest": 38,
+    "branch": "feat/HCODER-WO-0019-runtime-status-sidecar",
+    "head": "1bf98f07e38d37ae18f1bb941c59c886cf8c108c",
+    "authoritative": false,
+    "reusePolicy": "reconstruct-do-not-merge-or-cherry-pick"
+  },
+  "authorityBoundary": {
+    "presentationOnly": true,
+    "genericRpc": false,
+    "daemonOrListener": false,
+    "runtimeSpawnFromDesktop": false,
+    "providerCalls": false,
+    "modelExecution": false,
+    "credentialAccess": false,
+    "permissionMutation": false,
+    "taskMutation": false,
+    "filesystemMutation": false,
+    "gitMutation": false,
+    "computerUseMutation": false,
+    "remoteControl": false,
+    "billingOrPurchases": false
+  },
+  "promotionBlockedUntil": [
+    "exact-head Governance success",
+    "exact-head Desktop Shell success",
+    "HEDS no unresolved HIGH/CRITICAL",
+    "squash merge with expected-head protection",
+    "post-merge Governance and Desktop Shell success before CP-0019 canonical closeout"
+  ]
+}

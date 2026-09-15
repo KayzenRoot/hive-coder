@@ -16,15 +16,15 @@
 13. `HCODER-WO-0013` Provider Certification Lab + Semantic Repository Twin — DONE.
 14. `HCODER-WO-0014` Elite Specialist Forge + Autonomous Engineering Arena — DONE.
 15. `HCODER-WO-0015` Desktop Shell Foundation & Safe Workspace Read Model — DONE. Canonical `HCODER-CP-0015`.
-16. `HCODER-WO-0016` Trusted Workspace & Git Read Surface — **DONE / CANONICAL `HCODER-CP-0016`**. Canonical closeout SHA `442733aeae6bd2f615dc0bc4c76dda024455c212`; push Governance #218 and Desktop Shell #54 SUCCESS.
-17. `HCODER-WO-0017` Runtime Observability Contract & Safe Status Export — **DONE / CANONICAL `HCODER-CP-0017`**. Product PR #42 squash-merged as `00bcb87251772cba0eb385d9628448374e9dd612`; canonical closeout `79e6eb60288c8e0adcb26bdcffdfe0ae21ef8db7`; final HEDS unresolved HIGH/CRITICAL 0.
-18. `HCODER-WO-0018` Cross-Runtime Status IPC Contract — **DONE / CANONICAL `HCODER-CP-0018`**. Product PR #45 squash-merged as `9987b13f67f4c33b87acb2f03b87c6437e7a61ca`; post-merge Governance #244 and Desktop Shell #80 SUCCESS; final product HEDS `5215823771`, unresolved HIGH/CRITICAL 0.
-19. `HCODER-WO-0019` Runtime Status Sidecar Helper — **STAGED NEXT / RECONSTRUCTION REQUIRED**. Historical PR #38 is supporting evidence only; rebuild on canonical CP-0018.
-20. `HCODER-WO-0020` Desktop Runtime Status Supervisor & System Truth Surface — **HISTORICAL STACK EXISTS / BLOCKED BY CP-0019**. Corrected technical head exists; no canonical promotion yet.
+16. `HCODER-WO-0016` Trusted Workspace & Git Read Surface — **DONE / CANONICAL `HCODER-CP-0016`**.
+17. `HCODER-WO-0017` Runtime Observability Contract & Safe Status Export — **DONE / CANONICAL `HCODER-CP-0017`**.
+18. `HCODER-WO-0018` Cross-Runtime Status IPC Contract — **DONE / CANONICAL `HCODER-CP-0018`**. Product PR #45 and canonical closeout PR #46 are squash-merged; canonical closeout SHA `c0a44d43546b9f176125b9e7099b8422d6b62ba3`; push Governance #246 and Desktop Shell #82 SUCCESS.
+19. `HCODER-WO-0019` Runtime Status Sidecar Helper — **TECHNICALLY APPROVED / PROMOTION CANDIDATE, NOT CANONICAL**. PR #48; technical head `ba10ba72f76316806cd820dc0d205e68105f61bb`; Governance #250 **288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE PASS**; Desktop Shell #86 SUCCESS; HEDS `5216093993`, H/C 0. Historical PR #38 remains non-authoritative evidence only.
+20. `HCODER-WO-0020` Desktop Runtime Status Supervisor & System Truth Surface — **HISTORICAL STACK EXISTS / BLOCKED BY CANONICAL CP-0019**. No direct promotion/merge until WO-0019 is canonical and WO-0020 is freshly reconstructed against it.
 
 ## Product capability roadmap
 - **Desktop Shell/UI:** governed native substrate plus canonical explicit user-mediated workspace opening and truthful bounded workspace/Git/evidence reads.
-- **Runtime Observability:** strict bounded `RuntimeStatusSnapshot v1` is canonical through CP-0017 and the frozen one-shot `hive-runtime-status-ipc-v1` cross-runtime presentation protocol is canonical through CP-0018.
+- **Runtime Observability:** strict bounded `RuntimeStatusSnapshot v1` is canonical through CP-0017; frozen one-shot `hive-runtime-status-ipc-v1` is canonical through CP-0018; the fixed one-shot sidecar helper is technically approved as the CP-0019 promotion candidate.
 - **Model Capability Negotiator:** normalize provider/model capabilities and expose only verified capability state.
 - **Hive Skills Engine:** discover, verify, install, version, activate, compose and learn reusable skills under the permission boundary.
 - **Agent Runtime:** long-running task UX over the approved resumable runtime, checkpoints, plans, subagents and evidence.
@@ -35,16 +35,20 @@
 - **Integrated Build Loop:** code -> test -> launch -> observe -> computer-use validate -> repair -> evidence -> PR/review.
 - **Packaging/Updates:** signed Windows packaging, controlled acquisition, update channels, rollback and health diagnostics.
 
-## Current NECESSARY product increment after canonical CP-0018
-Reconstruct `HCODER-WO-0019 — Runtime Status Sidecar Helper` on canonical CP-0018. Historical PR #38 must not be merged directly.
+## Current NECESSARY product increment
+Finish governed promotion/canonicalization of `HCODER-WO-0019 — Runtime Status Sidecar Helper` in PR #48. The technical slice is approved; CP-0019 is not canonical until promotion/final exact-head gates, HEDS, squash merge and post-merge validation pass.
 
-The reconstruction must reconcile the historical helper against the canonical CP-0018 API:
-- `serve_one()` consumes a **prebuilt `RuntimeStatusSnapshot`**, so the helper must construct `disconnected_snapshot()` before calling it rather than passing the function object;
-- process tests must use the canonical `encode_request()` wire rather than ad hoc `json.dumps(...)` fixtures;
-- the sidecar must accept exactly `--stdio-status-v1`, handle exactly one request, emit exactly one response, then exit;
-- default status remains truthful DISCONNECTED;
-- `ManagedStdioProcess` remains shell-free and its sanitized child environment must preserve secret non-observation;
-- no desktop launcher, generic process dispatch, provider/model/network execution, credential lookup, task/permission mutation, filesystem/Git/terminal/computer-use mutation, remote control, billing/purchases or skill activation enters WO-0019.
+The candidate preserves these fixed laws:
+- exact mode `--stdio-status-v1` only;
+- prebuilt truthful `disconnected_snapshot()` passed to canonical CP-0018 `serve_one()`;
+- one canonical request -> one canonical response -> exit;
+- usage/protocol failures use stable exit `64` / `65` without fake snapshots or payload-derived stderr;
+- canonical `encode_request()` / `parse_response()` wire in acceptance tests;
+- duplicate/noncanonical/future/unsupported/oversized/missing-newline process input fails closed;
+- `ManagedStdioProcess` remains `shell=False` with least-privilege allowlisted child environment;
+- ambient provider credential material is neither inherited nor emitted;
+- Ubuntu source-pack and Windows HIGH_ASSURANCE both exercise the sidecar process boundary;
+- no desktop launcher, generic process dispatch, provider/model/network execution, credential authority, task/permission mutation, filesystem/Git/terminal/computer-use mutation, remote control, billing/purchases or automatic skill activation enters WO-0019.
 
 Any next increment must preserve:
 - presentation state as non-authoritative;
@@ -57,12 +61,12 @@ Any next increment must preserve:
 - disabled mutation controls until a later governed permit-gated path exists.
 
 ## Open residual work
+- Desktop/Tauri runtime status supervisor/launcher, helper identity/authenticity, containment and lifecycle policy after canonical CP-0019.
 - Rust dependency refresh/target-chain analysis for the 7 RustSec warning-class advisories.
 - Stricter desktop CSP than `style-src 'unsafe-inline'`.
 - Native picker/full desktop interaction E2E, Windows reparse fixture, visual screenshot/pixel validation and accessibility automation.
 - Stronger handle-relative/no-follow workspace capability I/O before privileged file/Git mutation.
 - Installer/signing/updater/release packaging and rollback/roll-forward proof.
-- Runtime helper/process identity, containment and supervision through staged WO-0019..0020 sequence.
 - Safe public permission/status observation only if later objectively needed; never serialize private authorization internals as a shortcut.
 - Final project license and release attribution decision.
 
