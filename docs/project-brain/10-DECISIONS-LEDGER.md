@@ -6,28 +6,36 @@ Hive Coder is developed in `KayzenRoot/hive-coder`, separate from `hive-code`.
 
 ## DEC-002 — Foundation direction
 **Status:** APPROVED FOR ARCHITECTURE/ASSESSMENT  
-Use Open Interpreter and Cua as preferred foundations to evaluate/integrate behind Hive-owned adapters. This is not permission to copy blindly or lock architecture before license/API/prototype validation.
+Use Open Interpreter and Cua as preferred foundations behind Hive-owned adapters.
 
 ## DEC-003 — Visual direction
 **Status:** APPROVED DIRECTION  
-Premium desktop UX inspired by modern macOS qualities such as clarity, translucency and polished motion, while using original Hive branding/assets and avoiding Apple proprietary/trademarked assets.
+Premium desktop UX inspired by modern macOS qualities while using original Hive branding/assets.
 
 ## DEC-004 — Engineering workflow
 **Status:** APPROVED  
-Prompt mode `GEF_V1`; review mode `HEDS_DELTA`; exact-head evidence; same-WO Correction Delta; canonical source hierarchy defined in `00-SOURCE-HIERARCHY.md`.
+Prompt mode `GEF_V1`; review mode `HEDS_DELTA`; exact-head evidence; same-WO Correction Delta.
 
 ## DEC-005 — First validated external foundations
 **Status:** APPROVED  
-`HCODER-WO-0002` validated Open Interpreter `0.0.43` and Cua Driver `0.28.1` as the first pinned external foundations behind Hive-owned boundaries. Open Interpreter uses ACP / JSON-RPC over stdio as the primary integration path with exec JSONL as fallback. Cua Driver uses MCP / JSON-RPC 2.0 over stdio. Full upstream repositories and binaries are not vendored by this decision; automatic installation remains disabled. Optional OmniParser/Ultralytics components remain excluded from the approved foundation set. Any live desktop-control action is a separate HIGH_ASSURANCE increment.
+Open Interpreter `0.0.43` and Cua Driver `0.28.1` are pinned behind Hive-owned boundaries. Automatic installation is disabled; optional OmniParser/Ultralytics remain excluded.
 
 ## DEC-006 — Hive-owned runtime bridge
 **Status:** APPROVED  
-`HCODER-WO-0003` establishes a Hive-owned shell-free stdio/process and strict NDJSON JSON-RPC boundary around the pinned foundations. Open Interpreter ACP v1 is approved for initialize, session create/cancel/update/close without prompt execution. Cua Driver modern MCP `2026-07-28` is approved for `server/discover` inventory only. Production adapter launch is gated by the canonical foundation lock and exact-version preflight; child environments use an explicit least-privilege allowlist. Cua `tools/call`, Open Interpreter prompt execution and all real desktop actions remain unapproved until their later governed increments.
+`HCODER-WO-0003` establishes shell-free stdio/process and strict NDJSON JSON-RPC boundaries. Open Interpreter ACP v1 session lifecycle and Cua modern MCP `2026-07-28` discovery are proven under deterministic contracts.
 
 ## DEC-007 — Hive Permission & Control Plane authorization core
 **Status:** APPROVED  
-`HCODER-WO-0004` establishes the Hive-owned HIGH_ASSURANCE authorization choke point required before future privileged adapter execution. Capability/action/target policy is default-deny with explicit-deny precedence; high-risk mutation and critical capability classes have mandatory approval floors. Control sessions are bounded, security expiry uses monotonic time, and policy/global emergency epochs invalidate stale authorization. Approval grants and execution permits are HMAC-SHA256 signed with a 256-bit minimum key, request/session/epoch/expiry bound and single-use. Request fingerprints bind canonical executor arguments and target identity while untrusted model/task context cannot grant capability. Emergency stop, user takeover, cancellation, expiry and policy changes invalidate ephemeral authorization; cancellation callbacks execute outside the authorization critical lock. The control-plane audit surface is private, redacted and hash chained in memory.
+`HCODER-WO-0004` establishes default-deny capability/action/target policy, mandatory approval floors, signed request-bound single-use permits, emergency epochs, cancellation/takeover and redacted hash-chained audit.
 
 ## DEC-008 — First gated Cua mutation boundary
 **Status:** APPROVED  
-`HCODER-WO-0005` introduces `GatedCuaActionExecutor` as the only approved Hive surface for Cua `tools/call`. Every dispatch consumes a request-bound single-use execution permit, revalidates live application/window identity immediately before RPC, applies an exact per-action argument schema, and fails closed on target drift, tool errors or failed post-action verification. The initial allowlist contains only `pointer.click` under `pointer.input` and `keyboard.type_text` under `text.input`; both remain mandatory-approval HIGH-risk capabilities. Emergency stop/user takeover closes the Cua peer to interrupt a blocking Hive JSON-RPC request and prevent further dispatch. Shell, filesystem, clipboard, destructive, privileged and unmapped Cua actions remain unapproved. CI proves the executor contract with mocked Cua peers on Ubuntu and Windows; physical desktop mutation and rollback semantics with the real pinned Cua Driver remain a separate HIGH_ASSURANCE proof before production claims.
+`HCODER-WO-0005` makes `GatedCuaActionExecutor` the only approved Hive Cua `tools/call` surface. Initial allowlist is only `pointer.click` and `keyboard.type_text`, both mandatory approval, with live target revalidation and emergency/takeover interruption.
+
+## DEC-009 — Real Cua Windows harness contract
+**Status:** APPROVED  
+`HCODER-WO-0006` corrects the production modern MCP contract to `server/discover` followed by `tools/list`, with protocol metadata on every request. Hive resolves concrete Cua click/type tool names only from the pinned driver's advertised capability tokens and required input schema, never from model/task text. The real Windows harness is explicit opt-in, exact-version preflighted, requires a named sandbox application, obtains HWND/PID/process identity through typed Win32 APIs and wires the trusted discovered bindings into the existing permit-gated executor. No capability is added beyond CP-0005. Hosted CI proves contract and Windows logic but does not prove a physical Cua click/type; physical desktop E2E remains UNKNOWN until a safe runner with the pinned binary is explicitly provisioned.
+
+## DEC-010 — Advanced capability roadmap
+**Status:** APPROVED DIRECTION  
+Hive Coder will evolve toward model-aware capability negotiation, a Hive-owned versioned/provenance-aware Skills Engine with governed skill learning, long-running autonomous agent workflows and secure remote control from another authorized computer. Remote control is a zero-trust application control plane with encrypted authenticated device sessions, revocation, approvals, audit and emergency stop, not a publicly exposed raw desktop/Cua port.
