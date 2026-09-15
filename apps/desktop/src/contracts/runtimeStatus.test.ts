@@ -62,13 +62,24 @@ describe("runtime status IPC contract", () => {
   });
 
   it("requires canonical provenance for every subsystem", () => {
-    expect(() => decodeRuntimeStatusEnvelope(canonicalDisconnected.replace(RUNTIME_STATUS_PROVENANCE, "caller"))).toThrow(/provenance/);
-    expect(() => decodeRuntimeStatusEnvelope(canonicalDisconnected.replace(PERMISSION_CONTROL_PROVENANCE, "caller"))).toThrow(/provenance/);
+    const runtime = replaceOnce(
+      canonicalDisconnected,
+      '"provenance":"hive-runtime-status"',
+      '"provenance":"caller"',
+    );
+    expect(() => decodeRuntimeStatusEnvelope(runtime)).toThrow(/provenance/);
+
+    const permission = replaceOnce(
+      canonicalDisconnected,
+      '"provenance":"hive-permission-control-plane"',
+      '"provenance":"caller"',
+    );
+    expect(() => decodeRuntimeStatusEnvelope(permission)).toThrow(/provenance/);
 
     const provider = replaceOnce(
       canonicalDisconnected,
       '"providers":[]',
-      '"providers":[{"modelIds":["m-1"],"providerId":"opencode-go","provenance":"caller","state":"READY"}]',
+      '"providers":[{"modelIds":["m-1"],"provenance":"caller","providerId":"opencode-go","state":"READY"}]',
     );
     expect(() => decodeRuntimeStatusEnvelope(provider)).toThrow(/provenance/);
 
@@ -84,7 +95,7 @@ describe("runtime status IPC contract", () => {
     let raw = replaceOnce(
       canonicalDisconnected,
       '"providers":[]',
-      `"providers":[{"modelIds":["m-1"],"providerId":"opencode-go","provenance":"${PROVIDER_CATALOG_PROVENANCE}","state":"READY"}]`,
+      `"providers":[{"modelIds":["m-1"],"provenance":"${PROVIDER_CATALOG_PROVENANCE}","providerId":"opencode-go","state":"READY"}]`,
     );
     raw = replaceOnce(
       raw,
@@ -100,21 +111,21 @@ describe("runtime status IPC contract", () => {
     const fakeReady = replaceOnce(
       canonicalDisconnected,
       '"providers":[]',
-      `"providers":[{"modelIds":[],"providerId":"opencode-go","provenance":"${PROVIDER_CATALOG_PROVENANCE}","state":"READY"}]`,
+      `"providers":[{"modelIds":[],"provenance":"${PROVIDER_CATALOG_PROVENANCE}","providerId":"opencode-go","state":"READY"}]`,
     );
     expect(() => decodeRuntimeStatusEnvelope(fakeReady)).toThrow(/readiness/);
 
     const duplicateProvider = replaceOnce(
       canonicalDisconnected,
       '"providers":[]',
-      `"providers":[{"modelIds":["m-1"],"providerId":"OpenCode-Go","provenance":"${PROVIDER_CATALOG_PROVENANCE}","state":"READY"},{"modelIds":["m-2"],"providerId":"opencode-go","provenance":"${PROVIDER_CATALOG_PROVENANCE}","state":"READY"}]`,
+      `"providers":[{"modelIds":["m-1"],"provenance":"${PROVIDER_CATALOG_PROVENANCE}","providerId":"OpenCode-Go","state":"READY"},{"modelIds":["m-2"],"provenance":"${PROVIDER_CATALOG_PROVENANCE}","providerId":"opencode-go","state":"READY"}]`,
     );
     expect(() => decodeRuntimeStatusEnvelope(duplicateProvider)).toThrow(/duplicate.*provider/);
 
     const duplicateModel = replaceOnce(
       canonicalDisconnected,
       '"providers":[]',
-      `"providers":[{"modelIds":["m-1","m-1"],"providerId":"opencode-go","provenance":"${PROVIDER_CATALOG_PROVENANCE}","state":"READY"}]`,
+      `"providers":[{"modelIds":["m-1","m-1"],"provenance":"${PROVIDER_CATALOG_PROVENANCE}","providerId":"opencode-go","state":"READY"}]`,
     );
     expect(() => decodeRuntimeStatusEnvelope(duplicateModel)).toThrow(/duplicate.*model/);
   });
