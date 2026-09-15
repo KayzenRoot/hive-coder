@@ -9,9 +9,11 @@ import ast
 import hashlib
 import json
 import os
+import stat
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from types import MappingProxyType
 from typing import Iterable, Mapping
 
 from .expert_common import BenchmarkDimension, _SAFE_ID, _SAFE_TOKEN, _SHA256, _sha
@@ -20,37 +22,13 @@ from .orchestration import ProjectDigitalTwin
 
 
 _LANGUAGE_BY_SUFFIX = {
-    ".py": "python",
-    ".pyi": "python",
-    ".js": "javascript",
-    ".mjs": "javascript",
-    ".cjs": "javascript",
-    ".ts": "typescript",
-    ".tsx": "typescript",
-    ".jsx": "javascript",
-    ".rs": "rust",
-    ".go": "go",
-    ".java": "java",
-    ".kt": "kotlin",
-    ".kts": "kotlin",
-    ".cs": "csharp",
-    ".cpp": "cpp",
-    ".cc": "cpp",
-    ".cxx": "cpp",
-    ".c": "c",
-    ".h": "c-header",
-    ".hpp": "cpp-header",
-    ".rb": "ruby",
-    ".php": "php",
-    ".swift": "swift",
-    ".sql": "sql",
-    ".sh": "shell",
-    ".ps1": "powershell",
-    ".json": "json",
-    ".toml": "toml",
-    ".yaml": "yaml",
-    ".yml": "yaml",
-    ".md": "markdown",
+    ".py": "python", ".pyi": "python", ".js": "javascript", ".mjs": "javascript",
+    ".cjs": "javascript", ".ts": "typescript", ".tsx": "typescript", ".jsx": "javascript",
+    ".rs": "rust", ".go": "go", ".java": "java", ".kt": "kotlin", ".kts": "kotlin",
+    ".cs": "csharp", ".cpp": "cpp", ".cc": "cpp", ".cxx": "cpp", ".c": "c",
+    ".h": "c-header", ".hpp": "cpp-header", ".rb": "ruby", ".php": "php",
+    ".swift": "swift", ".sql": "sql", ".sh": "shell", ".ps1": "powershell",
+    ".json": "json", ".toml": "toml", ".yaml": "yaml", ".yml": "yaml", ".md": "markdown",
 }
 
 _BINARY_SUFFIXES = frozenset({
@@ -65,7 +43,9 @@ _DEFAULT_EXCLUDED_DIRS = frozenset({
 })
 
 _SECRET_NAMES = frozenset({
-    ".env", ".env.local", ".env.production", ".env.development", "id_rsa", "id_ed25519",
+    ".env", ".env.local", ".env.production", ".env.development", ".npmrc", ".pypirc",
+    ".netrc", ".git-credentials", "credentials.json", "service-account.json",
+    "service_account.json", "id_rsa", "id_ed25519",
 })
 _SECRET_SUFFIXES = frozenset({".pem", ".key", ".p12", ".pfx", ".jks", ".keystore"})
 
@@ -74,10 +54,16 @@ def _content_sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _normalized_relative(path: Path) -> str:
-    raw = path.as_posix()
+def _normalized_relative(path: Path | str) -> str:
+    raw = str(path).replace(os.sep, "/") if isinstance(path, Path) else str(path)
+    if "\\" in raw:
+        raise ValueError("repository path must use canonical forward slashes")
     normalized = PurePosixPath(raw)
-    if normalized.is_absolute() or not raw or any(part in ("", ".", "..") for part in normalized.parts):
+    if (
+        normalized.is_absolute() or not raw
+        or any(part in ("", ".", "..") for part in normalized.parts)
+        or (normalized.parts and ":" in normalized.parts[0])
+    ):
         raise ValueError("repository path is not a safe relative path")
     return normalized.as_posix()
 
@@ -120,7 +106,8 @@ class RepositoryFileRecord:
     kind: str
 
     def validate(self) -> None:
-        _normalized_relative(Path(self.path))
+        if _normalized_relative(self.path) != self.path:
+            raise ValueError("repository file path must already be canonical")
         if not _SHA256.fullmatch(self.content_digest):
             raise ValueError("repository file digest must be sha256")
         if not 0 <= self.size_bytes <= 100_000_000:
@@ -155,13 +142,8 @@ class RepositorySnapshot:
             "repository_id": self.repository_id,
             "extractor_version": self.extractor_version,
             "files": [
-                {
-                    "path": item.path,
-                    "digest": item.content_digest,
-                    "size": item.size_bytes,
-                    "language": item.language,
-                    "kind": item.kind,
-                }
+                {"path": item.path, "digest": item.content_digest, "size": item.size_bytes,
+                 "language": item.language, "kind": item.kind}
                 for item in self.files
             ],
         })
@@ -171,6 +153,10 @@ class RepositorySnapshot:
 class IndexedRepository:
     snapshot: RepositorySnapshot
     texts: Mapping[str, str]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "texts", MappingProxyType(dict(self.texts)))
+        self.validate()
 
     def validate(self) -> None:
         self.snapshot.validate()
@@ -203,8 +189,43 @@ class RepoDNAIndexer:
         if any(not item or "/" in item or "\\" in item for item in self.excluded_dirs):
             raise ValueError("RepoDNA excluded directories must be simple names")
 
+    def _read_regular_file(self, candidate: Path, root_path: Path, relative: str) -> bytes | None:
+        if candidate.is_symlink():
+            return None
+        try:
+            candidate.resolve(strict=True).relative_to(root_path)
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(f"RepoDNA path escaped root: {relative}") from exc
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(candidate, flags)
+        except OSError as exc:
+            if candidate.is_symlink():
+                return None
+            raise RuntimeError(f"RepoDNA could not safely open file: {relative}") from exc
+        try:
+            metadata = os.fstat(fd)
+            if not stat.S_ISREG(metadata.st_mode):
+                return None
+            if metadata.st_size > self.max_file_bytes:
+                raise RuntimeError(f"RepoDNA per-file ceiling exceeded: {relative}")
+            with os.fdopen(fd, "rb", closefd=True) as handle:
+                fd = -1
+                data = handle.read(self.max_file_bytes + 1)
+            if len(data) > self.max_file_bytes:
+                raise RuntimeError(f"RepoDNA per-file ceiling exceeded while reading: {relative}")
+            if len(data) != metadata.st_size:
+                raise RuntimeError(f"repository file changed during RepoDNA scan: {relative}")
+            return data
+        finally:
+            if fd >= 0:
+                os.close(fd)
+
     def scan(self, root: str | os.PathLike[str], *, repository_id: str = "repository") -> IndexedRepository:
-        root_path = Path(root).resolve(strict=True)
+        supplied_root = Path(root)
+        if supplied_root.is_symlink():
+            raise ValueError("RepoDNA root symlink is not allowed")
+        root_path = supplied_root.resolve(strict=True)
         if not root_path.is_dir():
             raise ValueError("RepoDNA root must be a directory")
         if not _SAFE_ID.fullmatch(repository_id):
@@ -239,13 +260,8 @@ class RepoDNAIndexer:
                     continue
                 if suffix in _BINARY_SUFFIXES:
                     continue
-                size = candidate.stat().st_size
-                if size > self.max_file_bytes:
-                    raise RuntimeError(f"RepoDNA per-file ceiling exceeded: {relative}")
-                data = candidate.read_bytes()
-                if len(data) != size:
-                    raise RuntimeError(f"repository file changed during RepoDNA scan: {relative}")
-                if b"\x00" in data:
+                data = self._read_regular_file(candidate, root_path, relative)
+                if data is None or b"\x00" in data:
                     continue
                 try:
                     text = data.decode("utf-8", errors="strict")
@@ -257,20 +273,14 @@ class RepoDNAIndexer:
                     raise RuntimeError("RepoDNA total-byte ceiling exceeded")
                 total_bytes += len(data)
                 record = RepositoryFileRecord(
-                    relative,
-                    _content_sha(data),
-                    len(data),
-                    _language_for(relative),
-                    _kind_for(relative),
+                    relative, _content_sha(data), len(data), _language_for(relative), _kind_for(relative),
                 )
                 records.append(record)
                 texts[relative] = text
 
         records.sort(key=lambda item: item.path)
         snapshot = RepositorySnapshot(repository_id, tuple(records))
-        indexed = IndexedRepository(snapshot, texts)
-        indexed.validate()
-        return indexed
+        return IndexedRepository(snapshot, texts)
 
 
 class TruthWeave:
@@ -282,28 +292,20 @@ class TruthWeave:
         indexed.validate()
         self.indexed = indexed
         self._facts = self._extract()
-        self._fingerprints = {fact.fact_id: fact.fingerprint() for fact in self._facts}
+        self._fingerprints = MappingProxyType({fact.fact_id: fact.fingerprint() for fact in self._facts})
 
     def _fact(self, *, path: str, rule: str, predicate: str, object_digest: str,
               tags: Iterable[str], subject: str | None = None) -> TruthFact:
         record = next(item for item in self.indexed.snapshot.files if item.path == path)
         provenance = _sha({
-            "technology": self.VERSION,
-            "snapshot": self.indexed.snapshot.fingerprint(),
-            "path": path,
-            "file_digest": record.content_digest,
-            "rule": rule,
-            "predicate": predicate,
-            "object": object_digest,
+            "technology": self.VERSION, "snapshot": self.indexed.snapshot.fingerprint(),
+            "path": path, "file_digest": record.content_digest, "rule": rule,
+            "predicate": predicate, "object": object_digest,
         })
         fact_id = f"repo.{hashlib.sha256((path + '|' + rule + '|' + object_digest).encode()).hexdigest()[:28]}"
         return TruthFact(
-            fact_id=fact_id,
-            subject=subject or path,
-            predicate=predicate,
-            object_digest=object_digest,
-            provenance_digest=provenance,
-            tags=frozenset(tags),
+            fact_id=fact_id, subject=subject or path, predicate=predicate,
+            object_digest=object_digest, provenance_digest=provenance, tags=frozenset(tags),
         )
 
     def _extract_python(self, path: str, text: str) -> list[TruthFact]:
@@ -312,9 +314,7 @@ class TruthWeave:
             tree = ast.parse(text, filename=path)
         except SyntaxError as exc:
             facts.append(self._fact(
-                path=path,
-                rule="python.parse-error",
-                predicate="parse_error",
+                path=path, rule="python.parse-error", predicate="parse_error",
                 object_digest=_sha({"line": exc.lineno or 0, "offset": exc.offset or 0}),
                 tags={"repository", "parse-error", "language:python", _path_tag(path)},
             ))
@@ -327,9 +327,7 @@ class TruthWeave:
                 imports.add(node.module.split(".", 1)[0])
         for module in sorted(imports):
             facts.append(self._fact(
-                path=path,
-                rule=f"python.import:{module}",
-                predicate="imports",
+                path=path, rule=f"python.import:{module}", predicate="imports",
                 object_digest=_sha({"module": module}),
                 tags={"repository", "dependency", "language:python", _path_tag(path)},
             ))
@@ -358,9 +356,7 @@ class TruthWeave:
                                 dependencies[dep] = dep
         except (json.JSONDecodeError, tomllib.TOMLDecodeError, TypeError, ValueError):
             facts.append(self._fact(
-                path=path,
-                rule="manifest.parse-error",
-                predicate="manifest_parse_error",
+                path=path, rule="manifest.parse-error", predicate="manifest_parse_error",
                 object_digest=_sha({"path": path}),
                 tags={"repository", "manifest", "parse-error", _path_tag(path)},
             ))
@@ -381,9 +377,7 @@ class TruthWeave:
         for path in sorted(self.indexed.texts):
             record = by_path[path]
             facts.append(self._fact(
-                path=path,
-                rule="file.present",
-                predicate="file_content",
+                path=path, rule="file.present", predicate="file_content",
                 object_digest=record.content_digest,
                 tags={"repository", "file", f"kind:{record.kind}", f"language:{record.language}", _path_tag(path)},
             ))
@@ -420,6 +414,18 @@ class GenomePulseResult:
     fact_to_invariants: Mapping[str, tuple[str, ...]]
     covered_nodes: tuple[str, ...]
 
+    def __post_init__(self) -> None:
+        frozen: dict[str, tuple[str, ...]] = {}
+        for fact_id, invariant_ids in self.fact_to_invariants.items():
+            if not _SAFE_ID.fullmatch(fact_id):
+                raise ValueError("invalid GenomePulse fact id")
+            values = tuple(invariant_ids)
+            if not values or any(not _SAFE_ID.fullmatch(item) for item in values):
+                raise ValueError("invalid GenomePulse invariant binding")
+            frozen[fact_id] = tuple(sorted(set(values)))
+        object.__setattr__(self, "fact_to_invariants", MappingProxyType(frozen))
+        object.__setattr__(self, "covered_nodes", tuple(self.covered_nodes))
+
 
 class GenomePulseMiner:
     """Mines evidence-bound repository-footprint invariants without model inference."""
@@ -440,9 +446,7 @@ class GenomePulseMiner:
         fact_to_invariants: dict[str, list[str]] = {}
         covered: list[str] = []
         for node_id in sorted(node_path_bindings):
-            prefix = node_path_bindings[node_id].strip().strip("/")
-            if not prefix:
-                raise ValueError("GenomePulse path binding cannot be empty")
+            prefix = _normalized_relative(node_path_bindings[node_id].strip().strip("/"))
             selected = tuple(
                 fact for fact in verified
                 if fact.subject == prefix or fact.subject.startswith(prefix + "/")
@@ -452,24 +456,21 @@ class GenomePulseMiner:
             fact_ids = frozenset(fact.fact_id for fact in selected)
             invariant_id = f"genome.{node_id}"
             statement_digest = _sha({
-                "technology": self.VERSION,
-                "node": node_id,
-                "path_prefix": prefix,
+                "technology": self.VERSION, "node": node_id, "path_prefix": prefix,
                 "facts": sorted((fact.fact_id, fact.fingerprint()) for fact in selected),
             })
             invariants.append(ArchitecturalInvariant(
-                invariant_id,
-                statement_digest,
-                frozenset({node_id}),
-                fact_ids,
-                node_id in critical,
+                invariant_id, statement_digest, frozenset({node_id}), fact_ids, node_id in critical,
             ))
             covered.append(node_id)
             for fact_id in fact_ids:
                 fact_to_invariants.setdefault(fact_id, []).append(invariant_id)
         genome = ArchitecturalGenome(twin, truth, invariants)
-        frozen_map = {key: tuple(sorted(value)) for key, value in sorted(fact_to_invariants.items())}
-        return GenomePulseResult(genome, frozen_map, tuple(covered))
+        return GenomePulseResult(
+            genome,
+            {key: tuple(sorted(value)) for key, value in sorted(fact_to_invariants.items())},
+            tuple(covered),
+        )
 
 
 @dataclass(frozen=True)
@@ -503,13 +504,10 @@ class ExpertiseCapsuleExtension:
     def fingerprint(self) -> str:
         self.validate()
         return _sha({
-            "id": self.extension_id,
-            "version": self.version,
+            "id": self.extension_id, "version": self.version,
             "base": self.base_capsule_fingerprint,
-            "languages": sorted(self.languages),
-            "frameworks": sorted(self.frameworks),
-            "principles": list(self.principles),
-            "review_lenses": list(self.review_lenses),
+            "languages": sorted(self.languages), "frameworks": sorted(self.frameworks),
+            "principles": list(self.principles), "review_lenses": list(self.review_lenses),
             "benchmarks": sorted(item.value for item in self.benchmark_dimensions),
             "provenance": self.provenance_digest,
         })
