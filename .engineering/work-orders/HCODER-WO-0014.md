@@ -1,6 +1,6 @@
 # HCODER-WO-0014 — Elite Specialist Forge & Autonomous Engineering Arena
 
-**Status:** IN PROGRESS  
+**Status:** PROMOTION CANDIDATE  
 **Issue:** #28  
 **Risk:** HIGH_ASSURANCE  
 **Task class:** T3  
@@ -85,6 +85,9 @@ Runtime code, tests, canonical docs, evidence, Correction Deltas if required, DE
 
 ## REVIEW FORMAT
 HEDS_DELTA exact-head. UNKNOWN is not PASS. HIGH/CRITICAL findings block promotion.
+
+## PROMOTION CANDIDATE STATE
+Technical runtime head `54d19f3acbac6e20f34287d5fe12cc2316d89e23` is HEDS-approved for promotion candidate and passed Governance run `34965734345` with Ubuntu **256/256 PASS** and Windows Server 2025 HIGH_ASSURANCE **56/56 PASS**. `CR-001..CR-004` are resolved. Promotion documentation is staged under this same PR and must pass its own exact-head Governance + final HEDS before DEC-018/CP-0014 can become APPROVED.
 
 ## STOP CONDITION
 Exact-head Governance green; HEDS APPROVED; no open HIGH/CRITICAL; DEC-018 and CP-0014 APPROVED; squash merge; post-merge Governance green.
