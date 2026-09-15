@@ -31,8 +31,27 @@ function SafetyButton({ label, enabled, kind = "default" }: { label: string; ena
   );
 }
 
-export function ShellView({ snapshot }: { snapshot: DesktopSnapshot }) {
-  const statusSignals = [snapshot.runtime, snapshot.provider, snapshot.git, snapshot.evidence, snapshot.permission];
+interface ShellViewProps {
+  snapshot: DesktopSnapshot;
+  choosingWorkspace?: boolean;
+  workspaceError?: string | null;
+  onChooseWorkspace?: () => void | Promise<void>;
+}
+
+function shortHead(head: string | null): string {
+  return head ? head.slice(0, 12) : "Unavailable";
+}
+
+export function ShellView({
+  snapshot,
+  choosingWorkspace = false,
+  workspaceError = null,
+  onChooseWorkspace,
+}: ShellViewProps) {
+  const statusSignals = [snapshot.runtime, snapshot.provider, snapshot.git.signal, snapshot.evidence.signal, snapshot.permission];
+  const workspaceName = snapshot.workspace.name ?? "No workspace selected";
+  const workspaceRoot = snapshot.workspace.root ?? "Choose a folder explicitly to establish trusted read-only project context.";
+  const branch = snapshot.git.detached ? "Detached HEAD" : snapshot.git.branch ?? "Unavailable";
 
   return (
     <main className="app-shell">
@@ -66,7 +85,7 @@ export function ShellView({ snapshot }: { snapshot: DesktopSnapshot }) {
             <h1>{snapshot.product.name}</h1>
           </div>
           <div className="topbar__meta">
-            <span className="read-only-pill"><span className="read-only-pill__dot" />READ-ONLY SHELL</span>
+            <span className="read-only-pill"><span className="read-only-pill__dot" />TRUSTED READ MODE</span>
             <span className="checkpoint">BASE {snapshot.product.baselineCheckpoint}</span>
           </div>
         </header>
@@ -76,31 +95,43 @@ export function ShellView({ snapshot }: { snapshot: DesktopSnapshot }) {
             <div className="panel-heading">
               <div>
                 <span className="section-kicker">CURRENT WORKSPACE</span>
-                <h2>Hive Coder</h2>
+                <h2>{workspaceName}</h2>
               </div>
-              <span className={`state-chip state-chip--${snapshot.shell.state.toLowerCase()}`}>
-                <StateDot state={snapshot.shell.state} />
-                {snapshot.shell.state}
+              <span className={`state-chip state-chip--${snapshot.workspace.signal.state.toLowerCase()}`}>
+                <StateDot state={snapshot.workspace.signal.state} />
+                {snapshot.workspace.signal.state}
               </span>
             </div>
 
             <div className="project-card">
               <div className="project-card__top">
                 <HiveMark />
-                <div>
-                  <span className="project-card__label">Desktop foundation</span>
-                  <h3>Safe Workspace Read Model</h3>
+                <div className="project-card__identity">
+                  <span className="project-card__label">{snapshot.workspace.selected ? "Trusted workspace" : "Workspace boundary"}</span>
+                  <h3>{workspaceName}</h3>
+                  <span className="workspace-root" title={snapshot.workspace.root ?? undefined}>{workspaceRoot}</span>
                 </div>
+                <button
+                  className="workspace-open-button"
+                  type="button"
+                  disabled={choosingWorkspace || !onChooseWorkspace}
+                  onClick={() => { void onChooseWorkspace?.(); }}
+                >
+                  {choosingWorkspace ? "Opening…" : snapshot.workspace.selected ? "Change workspace" : "Open workspace"}
+                </button>
               </div>
-              <p>
-                This first vertical slice exposes only bounded presentation state. Runtime mutations, shell commands,
-                computer input and credentials remain outside this UI boundary.
-              </p>
+              <p>{snapshot.workspace.signal.detail}</p>
+              {workspaceError ? <div className="workspace-error" role="alert">{workspaceError}</div> : null}
               <div className="mini-grid">
-                <div><span>Version</span><strong>{snapshot.product.version}</strong></div>
-                <div><span>Schema</span><strong>DesktopSnapshot v{snapshot.schemaVersion}</strong></div>
-                <div><span>Authority</span><strong>Read only</strong></div>
+                <div><span>Git branch</span><strong>{branch}</strong></div>
+                <div><span>HEAD</span><strong>{shortHead(snapshot.git.head)}</strong></div>
+                <div><span>Evidence</span><strong>{snapshot.evidence.evidenceBundles} bundle{snapshot.evidence.evidenceBundles === 1 ? "" : "s"}</strong></div>
               </div>
+              {snapshot.workspace.projectMarkers.length > 0 ? (
+                <div className="workspace-markers" aria-label="Detected project markers">
+                  {snapshot.workspace.projectMarkers.map((marker) => <span key={marker}>{marker}</span>)}
+                </div>
+              ) : null}
             </div>
 
             <div className="task-surface">
@@ -108,11 +139,11 @@ export function ShellView({ snapshot }: { snapshot: DesktopSnapshot }) {
               <span className="section-kicker">TASK / CONVERSATION</span>
               <h3>No execution session attached</h3>
               <p>
-                Task execution is intentionally unavailable in this read-only desktop increment. Connective and
-                mutating workflows arrive only through later approved application boundaries.
+                Workspace and Git observations are read-only. Task execution, shell commands, file mutation and
+                computer input remain unavailable until later governed application boundaries are promoted.
               </p>
               <div className="composer" aria-label="Inactive task composer">
-                <span>Task input unavailable in read-only mode</span>
+                <span>Execution input unavailable in trusted read mode</span>
                 <button type="button" disabled>Run</button>
               </div>
             </div>
@@ -127,6 +158,7 @@ export function ShellView({ snapshot }: { snapshot: DesktopSnapshot }) {
               <span className="inspector__pulse" aria-hidden="true" />
             </div>
             <div className="status-stack">
+              <StatusCard signal={snapshot.workspace.signal} />
               {statusSignals.map((signal) => <StatusCard key={signal.label} signal={signal} />)}
             </div>
           </aside>
