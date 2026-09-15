@@ -1,0 +1,10 @@
+{
+  "workOrderId": "HCODER-WO-0009",
+  "baseCheckpoint": "HCODER-CP-0008",
+  "baseSha": "21b11482015ff2704a56af7ea71921e74e11c61a",
+  "risk": "ELEVATED",
+  "taskClass": "T3",
+  "contextRadius": "C4",
+  "allowed": ["task-graph", "checkpoint-state", "model-routing", "trusted-skill-port", "cancellation", "recovery", "execution-history"],
+  "forbidden": ["checkpoint-authority", "committed-secret", "direct-cua-authority", "remote-control-listener", "automatic-skill-install", "parallel-distributed-execution"]
+}

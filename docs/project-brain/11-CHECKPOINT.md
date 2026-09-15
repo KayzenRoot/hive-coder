@@ -1,25 +1,27 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** HCODER-CP-0008  
-**Status:** APPROVED  
+**Checkpoint:** HCODER-CP-0009  
+**Status:** CANDIDATE  
 **Date:** 2026-09-14  
 **Repository:** `KayzenRoot/hive-coder`  
-**Approved Work Order:** `HCODER-WO-0008`  
-**PR:** `#17`
+**Work Order:** `HCODER-WO-0009`
 
-## Proven canonical state
-- CP-0007 capability/skills boundary remains authoritative.
-- Hive-owned provider/model contracts and normalized catalog exist.
-- Raw provider observations cannot self-assert VERIFIED; only a trusted host verifier may promote capability evidence.
-- Deterministic router refuses capability downgrade and fails closed when no verified model qualifies.
-- OpenCode Go is a first-class provider identity with zero implied capability.
-- Credentials have an explicit redacted scope and are not placed into model/skill metadata.
-- Open Interpreter ACP now has bounded `session/prompt` lifecycle with strict result validation.
-- Prompt execution creates no desktop capability grant or Cua permit.
-- HEDS CR-001 HIGH and CR-002 MEDIUM are resolved.
-- Corrected exact head `263a920cd1ced4c24955f29ed97e29c0fe3f2d93` passed Governance run `34916503775`: Ubuntu **105/105 PASS** and Windows HIGH_ASSURANCE **56/56 PASS**.
-- No live OpenCode Go credentials/capability probes are claimed by this checkpoint.
-- No remote control, billing, automatic skill install or new desktop mutation is introduced.
+## Candidate canonical state
+- CP-0005 permission authority and CP-0007/0008 capability truth remain authoritative.
+- Hive has a deterministic sequential Agent Task Runtime over model-prompt and governed-skill nodes.
+- Task plans are validated as acyclic DAGs and bound to checkpoints by canonical fingerprints.
+- Checkpoints are atomically persisted and HMAC-authenticated with a trusted host key.
+- Checkpoint payload contains workflow metadata only, not credentials, approvals, permits, capability grants, skill content, raw prompts or model output.
+- Model tasks route through CP-0008 verified capabilities.
+- Skill tasks execute only through a trusted host `SkillExecutionPort`; the runtime does not activate skills or grant permissions.
+- Per-node attempt and global execution/failure budgets are bounded.
+- Pause, continue, cancellation, terminal-state invariants and structured execution history exist.
+- Crash recovery never auto-replays an interrupted skill. Explicit trusted-host retry/fail disposition is required and remains attempt-budget bounded.
+- Task snapshots exposed to callers are immutable views rather than promotion/state authority.
+- No remote-control listener, real provider credential, parallel scheduler or new desktop mutation capability is introduced.
 
-## Next necessary increment
-Build the **Resumable Agent Task Runtime**: durable task graph/state machine, checkpoints, budgets, provider/model selection, governed skill invocation, cancellation/recovery and observable execution history. It must remain subordinate to CP-0005 permissions and CP-0007/0008 capability truth. Remote Hive Control remains a separate HIGH_ASSURANCE subsystem.
+## Promotion gate
+Promote only after exact-head Governance and HEDS approval with no unresolved HIGH/CRITICAL findings.
+
+## Next direction after promotion
+Implement the **Agent Orchestrator & Work Loop** over CP-0009: decomposition/planning contracts, task creation from an approved objective, model/skill selection policies, bounded self-correction, repository/test evidence hooks, progress/ETA telemetry and explicit STOP CONDITION evaluation. Remote Hive Control remains a separate HIGH_ASSURANCE subsystem.

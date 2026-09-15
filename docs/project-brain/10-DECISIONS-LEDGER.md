@@ -47,3 +47,7 @@ Hive Coder will evolve toward model-aware capability negotiation, a Hive-owned v
 ## DEC-012 — Provider/model runtime and ACP prompt boundary
 **Status:** APPROVED  
 `HCODER-WO-0008` normalizes provider catalogs behind Hive-owned adapters. Raw provider observations have no verification authority: only a trusted host verifier may promote them into CP-0007 VERIFIED evidence. Routing considers only models satisfying verified requirements. OpenCode Go is the first-class provider identity but its name grants zero capabilities. Credentials are explicitly scoped/redacted. Open Interpreter ACP `session/prompt` is admitted as model execution only and does not mint desktop permits or expand CP-0005/0006 authority.
+
+## DEC-013 — Resumable agent task runtime
+**Status:** APPROVED  
+`HCODER-WO-0009` establishes a deterministic sequential task DAG/state machine with bounded execution/failure/attempt budgets, HMAC-authenticated atomic checkpoints bound to a plan fingerprint, CP-0008 model routing and trusted host prompt/skill execution ports. Checkpoint state is explicitly non-authoritative: it persists no credentials, approvals, permits, capability grants, skill content, prompts or model output. Interrupted model computation may reissue only within its attempt budget; interrupted skills never auto-replay and require explicit trusted-host recovery disposition. Task snapshots are immutable views and cancellation/pause/terminal state stops further scheduling.
