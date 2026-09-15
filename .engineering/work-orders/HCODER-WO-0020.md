@@ -1,6 +1,6 @@
 # HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface
 
-**Status:** PROMOTION CANDIDATE / NOT CANONICAL  
+**Status:** APPROVED FOR SQUASH MERGE / NOT CANONICAL  
 **Risk:** HIGH_ASSURANCE  
 **Task class:** T3  
 **Context radius:** C4  
@@ -70,7 +70,13 @@ HEDS_DELTA HIGH_ASSURANCE exact-head. Generic process execution, caller-controll
 ## STOP CONDITION
 Exact-head Governance + Desktop Shell green; HEDS approved; no unresolved HIGH/CRITICAL; promotion/checkpoint only after evidence; squash merge and post-merge validation; canonical closeout before advancing.
 
-## PROMOTION RECEIPT
+## TECHNICAL RECEIPT
 Technical exact head `86c6e956985e0b51e0f56b3568a3fe9db61fef90` passed Governance #263 (**288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #99 (security gate PASS, frontend **26/26**, Rust **13/13**, locked audits/checks, Tauri Windows release build and launch smoke). Technical HEDS `5216871217` approved promotion with unresolved HIGH/CRITICAL `0`.
 
-`HCODER-WO-0020-CR-001` and `HCODER-WO-0020-CR-002` are resolved. Promotion remains documentation/evidence-only; CP-0020 and DEC-024 are NOT CANONICAL until all later gates/merge/closeout steps complete.
+`HCODER-WO-0020-CR-001` MEDIUM and `HCODER-WO-0020-CR-002` MEDIUM are resolved.
+
+## PROMOTION RECEIPT
+Promotion head `bf76c2a451763d7bc361437028e819d2df5f97ba` changed exactly 7 documentation/evidence/governance files and no product/runtime/workflow/dependency/capability file. It passed Governance #264 (**288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #100, including strict security gate, frontend **26/26**, locked Rust audit/tests/check, Windows release build + launch smoke. Promotion HEDS `5216925860` approved the final-approval state mutation with unresolved HIGH/CRITICAL `0`.
+
+## FINAL APPROVAL STATE
+WO-0020 is **APPROVED FOR SQUASH MERGE / NOT CANONICAL**. The final state mutation must remain documentation/evidence-only and must pass its own exact-head Governance + Desktop Shell + HEDS before PR #54 can be squash-merged. Canonical completion additionally requires product post-merge validation and documentation-only canonical closeout.

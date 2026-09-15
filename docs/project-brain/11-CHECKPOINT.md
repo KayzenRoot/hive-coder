@@ -1,18 +1,20 @@
 # Checkpoint — Hive Coder
 
 **Checkpoint:** `HCODER-CP-0020`  
-**Status:** CANDIDATE / NOT CANONICAL  
+**Status:** FINAL APPROVAL CANDIDATE / NOT CANONICAL  
 **Date:** 2026-09-15  
 **Repository:** `KayzenRoot/hive-coder`  
-**Work Order:** `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface` — PROMOTION CANDIDATE  
+**Work Order:** `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface` — APPROVED FOR SQUASH MERGE / NOT CANONICAL  
 **Issue:** `#51` — OPEN  
-**PR:** `#54` — DRAFT  
+**PR:** `#54` — DRAFT UNTIL FINAL GATES  
 **Base checkpoint:** `HCODER-CP-0019` — APPROVED / CANONICAL  
 **Canonical base main SHA:** `e4bc74d1ae6c4054cd98cd34b16e6357f911224c`  
 **Technical head:** `86c6e956985e0b51e0f56b3568a3fe9db61fef90`  
-**Technical HEDS:** `5216871217`
+**Technical HEDS:** `5216871217`  
+**Promotion head:** `bf76c2a451763d7bc361437028e819d2df5f97ba`  
+**Promotion HEDS:** `5216925860`
 
-> CP-0020 is a promotion candidate only. Canonical project truth remains CP-0019 until final gates, product merge, post-merge validation and canonical closeout all complete.
+> CP-0020 is approved only for the final pre-merge validation path. Canonical project truth remains CP-0019 until product merge, post-merge validation and canonical closeout all complete.
 
 ## Candidate product state
 - All CP-0005 through CP-0019 permission/security/status boundaries remain authoritative and unchanged.
@@ -46,8 +48,15 @@ Exact `86c6e956985e0b51e0f56b3568a3fe9db61fef90`:
 - Desktop Shell #99 (`35035152526`): **SUCCESS** — security gate PASS, frontend **26/26 PASS**, npm audit 0, RustSec locked audit executed over 432 dependencies, Rust **13/13 PASS**, `cargo check --locked` PASS, Windows release build PASS and `DESKTOP_LAUNCH_SMOKE=PASS`.
 - HEDS technical `5216871217`: **APPROVED FOR PROMOTION CANDIDATE**, unresolved HIGH/CRITICAL **0**.
 
+## Promotion proof
+Exact `bf76c2a451763d7bc361437028e819d2df5f97ba`:
+- promotion delta from technical head: exactly 7 documentation/evidence/governance files and no product/runtime/workflow/dependency/capability change;
+- Governance #264 (`35035821821`): **SUCCESS** — Ubuntu **288/288 PASS**, Windows HIGH_ASSURANCE **61/61 PASS**;
+- Desktop Shell #100 (`35035821714`): **SUCCESS** — strict security gate PASS, frontend **26/26 PASS**, locked Rust audit/tests/check PASS, Windows release build and launch smoke PASS;
+- HEDS promotion `5216925860`: **APPROVED FOR FINAL APPROVAL MUTATION**, unresolved HIGH/CRITICAL **0**.
+
 ## Candidate decision
-`DEC-024 — Desktop Runtime Status Supervisor Boundary` is **CANDIDATE / NOT CANONICAL**. It authorizes no generic process capability and no mutation authority.
+`DEC-024 — Desktop Runtime Status Supervisor Boundary` is **APPROVED FOR SQUASH MERGE / NOT CANONICAL**. It authorizes no generic process capability and no mutation authority.
 
 ## Explicit residual boundaries
 - Sidecar packaging/signing/binary attestation/update provenance is not proven.
@@ -58,14 +67,13 @@ Exact `86c6e956985e0b51e0f56b3568a3fe9db61fef90`:
 - Seven RustSec warning-class dependency advisories remain explicit debt.
 - Existing CSP, native/full E2E, visual/accessibility, installer/signing/updater and final-license residuals remain unchanged.
 
-## Promotion gate
+## Final merge gate
 CP-0020 remains **NOT CANONICAL** until:
-1. this promotion candidate passes exact-head Governance + Desktop Shell;
-2. promotion HEDS reports unresolved HIGH/CRITICAL 0;
-3. a minimal final-approval state mutation passes exact-head Governance + Desktop Shell + final HEDS;
-4. PR #54 is squash-merged with expected-head protection;
-5. the product merge SHA passes push Governance + Desktop Shell;
-6. a documentation-only canonical closeout records those receipts, passes its own exact-head Governance + Desktop Shell + HEDS, is squash-merged, and the resulting `main` SHA passes push validation.
+1. this final approval head passes exact-head Governance + Desktop Shell;
+2. final HEDS reports unresolved HIGH/CRITICAL 0;
+3. PR #54 is squash-merged with expected-head protection;
+4. the product merge SHA passes push Governance + Desktop Shell;
+5. a documentation-only canonical closeout records those receipts, passes its own exact-head Governance + Desktop Shell + HEDS, is squash-merged, and the resulting `main` SHA passes push validation.
 
 ## Next governed increment
 Do not select the next product increment until CP-0020 is fully canonical. Source-check must run again after closeout rather than inferring the next Work Order from historical branches.
