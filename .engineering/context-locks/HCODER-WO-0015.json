@@ -1,0 +1,40 @@
+{
+  "workOrderId": "HCODER-WO-0015",
+  "base": {
+    "branch": "main",
+    "sha": "58442e5220a6242927c4103eded3366dc17d8938"
+  },
+  "sources": {
+    "requirements": {"path": "docs/project-brain/02-REQUIREMENTS.md", "gitBlobSha": "35cb36929580e215a8fa3cc04b199f5e20b76dce"},
+    "scope": {"path": "docs/project-brain/03-SCOPE.md", "gitBlobSha": "330ce490cc29fc5f3ba4e612db8935dd982d745c"},
+    "architecture": {"path": "docs/project-brain/04-ARCHITECTURE.md", "gitBlobSha": "ede012d3b0548e5599d5093a271c67ee95c9deb5"},
+    "security": {"path": "docs/project-brain/05-SECURITY.md", "gitBlobSha": "1e9e9064483f0d14c13d33647a7f529456316d2c"},
+    "testPlan": {"path": "docs/project-brain/06-TEST-BENCHMARK-PLAN.md", "gitBlobSha": "c45f06d44e23e7084804fdee60ab771d646994cb"},
+    "backlog": {"path": "docs/project-brain/08-BACKLOG.md", "gitBlobSha": "35a177311602dc3e736762aa338150d3c21f5f5a"},
+    "dod": {"path": "docs/project-brain/09-DEFINITION-OF-DONE.md", "gitBlobSha": "9770301f87703ec9a24b6c17525c6b55a23da317"},
+    "decisions": {"path": "docs/project-brain/10-DECISIONS-LEDGER.md", "gitBlobSha": "328bdf13f387f8b381d935e09e86f082b94561f3"},
+    "checkpoint": {"path": "docs/project-brain/11-CHECKPOINT.md", "gitBlobSha": "c3823eb9f914908692e2acfa493ee98f22b27880"},
+    "uiUx": {"path": "docs/project-brain/12-UI-UX.md", "gitBlobSha": "bf9a8110a7fa34a15cb446000f499cf001a515b1"},
+    "integration": {"path": "docs/project-brain/13-INTEGRATION-CONTRACTS.md", "gitBlobSha": "40ee2811fa88295e168316b266a5c99dfce362dd"}
+  },
+  "externalPreflight": {
+    "observedAt": "2026-09-15",
+    "node": "24.21.0 LTS",
+    "react": "19.3.0 stable",
+    "tauri": "2.11.x stable line (official changelog observed 2.11.5)",
+    "vite": "8.3 supported patch line",
+    "authority": "informational only; exact committed versions require lockfile/build proof"
+  },
+  "staleIf": [
+    "base SHA changes before branch creation/rebase",
+    "checkpoint blob changes",
+    "decisions blob changes",
+    "scope blob changes",
+    "DoD blob changes",
+    "architecture blob changes",
+    "requirements blob changes",
+    "security boundary changes",
+    "UI/UX direction changes",
+    "integration contract changes"
+  ]
+}
