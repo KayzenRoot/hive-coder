@@ -1,11 +1,12 @@
 # HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface
 
-**Status:** APPROVED FOR EXECUTION  
+**Status:** PROMOTION CANDIDATE / NOT CANONICAL  
 **Risk:** HIGH_ASSURANCE  
 **Task class:** T3  
 **Context radius:** C4  
 **Canonical base:** `HCODER-CP-0019` / `e4bc74d1ae6c4054cd98cd34b16e6357f911224c`  
-**Issue:** `#51`
+**Issue:** `#51`  
+**PR:** `#54`
 
 ## OBJECTIVE
 Connect the desktop to the canonical CP-0019 one-shot runtime-status helper through exactly one fixed, argument-free Tauri read command and render bounded Runtime/Provider/Task/Permission truth without granting execution or mutation authority.
@@ -68,3 +69,8 @@ HEDS_DELTA HIGH_ASSURANCE exact-head. Generic process execution, caller-controll
 
 ## STOP CONDITION
 Exact-head Governance + Desktop Shell green; HEDS approved; no unresolved HIGH/CRITICAL; promotion/checkpoint only after evidence; squash merge and post-merge validation; canonical closeout before advancing.
+
+## PROMOTION RECEIPT
+Technical exact head `86c6e956985e0b51e0f56b3568a3fe9db61fef90` passed Governance #263 (**288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #99 (security gate PASS, frontend **26/26**, Rust **13/13**, locked audits/checks, Tauri Windows release build and launch smoke). Technical HEDS `5216871217` approved promotion with unresolved HIGH/CRITICAL `0`.
+
+`HCODER-WO-0020-CR-001` and `HCODER-WO-0020-CR-002` are resolved. Promotion remains documentation/evidence-only; CP-0020 and DEC-024 are NOT CANONICAL until all later gates/merge/closeout steps complete.

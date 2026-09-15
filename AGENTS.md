@@ -31,19 +31,26 @@ If the user says `continue`, `continue do chat anterior`, or equivalent for Hive
 4. Continue autonomously from its `NEXT EXACT ACTIONS`; do not ask the user to restate recoverable context.
 
 ## Current execution state
-Canonical `main` is `HCODER-CP-0019` at `e4bc74d1ae6c4054cd98cd34b16e6357f911224c` until WO-0020 is fully promoted and closed out.
+Canonical `main` remains `HCODER-CP-0019` at `e4bc74d1ae6c4054cd98cd34b16e6357f911224c` until WO-0020 completes product merge, post-merge validation and canonical closeout.
 
-Active increment: `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface`, Issue `#51`, branch `feat/HCODER-WO-0020-desktop-runtime-status-supervisor-canonical`.
+Active increment: `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface`, Issue `#51`, PR `#54`, branch `feat/HCODER-WO-0020-desktop-runtime-status-supervisor-canonical`.
+
+Technical exact head `86c6e956985e0b51e0f56b3568a3fe9db61fef90` passed Governance #263 (**288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #99 (security gate PASS, frontend **26/26**, npm audit 0, Rust **13/13**, locked RustSec/check, Windows release build and launch smoke). HEDS technical review `5216871217` is **APPROVED FOR PROMOTION CANDIDATE**, unresolved HIGH/CRITICAL `0`.
+
+`HCODER-WO-0020-CR-001` MEDIUM and `HCODER-WO-0020-CR-002` MEDIUM are resolved. `HCODER-CP-0020` and `DEC-024 — Desktop Runtime Status Supervisor Boundary` are promotion candidates only, **NOT CANONICAL**.
 
 Historical PR #39 / branch `feat/HCODER-WO-0020-desktop-runtime-status-bridge` is non-authoritative supporting evidence only and MUST NOT be merged or cherry-picked.
 
-WO-0020 authority is presentation-only: exactly one fixed sidecar supervisor process site, fixed sibling basename, fixed `--stdio-status-v1`, cleared child environment, canonical CP-0018 request, bounded output, strict raw-wire decoder, argument-free Tauri command, and read-only Runtime/Provider/Task/Permission System Truth. No generic process/shell capability, caller-controlled process path/args/env, provider/model execution, credential authority, task/permission mutation, filesystem/Git/terminal/computer-use mutation, remote control, skill activation or billing/purchase authority is allowed.
+WO-0020 authority remains presentation-only: exactly one fixed child-process site, fixed sibling basename, fixed `--stdio-status-v1`, cleared child environment, canonical request/33,024-byte response ceiling, strict raw decoder, argument-free main-window Tauri command and read-only Runtime/Provider/Task/Permission System Truth. No generic process/shell capability, caller-controlled process input, provider/model execution, credential authority, task/permission/filesystem/Git/terminal/computer-use mutation, remote control, skill activation or billing/purchase authority exists.
 
 ### NEXT EXACT ACTIONS
-1. Validate the exact technical head with Governance + Desktop Shell.
-2. Perform HEDS technical review; stop on unresolved HIGH/CRITICAL.
-3. Same-WO corrections only if findings exist.
-4. If approved, create Evidence Bundle + governed promotion candidate without declaring CP-0020 canonical.
-5. Run promotion and final exact-head gates/HEDS.
-6. Squash merge with expected-head protection, require post-merge Governance + Desktop Shell, then documentation-only canonical closeout and push validation.
-7. Refresh Issue #30 at each major state transition.
+1. Commit documentation/evidence-only CP-0020 promotion candidate.
+2. Run exact-head Governance + Desktop Shell on the promotion head.
+3. Perform HEDS promotion review; stop on unresolved HIGH/CRITICAL.
+4. If approved, create a minimal final-approval state mutation without declaring CP-0020 canonical.
+5. Run final exact-head Governance + Desktop Shell + HEDS.
+6. Squash merge PR #54 with expected-head protection.
+7. Require push-triggered Governance + Desktop Shell on the product merge SHA.
+8. Create documentation-only canonical closeout, gate/HEDS it, squash merge, and require push validation.
+9. Refresh Issue #30 at each major state transition.
+10. Only after fully canonical CP-0020, run a fresh source-check for the next NECESSARY increment.

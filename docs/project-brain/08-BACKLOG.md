@@ -16,15 +16,15 @@
 13. `HCODER-WO-0013` Provider Certification Lab + Semantic Repository Twin — DONE.
 14. `HCODER-WO-0014` Elite Specialist Forge + Autonomous Engineering Arena — DONE.
 15. `HCODER-WO-0015` Desktop Shell Foundation & Safe Workspace Read Model — DONE. Canonical `HCODER-CP-0015`.
-16. `HCODER-WO-0016` Trusted Workspace & Git Read Surface — **DONE / CANONICAL `HCODER-CP-0016`**.
-17. `HCODER-WO-0017` Runtime Observability Contract & Safe Status Export — **DONE / CANONICAL `HCODER-CP-0017`**.
-18. `HCODER-WO-0018` Cross-Runtime Status IPC Contract — **DONE / CANONICAL `HCODER-CP-0018`**. Canonical closeout SHA `c0a44d43546b9f176125b9e7099b8422d6b62ba3`; push Governance #246 and Desktop Shell #82 SUCCESS.
-19. `HCODER-WO-0019` Runtime Status Sidecar Helper — **DONE / CANONICAL `HCODER-CP-0019` SUBJECT TO CLOSEOUT SEAL**. Product PR #48 squash-merged as GitHub-signed `2ed4222556916cf524e31f65c4c417d27b7e6fd9`; final HEDS `5216313496`, H/C 0; post-merge Governance #253 and Desktop Shell #89 SUCCESS. Historical PR #38 remains non-authoritative evidence only.
-20. `HCODER-WO-0020` Desktop Runtime Status Supervisor & System Truth Surface — **STAGED NEXT / RECONSTRUCTION REQUIRED AFTER CP-0019 CLOSEOUT SEAL**. Historical stacked work is supporting evidence only and must not be merged directly.
+16. `HCODER-WO-0016` Trusted Workspace & Git Read Surface — DONE / CANONICAL `HCODER-CP-0016`.
+17. `HCODER-WO-0017` Runtime Observability Contract & Safe Status Export — DONE / CANONICAL `HCODER-CP-0017`.
+18. `HCODER-WO-0018` Cross-Runtime Status IPC Contract — DONE / CANONICAL `HCODER-CP-0018`.
+19. `HCODER-WO-0019` Runtime Status Sidecar Helper — DONE / CANONICAL `HCODER-CP-0019`. Canonical closeout `main` SHA `e4bc74d1ae6c4054cd98cd34b16e6357f911224c`; push Governance #255 and Desktop Shell #91 SUCCESS.
+20. `HCODER-WO-0020` Desktop Runtime Status Supervisor & System Truth Surface — **PROMOTION CANDIDATE / CP-0020 NOT CANONICAL**. Technical head `86c6e956985e0b51e0f56b3568a3fe9db61fef90` passed Governance #263, Desktop #99 and HEDS `5216871217`; CR-001/CR-002 resolved. Product merge is not yet authorized by this backlog entry.
 
 ## Product capability roadmap
-- **Desktop Shell/UI:** governed native substrate plus canonical explicit user-mediated workspace opening and truthful bounded workspace/Git/evidence reads.
-- **Runtime Observability:** `RuntimeStatusSnapshot v1` is canonical through CP-0017; frozen `hive-runtime-status-ipc-v1` through CP-0018; fixed one-shot sidecar helper through CP-0019 once this closeout seal completes.
+- **Desktop Shell/UI:** governed native substrate, explicit trusted workspace opening, truthful bounded workspace/Git/evidence reads, and candidate read-only runtime System Truth through the fixed supervisor boundary.
+- **Runtime Observability:** canonical `RuntimeStatusSnapshot v1` through CP-0017, canonical `hive-runtime-status-ipc-v1` through CP-0018, canonical fixed one-shot sidecar through CP-0019, and CP-0020 candidate fixed desktop supervisor + System Truth consumption.
 - **Model Capability Negotiator:** normalize provider/model capabilities and expose only verified capability state.
 - **Hive Skills Engine:** discover, verify, install, version, activate, compose and learn reusable skills under the permission boundary.
 - **Agent Runtime:** long-running task UX over the approved resumable runtime, checkpoints, plans, subagents and evidence.
@@ -35,22 +35,23 @@
 - **Integrated Build Loop:** code -> test -> launch -> observe -> computer-use validate -> repair -> evidence -> PR/review.
 - **Packaging/Updates:** signed Windows packaging, controlled acquisition, update channels, rollback and health diagnostics.
 
-## Current NECESSARY product increment after the CP-0019 closeout seal
-Freshly reconstruct `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface` from canonical CP-0019. Historical stacked WO-0020 artifacts are evidence only and may be mined for intent/tests, never merged or cherry-picked as canonical ancestry.
+## Current governed product increment
+Finish `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface` through promotion/final gates, squash product merge, exact-SHA post-merge validation and documentation-only canonical closeout. Do not select a new product Work Order before CP-0020 is fully canonical and a fresh source-check is performed.
 
-WO-0020 must preserve these laws from CP-0017..0019:
+WO-0020 laws:
 - runtime status is presentation state, never authorization;
-- wire remains `hive-runtime-status-ipc-v1` with sole `status.snapshot` operation unless a separately governed protocol change explicitly proves otherwise;
-- sidecar launch target is fixed Hive-owned identity, not caller/model-selected process input;
-- no generic process/shell capability is introduced as a shortcut;
-- helper/supervisor lifecycle must fail closed on identity, startup, malformed status, timeout, crash, shutdown and stale-process ambiguity;
-- provider catalog observation remains distinct from VERIFIED capability evidence;
-- private Permission & Control Plane state is not serialized as presentation telemetry;
-- `UI -> Application/Orchestrator -> Permission & Control Plane -> Capability Adapters` remains the mutation authority path;
-- mutation controls remain disabled until a later permit-gated path exists.
+- wire remains canonical `hive-runtime-status-ipc-v1` with sole `status.snapshot` operation;
+- exactly one fixed Hive-owned supervisor process site is admitted; generic process/shell remains forbidden;
+- executable identity is fixed sibling-of-current-executable and rejects link/reparse identity;
+- no frontend/model/task process path/args/env authority;
+- child environment is cleared and output is byte-bounded with hard timeout;
+- raw response admission is only through `decodeRuntimeStatusEnvelope(raw)`;
+- no fake readiness or fabricated null counters;
+- mutation controls remain disabled and the Permission & Control Plane remains the authority choke point.
 
 ## Open residual work
-- Desktop/Tauri runtime status supervisor/launcher, fixed helper identity/authenticity, containment and lifecycle policy through WO-0020.
+- Package/sign/attest the runtime-status sidecar and prove packaged live sidecar E2E; WO-0020 does not claim this.
+- Define future restart/health/process-containment policy only if objectively needed; no generic daemon supervisor is approved.
 - Rust dependency refresh/target-chain analysis for the 7 RustSec warning-class advisories.
 - Stricter desktop CSP than `style-src 'unsafe-inline'`.
 - Native picker/full desktop interaction E2E, Windows reparse fixture, visual screenshot/pixel validation and accessibility automation.
@@ -59,4 +60,4 @@ WO-0020 must preserve these laws from CP-0017..0019:
 - Safe public permission/status observation only if later objectively needed; never serialize private authorization internals as a shortcut.
 - Final project license and release attribution decision.
 
-Only the next NECESSARY increment enters canonical promotion automatically; later historical stacked Work Orders remain blocked until their predecessor checkpoint is canonical.
+Only the next NECESSARY increment enters canonical promotion automatically. Historical stacked branches remain evidence only unless freshly reconstructed from the current canonical checkpoint.

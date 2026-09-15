@@ -1,73 +1,71 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** `HCODER-CP-0019`  
-**Status:** APPROVED / CANONICAL — CLOSEOUT SEAL PENDING  
+**Checkpoint:** `HCODER-CP-0020`  
+**Status:** CANDIDATE / NOT CANONICAL  
 **Date:** 2026-09-15  
 **Repository:** `KayzenRoot/hive-coder`  
-**Work Order:** `HCODER-WO-0019` — COMPLETE / CANONICAL  
-**Issue:** `#47` — CLOSED / COMPLETED  
-**Product PR:** `#48` — SQUASH MERGED  
-**Base checkpoint:** `HCODER-CP-0018` — APPROVED / CANONICAL  
-**Canonical base main SHA:** `c0a44d43546b9f176125b9e7099b8422d6b62ba3`  
-**Technical head:** `ba10ba72f76316806cd820dc0d205e68105f61bb`  
-**Technical HEDS:** `5216093993`  
-**Promotion head:** `55975e7e97eb33d2b695d02e36ab6994fa7ae7b5`  
-**Promotion HEDS:** `5216180277`  
-**Final reviewed product head:** `abe7b29cf59d3fd2e464e3ea69a7e585ba75e6dd`  
-**Final product HEDS:** `5216313496`  
-**Canonical product merge SHA:** `2ed4222556916cf524e31f65c4c417d27b7e6fd9`
+**Work Order:** `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface` — PROMOTION CANDIDATE  
+**Issue:** `#51` — OPEN  
+**PR:** `#54` — DRAFT  
+**Base checkpoint:** `HCODER-CP-0019` — APPROVED / CANONICAL  
+**Canonical base main SHA:** `e4bc74d1ae6c4054cd98cd34b16e6357f911224c`  
+**Technical head:** `86c6e956985e0b51e0f56b3568a3fe9db61fef90`  
+**Technical HEDS:** `5216871217`
 
-## Canonical product state
-- All CP-0005 through CP-0018 permission/security/status boundaries remain authoritative and unchanged.
-- Hive owns the fixed runtime-status sidecar helper at `tools/runtime/status_sidecar.py`.
-- Sole mode is `--stdio-status-v1`.
-- Valid invocation constructs canonical `disconnected_snapshot()`, passes it to CP-0018 `serve_one(...)`, consumes one canonical newline-framed request, emits one canonical response and exits.
-- Invalid/missing/extra mode returns `64`; invalid protocol input returns `65`; expected failures emit no fake response or payload-derived stderr detail.
-- CP-0018 wire remains exactly `hive-runtime-status-ipc-v1` with sole `status.snapshot` operation.
-- Default presentation truth remains intentionally `DISCONNECTED`; no live runtime/provider connection is claimed.
-- Process proof uses `ManagedStdioProcess` with `shell=False` and allowlisted child environment; WO-0019 supplies no environment override.
-- Representative ambient provider credential material is proven excluded and not emitted.
-- Windows HIGH_ASSURANCE executes the sidecar process suite.
+> CP-0020 is a promotion candidate only. Canonical project truth remains CP-0019 until final gates, product merge, post-merge validation and canonical closeout all complete.
 
-## Fail-closed / one-shot proof
-Executable-boundary tests prove canonical accepted wire, buffered-second-request non-service, mode rejection, malformed/noncanonical/duplicate/future/unsupported/oversized/missing-newline rejection, empty expected-error output and clean process resource handling.
+## Candidate product state
+- All CP-0005 through CP-0019 permission/security/status boundaries remain authoritative and unchanged.
+- Hive desktop adds one fixed Rust runtime-status supervisor process site only.
+- Helper identity is derived from the current desktop executable sibling plus a fixed platform basename; symlink/reparse/non-file targets fail closed.
+- Sole helper mode is `--stdio-status-v1`; frontend/model/task text supplies no process identity, path, args or environment.
+- Child environment is cleared. stdin/stdout are piped, stderr discarded, timeout is bounded and post-spawn failures terminate/wait the child.
+- Request is exact canonical CP-0018 `status.snapshot` for request id `desktop-runtime`; response ceiling is exactly `33,024` bytes.
+- One argument-free Tauri command `get_runtime_status_envelope` is authorized only for the existing `main` window.
+- Frontend admits raw status only through `decodeRuntimeStatusEnvelope(raw)`; semantic or `JSON.parse(raw)` bypass is rejected by the security gate.
+- Runtime/Provider/Task/Permission System Truth remains read-only presentation state. Mutation controls remain unavailable.
+
+## Security-gate truth
+Exact technical head reports:
+- `TAURI_COMMANDS=choose_workspace,get_desktop_snapshot,get_runtime_status_envelope`
+- `FRONTEND_INVOKES=3`
+- `CAPABILITY_PERMISSIONS=0`
+- `RUNTIME_STATUS_ARGS=0`
+- `RUNTIME_STATUS_RAW_DECODER=STRICT`
+- `FILESYSTEM_MUTATION_PRIMITIVES=0`
+- `GENERIC_PROCESS_EXECUTION=0`
+- `FIXED_RUNTIME_SIDECAR_PROCESS=1`
 
 ## Corrections
-- `HCODER-WO-0019-CR-001` LOW — **RESOLVED**: executable-boundary adversarial + one-shot coverage.
-- `HCODER-WO-0019-CR-002` LOW — **RESOLVED**: Windows HIGH_ASSURANCE sidecar process validation.
+- `HCODER-WO-0020-CR-001` MEDIUM — **RESOLVED**: unknown permission counters are not rendered as observed zeroes; canonical subsystem provenance is preserved.
+- `HCODER-WO-0020-CR-002` MEDIUM — **RESOLVED**: the single fixed process boundary and raw decoder invariants are statically enforced.
 
-## Pre-merge proof
-Technical head `ba10ba72f76316806cd820dc0d205e68105f61bb` passed Governance #250, Desktop #86 and HEDS `5216093993`.
+## Technical proof
+Exact `86c6e956985e0b51e0f56b3568a3fe9db61fef90`:
+- Governance #263 (`35035152518`): **SUCCESS** — Ubuntu **288/288 PASS**, Windows HIGH_ASSURANCE **61/61 PASS**.
+- Desktop Shell #99 (`35035152526`): **SUCCESS** — security gate PASS, frontend **26/26 PASS**, npm audit 0, RustSec locked audit executed over 432 dependencies, Rust **13/13 PASS**, `cargo check --locked` PASS, Windows release build PASS and `DESKTOP_LAUNCH_SMOKE=PASS`.
+- HEDS technical `5216871217`: **APPROVED FOR PROMOTION CANDIDATE**, unresolved HIGH/CRITICAL **0**.
 
-Promotion head `55975e7e97eb33d2b695d02e36ab6994fa7ae7b5` passed Governance #251, Desktop #87 and HEDS `5216180277`.
-
-Final reviewed product head `abe7b29cf59d3fd2e464e3ea69a7e585ba75e6dd`:
-- Governance #252 (`35029148474`): **SUCCESS** — Ubuntu **288/288 PASS**, Windows HIGH_ASSURANCE **61/61 PASS**.
-- Desktop Shell #88 (`35029148429`): **SUCCESS** — security gate PASS, frontend **23/23 PASS**, npm audit 0, locked Rust audit/tests/check PASS, Tauri Windows release build and launch smoke PASS.
-- HEDS final `5216313496`: **APPROVED FOR SQUASH MERGE**, unresolved HIGH/CRITICAL **0**.
-
-## Merge and post-merge proof
-PR #48 was squash-merged with expected-head protection as GitHub-signed commit `2ed4222556916cf524e31f65c4c417d27b7e6fd9`, whose parent is canonical CP-0018 SHA `c0a44d43546b9f176125b9e7099b8422d6b62ba3`.
-
-On exact product merge SHA `2ed4222556916cf524e31f65c4c417d27b7e6fd9`:
-- Governance #253 (`35029537865`): **SUCCESS** — Ubuntu **288/288 PASS**, Windows Server 2025 HIGH_ASSURANCE **61/61 PASS**.
-- Desktop Shell #89 (`35029537862`): **SUCCESS** — desktop-web and desktop-windows passed, including security/dependency audits, locked Rust tests/check, Tauri Windows release build and launch smoke.
-
-## Canonical decision
-`DEC-023 — Runtime Status Sidecar Helper Boundary` is **APPROVED / CANONICAL**, subject only to sealing this documentation-only closeout PR. The decision canonicalizes the fixed one-shot helper, not desktop supervision or generic process execution.
+## Candidate decision
+`DEC-024 — Desktop Runtime Status Supervisor Boundary` is **CANDIDATE / NOT CANONICAL**. It authorizes no generic process capability and no mutation authority.
 
 ## Explicit residual boundaries
-- No Tauri/desktop child-process launcher or generic caller-selected process capability is approved by CP-0019.
-- Helper packaging/signing/binary authenticity/update provenance is unproven.
-- Restart/shutdown/health supervision and process containment policy remain unproven.
-- No live trusted runtime/provider/task/permission observer is connected; helper truth remains `DISCONNECTED`.
-- Provider reachability/authentication and VERIFIED model capability remain separate.
-- No new Permission & Control Plane, filesystem/Git/terminal/computer-use, remote-control, skill-activation or billing/purchase authority exists.
-- Seven RustSec warning-class transitive advisories remain dependency debt.
-- Existing CSP, native/full E2E, visual/accessibility, privileged capability-I/O, installer/signing/updater and final-license residuals remain unchanged.
+- Sidecar packaging/signing/binary attestation/update provenance is not proven.
+- Hosted launch smoke proves desktop startup/fail-closed behavior, not a packaged live sidecar session.
+- No automatic polling daemon, restart/health manager or generic process supervisor is approved.
+- Provider reachability/authentication and VERIFIED model capability remain separate evidence domains.
+- No new Permission & Control Plane, task mutation, filesystem/Git/terminal/computer-use, remote-control, skill-activation or billing/purchase authority exists.
+- Seven RustSec warning-class dependency advisories remain explicit debt.
+- Existing CSP, native/full E2E, visual/accessibility, installer/signing/updater and final-license residuals remain unchanged.
 
-## Closeout gate
-This documentation-only closeout must pass exact-head Governance + Desktop Shell and HEDS with unresolved HIGH/CRITICAL findings 0, then be squash-merged and pass push validation on the resulting `main` SHA. The product state above is already supported by the signed product merge and post-merge evidence; closeout introduces no runtime or authority change.
+## Promotion gate
+CP-0020 remains **NOT CANONICAL** until:
+1. this promotion candidate passes exact-head Governance + Desktop Shell;
+2. promotion HEDS reports unresolved HIGH/CRITICAL 0;
+3. a minimal final-approval state mutation passes exact-head Governance + Desktop Shell + final HEDS;
+4. PR #54 is squash-merged with expected-head protection;
+5. the product merge SHA passes push Governance + Desktop Shell;
+6. a documentation-only canonical closeout records those receipts, passes its own exact-head Governance + Desktop Shell + HEDS, is squash-merged, and the resulting `main` SHA passes push validation.
 
-## Next NECESSARY governed increment
-After the closeout seal, fresh source-check and reconstruct `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface` on canonical CP-0019. Historical stacked WO-0020 work is supporting evidence only and must not be directly merged/cherry-picked.
+## Next governed increment
+Do not select the next product increment until CP-0020 is fully canonical. Source-check must run again after closeout rather than inferring the next Work Order from historical branches.
