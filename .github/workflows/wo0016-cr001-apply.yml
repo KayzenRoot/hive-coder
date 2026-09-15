@@ -1,0 +1,158 @@
+name: WO0016 CR001 Apply
+
+on:
+  push:
+    branches:
+      - feat/HCODER-WO-0016-trusted-workspace-git-read
+
+permissions:
+  contents: write
+
+jobs:
+  apply-correction:
+    if: github.repository == 'KayzenRoot/hive-coder'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: true
+      - name: Verify exact-head checkout
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "EXACT_HEAD_OK=$EXPECTED_SHA"
+      - name: Apply root-containment correction
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/desktop/src-tauri/src/lib.rs')
+          text = path.read_text(encoding='utf-8')
+          original = text
+
+          old_child = '''        if !current.exists() {
+              return Ok(None);
+          }
+          let metadata = fs::symlink_metadata(&current).map_err(|_| "workspace child metadata is unavailable".to_owned())?;
+          if is_link_or_reparse(&metadata) {
+          '''
+          new_child = '''        let metadata = match fs::symlink_metadata(&current) {
+              Ok(metadata) => metadata,
+              Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+              Err(_) => return Err("workspace child metadata is unavailable".to_owned()),
+          };
+          if is_link_or_reparse(&metadata) {
+          '''
+          if old_child in text:
+              text = text.replace(old_child, new_child, 1)
+
+          old_evidence = '''                    let Ok(metadata) = item.metadata() else {
+          '''
+          new_evidence = '''                    let Ok(metadata) = fs::symlink_metadata(item.path()) else {
+          '''
+          if old_evidence in text:
+              text = text.replace(old_evidence, new_evidence, 1)
+
+          old_ref = '''        if !reference.starts_with("refs/heads/") || reference.len() > 220 {
+          '''
+          new_ref = '''        if !reference.starts_with("refs/heads/") || reference == "refs/heads/" || reference.len() > 220 {
+          '''
+          if old_ref in text:
+              text = text.replace(old_ref, new_ref, 1)
+
+          test_marker = 'fn evidence_symlink_escape_is_not_counted()'
+          if test_marker not in text:
+              insertion = r'''
+
+              #[test]
+              fn empty_git_branch_reference_fails_closed() {
+                  let root = temp_root("git-empty-branch");
+                  fs::create_dir_all(root.join(".git")).unwrap();
+                  fs::write(root.join(".git/HEAD"), "ref: refs/heads/\n").unwrap();
+                  let canonical = validate_workspace_root(&root).unwrap();
+                  let git = git_model(&canonical);
+                  assert!(git.repository);
+                  assert!(git.branch.is_none());
+                  assert!(git.head.is_none());
+                  assert!(matches!(git.signal.state, OperationalState::Degraded));
+                  cleanup(&root);
+              }
+
+              #[cfg(unix)]
+              #[test]
+              fn dangling_symlink_is_rejected_as_unsafe_child() {
+                  use std::os::unix::fs::symlink;
+
+                  let root = temp_root("dangling-link");
+                  symlink(root.join("missing-target"), root.join("dangling")).unwrap();
+                  let canonical = validate_workspace_root(&root).unwrap();
+                  assert!(safe_existing_path(&canonical, Path::new("dangling")).is_err());
+                  cleanup(&root);
+              }
+
+              #[cfg(unix)]
+              #[test]
+              fn evidence_symlink_escape_is_not_counted() {
+                  use std::os::unix::fs::symlink;
+
+                  let root = temp_root("evidence-symlink");
+                  let outside = temp_root("evidence-outside");
+                  fs::create_dir_all(root.join(".engineering/evidence")).unwrap();
+                  let outside_file = outside.join("outside.md");
+                  fs::write(&outside_file, "outside evidence").unwrap();
+                  symlink(&outside_file, root.join(".engineering/evidence/linked.md")).unwrap();
+
+                  let canonical = validate_workspace_root(&root).unwrap();
+                  let evidence = evidence_model(&canonical);
+                  assert_eq!(evidence.evidence_bundles, 0);
+                  assert!(matches!(evidence.signal.state, OperationalState::Degraded));
+
+                  cleanup(&root);
+                  cleanup(&outside);
+              }
+          '''
+              pos = text.rfind('\n}')
+              if pos < 0:
+                  raise SystemExit('test module closing brace not found')
+              text = text[:pos] + insertion + text[pos:]
+
+          required = [
+              'Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None)',
+              'fs::symlink_metadata(item.path())',
+              'reference == "refs/heads/"',
+              test_marker,
+          ]
+          missing = [needle for needle in required if needle not in text]
+          if missing:
+              raise SystemExit(f'correction incomplete: {missing}')
+
+          if text != original:
+              path.write_text(text, encoding='utf-8')
+              print('CR001_CHANGED=1')
+          else:
+              print('CR001_CHANGED=0')
+          PY
+      - name: Validate and commit correction only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git diff --name-only)
+          if [ "${#changed[@]}" -eq 0 ]; then
+            echo "CR001_COMMITTED=0"
+            exit 0
+          fi
+          if [ "${#changed[@]}" -ne 1 ] || [ "${changed[0]}" != "apps/desktop/src-tauri/src/lib.rs" ]; then
+            printf 'unexpected correction delta: %s\n' "${changed[*]}" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/desktop/src-tauri/src/lib.rs
+          git commit -m "HCODER-WO-0016-CR-001: harden workspace root containment"
+          git push origin HEAD:feat/HCODER-WO-0016-trusted-workspace-git-read
+          echo "CR001_COMMITTED=1"
