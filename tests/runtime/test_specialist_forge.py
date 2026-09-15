@@ -140,14 +140,13 @@ class SpecialistForgeTests(unittest.TestCase):
         horizon.admit(challenge)
         with self.assertRaises(ValueError):
             horizon.admit(challenge)
-        # A different morph over the same source lineage is still not fresh mastery evidence.
         suite = self.fx.suite_a
         same_case = self.fx.case(2)
         variant = self.fx.morph.create(self.fx.blueprint, self.fx.pack, same_case, suite, morph_index=3)
         with self.assertRaises(ValueError):
             horizon.admit(variant)
 
-    def test_evidence_seal_covers_telemetry_grade_and_outcome(self):
+    def test_evidence_seal_covers_telemetry_grade_outcome_and_lineage(self):
         challenge = self.fx.challenge(3)
         telemetry = ArenaTelemetry(1200, 5000)
         evidence = self.fx.evidence_authority.issue(
@@ -155,8 +154,10 @@ class SpecialistForgeTests(unittest.TestCase):
             policy_violation=False, tamper_event=False, telemetry=telemetry,
             grade_proof_digest=GRADE,
         )
+        self.assertEqual(evidence.source_lineage_root, challenge.base_lineage_root)
         self.assertTrue(self.fx.evidence_authority.verify(evidence))
         self.assertFalse(self.fx.evidence_authority.verify(replace(evidence, telemetry=ArenaTelemetry(1, 1))))
+        self.assertFalse(self.fx.evidence_authority.verify(replace(evidence, source_lineage_root=D("fake-lineage"))))
 
     def test_mastery_lattice_rejects_duplicate_challenge_evidence(self):
         lattice = MasteryLattice(self.fx.evidence_authority)
@@ -172,6 +173,30 @@ class SpecialistForgeTests(unittest.TestCase):
         lattice.add(one)
         with self.assertRaises(ValueError):
             lattice.add(two)
+
+    def test_horizon_gate_is_mandatory_inside_mastery_lattice(self):
+        lattice = MasteryLattice(self.fx.evidence_authority)
+        case = self.fx.case(6)
+        first_challenge = self.fx.morph.create(
+            self.fx.blueprint, self.fx.pack, case, self.fx.suite_a, morph_index=0
+        )
+        second_challenge = self.fx.morph.create(
+            self.fx.blueprint, self.fx.pack, case, self.fx.suite_b, morph_index=1
+        )
+        self.assertNotEqual(first_challenge.fingerprint(), second_challenge.fingerprint())
+        first = self.fx.evidence_authority.issue(
+            "ev.lineage.one", self.fx.blueprint, first_challenge, passed=True,
+            critical_failure=False, policy_violation=False, tamper_event=False,
+            telemetry=ArenaTelemetry(10, 10), grade_proof_digest=GRADE,
+        )
+        second = self.fx.evidence_authority.issue(
+            "ev.lineage.two", self.fx.blueprint, second_challenge, passed=True,
+            critical_failure=False, policy_violation=False, tamper_event=False,
+            telemetry=ArenaTelemetry(10, 10), grade_proof_digest=GRADE,
+        )
+        lattice.add(first)
+        with self.assertRaises(ValueError):
+            lattice.add(second)
 
     def test_policy_floors_cannot_be_weakened(self):
         with self.assertRaises(ValueError):
@@ -197,7 +222,6 @@ class SpecialistForgeTests(unittest.TestCase):
     def test_pareto_crown_prefers_quality_then_reliability_before_cost(self):
         lattice = MasteryLattice(self.fx.evidence_authority)
         shadow = ReliabilityShadow(RegressionAuthority(b"r" * 32))
-        # Same certified exact stack, different ForgeSeal identity. The second is cheaper but unreliable.
         better = self.fx.blueprint
         cheaper = self.fx.forge.forge(
             "forge.python.backend.cheap", self.fx.profile, self.fx.descriptor, self.fx.pack, self.fx.skill_genome,

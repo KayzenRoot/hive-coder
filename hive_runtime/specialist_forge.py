@@ -302,6 +302,7 @@ class ArenaEvidence:
     evidence_id: str
     blueprint_fingerprint: str
     challenge_fingerprint: str
+    source_lineage_root: str
     repository_snapshot_digest: str
     semantic_twin_fingerprint: str
     dimension: BenchmarkDimension
@@ -317,12 +318,13 @@ class ArenaEvidence:
     def fingerprint(self) -> str:
         if not _SAFE_ID.fullmatch(self.evidence_id) or not _SAFE_TOKEN.fullmatch(self.diversity_family):
             raise ValueError("invalid arena evidence identity")
-        digests = (self.blueprint_fingerprint, self.challenge_fingerprint,
+        digests = (self.blueprint_fingerprint, self.challenge_fingerprint, self.source_lineage_root,
                    self.repository_snapshot_digest, self.semantic_twin_fingerprint, self.grade_proof_digest)
         if any(not _SHA256.fullmatch(item) for item in digests):
             raise ValueError("arena evidence digest must be sha256")
         return _sha({"id": self.evidence_id, "blueprint": self.blueprint_fingerprint,
-                     "challenge": self.challenge_fingerprint, "repository": self.repository_snapshot_digest,
+                     "challenge": self.challenge_fingerprint, "lineage": self.source_lineage_root,
+                     "repository": self.repository_snapshot_digest,
                      "twin": self.semantic_twin_fingerprint, "dimension": self.dimension.value,
                      "family": self.diversity_family, "passed": self.passed,
                      "critical": self.critical_failure, "policy": self.policy_violation,
@@ -352,10 +354,11 @@ class ArenaEvidenceAuthority:
             raise ValueError("arena evidence context mismatch")
         if not _SHA256.fullmatch(grade_proof_digest): raise ValueError("arena GradeProof digest required")
         unsigned = ArenaEvidence(evidence_id, blueprint.fingerprint(), challenge.fingerprint(),
-                                 blueprint.repository_snapshot_digest, blueprint.semantic_twin_fingerprint,
-                                 challenge.dimension, challenge.diversity_family, bool(passed),
-                                 bool(critical_failure), bool(policy_violation), bool(tamper_event),
-                                 telemetry, grade_proof_digest, "")
+                                 challenge.base_lineage_root, blueprint.repository_snapshot_digest,
+                                 blueprint.semantic_twin_fingerprint, challenge.dimension,
+                                 challenge.diversity_family, bool(passed), bool(critical_failure),
+                                 bool(policy_violation), bool(tamper_event), telemetry,
+                                 grade_proof_digest, "")
         return replace(unsigned, evidence_tag=hmac.new(self._key, unsigned.fingerprint().encode(), hashlib.sha256).hexdigest())
 
     def verify(self, evidence: ArenaEvidence) -> bool:
@@ -415,14 +418,22 @@ class MasteryMetric:
 
 
 class MasteryLattice:
+    """Mastery memory with mandatory HorizonGate lineage deduplication."""
     def __init__(self, authority: ArenaEvidenceAuthority) -> None:
-        self.authority = authority; self._evidence: dict[str, ArenaEvidence] = {}; self._challenges: set[tuple[str, str]] = set()
+        self.authority = authority
+        self._evidence: dict[str, ArenaEvidence] = {}
+        self._challenges: set[tuple[str, str]] = set()
+        self._lineages: set[tuple[str, str]] = set()
     def add(self, evidence: ArenaEvidence) -> None:
         if not self.authority.verify(evidence): raise PermissionError("untrusted arena evidence")
         if evidence.evidence_id in self._evidence: raise ValueError("duplicate arena evidence")
-        key = (evidence.blueprint_fingerprint, evidence.challenge_fingerprint)
-        if key in self._challenges: raise ValueError("arena challenge evidence cannot be counted twice")
-        self._evidence[evidence.evidence_id] = evidence; self._challenges.add(key)
+        challenge_key = (evidence.blueprint_fingerprint, evidence.challenge_fingerprint)
+        lineage_key = (evidence.blueprint_fingerprint, evidence.source_lineage_root)
+        if challenge_key in self._challenges: raise ValueError("arena challenge evidence cannot be counted twice")
+        if lineage_key in self._lineages: raise ValueError("HorizonGate rejects repeated source lineage mastery evidence")
+        self._evidence[evidence.evidence_id] = evidence
+        self._challenges.add(challenge_key)
+        self._lineages.add(lineage_key)
     def metric(self, blueprint: SpecialistBlueprint, dimension: BenchmarkDimension) -> MasteryMetric:
         rows = [e for e in self._evidence.values() if e.blueprint_fingerprint == blueprint.fingerprint() and e.dimension is dimension]
         samples = len(rows); successes = sum(1 for e in rows if e.passed)
