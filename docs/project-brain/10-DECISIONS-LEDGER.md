@@ -39,3 +39,7 @@ Open Interpreter `0.0.43` and Cua Driver `0.28.1` are pinned behind Hive-owned b
 ## DEC-010 — Advanced capability roadmap
 **Status:** APPROVED DIRECTION  
 Hive Coder will evolve toward model-aware capability negotiation, a Hive-owned versioned/provenance-aware Skills Engine with governed skill learning, long-running autonomous agent workflows and secure remote control from another authorized computer. Remote control is a zero-trust application control plane with encrypted authenticated device sessions, revocation, approvals, audit and emergency stop, not a publicly exposed raw desktop/Cua port.
+
+## DEC-011 — Evidence-driven model capabilities and governed skills
+**Status:** APPROVED  
+`HCODER-WO-0007` makes explicit verified evidence the only authority for model capability negotiation. Model names, marketing labels, declarations and model-generated prose cannot enable capabilities. Hive skills are versioned/provenance-aware artifacts with separate ingest, deterministic evaluation, activation and rollback states. MCP skill resources are untrusted content regardless of transport trust. Skill activation is subordinate to the existing permission grant and can never mint or broaden authority.
