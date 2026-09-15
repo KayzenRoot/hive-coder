@@ -1,39 +1,34 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** HCODER-CP-0004  
+**Checkpoint:** HCODER-CP-0005  
 **Status:** APPROVED  
 **Date:** 2026-09-14  
 **Repository:** `KayzenRoot/hive-coder`  
-**Approved Work Order:** `HCODER-WO-0004`  
-**PR:** `#9`
+**Approved Work Order:** `HCODER-WO-0005`  
+**PR:** `#11`
 
 ## Proven canonical state
-- HCODER-CP-0003 foundation/runtime bridge state remains authoritative.
-- A Hive-owned `PermissionControlPlane` exists as a pure authorization boundary with no desktop executor.
-- Capability taxonomy covers observation, pointer/keyboard/text input, clipboard, window/browser mutation, filesystem, shell, destructive and privileged intent with explicit risk classes.
-- Policy evaluation is default-deny; unknown capability/target/session/authorization state denies; explicit deny wins over allow.
-- Application, window, workspace-root, resource and action scopes are policy-bound. High-risk mutation and critical capabilities retain mandatory approval floors even if a policy attempts to disable approval.
-- Control sessions are bounded. Security TTLs use monotonic time separate from wall-clock audit timestamps.
-- Approval challenges are request-bound. Approval tokens and execution permits are HMAC-SHA256 signed, use a minimum 256-bit key, bind session/request fingerprint/policy epoch/global emergency epoch/expiry, are server-record cross-checked and single-use.
-- Request fingerprints bind canonical executor-relevant arguments and targets; free-form untrusted model/task context does not influence authorization semantics.
-- Approval display arguments are recursively redacted and challenge target/display payloads are stored as canonical JSON with copy-on-read exposure.
-- Emergency stop, user takeover, cancellation, session expiry and policy changes invalidate outstanding challenges/tokens/permits before cancellation propagation.
-- Blocking/faulty cancellation callbacks cannot hold the authorization critical lock; callback failures are contained and audited.
-- The control plane keeps its audit log private and exposes event snapshots plus hash-chain verification. The current in-memory SHA-256 chain is tamper-evident ordering, not durable/authenticated persistence.
-- `HCODER-WO-0004-CR-001` through `CR-004` were resolved in the same Work Order.
-- HEDS technical verdict is APPROVED on implementation head `470ab2e25c4b838d8b6d59cd38f0b43186606063`. GitHub account-level APPROVE cannot be submitted by the PR author, so the verdict is recorded as review comment `5204200607` rather than misrepresented.
-- Governance run `34912342323` proved exact-head on that implementation SHA: Ubuntu broad regression 62/62 PASS and Windows Server 2025 targeted control-plane tests 36/36 PASS, with `ResourceWarning` treated as error.
+- HCODER-CP-0004 authorization/control-plane state remains authoritative.
+- `GatedCuaActionExecutor` is the only approved Hive code surface that may issue Cua `tools/call`.
+- Every dispatch consumes a request-bound, session/epoch-bound, expiring single-use permit from `PermissionControlPlane`.
+- Initial allowlist: `pointer.click` mapped to `pointer.input` and `keyboard.type_text` mapped to `text.input` only.
+- Exact argument schemas are enforced: click accepts bounded numeric `x/y`; text accepts bounded non-NUL `text`.
+- Live normalized application/window identity is revalidated after permit consumption and immediately before dispatch. Drift denies and burns the permit.
+- Parallel mutations in one control session are denied.
+- Emergency stop/user takeover/cancellation mark the executor session cancelled and close the Cua peer, waking a blocking Hive JSON-RPC request and preventing later dispatch through that peer.
+- Cua error results and failed post-action verification fail closed.
+- `HCODER-WO-0005-CR-001` resolved stale policy test construction, broad argument forwarding, incomplete Windows executor coverage and non-interrupting RPC cancellation.
+- Exact-head candidate `28e696f57882bbca9e3e3a47184ca3d35e19f058` passed Ubuntu broad regression 74/74 and Windows Server 2025 HIGH_ASSURANCE targeted tests 48/48 with ResourceWarning fatal.
 
 ## Product state
-The product now has a validated foundation/runtime bridge and a validated authorization/control-plane core. No Cua action executor, real mouse/keyboard/clipboard/screen/window/browser mutation, Open Interpreter prompt/model execution, provider routing, desktop UI, installer/package or production deployment is yet proven.
+Hive Coder now has validated foundation pins, runtime bridge, permission/control plane and a first permit-gated Cua action executor contract. The executor is proven against deterministic/mock Cua peers on Ubuntu and Windows. No claim is made that CI physically mutated a Windows desktop with the pinned Cua Driver.
 
 ## Safety state
-- Cua `tools/call` remains absent from the approved adapter surface.
-- No real OS mutation is authorized by this checkpoint.
+- Shell, filesystem mutation, clipboard, destructive, privileged and unmapped Cua tools remain blocked.
+- Both approved mutation capabilities retain mandatory trusted approval.
 - Model/task text cannot mint approvals or permits.
-- Emergency/takeover state invalidation is proven at the authorization layer; stopping an already in-flight real desktop action is not yet proven because no real executor exists.
-- A future executor must consume the exact request-bound permit immediately before mutation, revalidate live application/window/target identity, and prove in-flight cancellation/emergency-stop behavior.
-- Automatic dependency installation remains disabled and foundation provenance pins remain unchanged.
+- Peer closure proves cancellation at the Hive RPC boundary but cannot roll back an OS input already accepted by Cua.
+- Automatic foundation installation remains disabled and provenance pins remain unchanged.
 
 ## Next necessary increment
-Implement the first Hive gated Cua Action Executor as a separate HIGH_ASSURANCE Work Order. Start with the smallest safe tool subset, require a valid single-use execution permit for every call, map Cua tool metadata to the Hive capability taxonomy, revalidate live target identity immediately before mutation, propagate emergency stop/user takeover to in-flight execution, verify post-action state where feasible, and add Windows end-to-end tests. Keep destructive, privileged, clipboard-secret and broad shell actions disabled until separately proven.
+Build an opt-in real-Cua Windows integration harness for pinned Cua Driver `0.28.1`. Prove discovery-to-executor wiring, actual tool-name/argument mapping, live target resolver behavior, safe sandboxed pointer/text actions, emergency-stop behavior and post-action evidence without broadening the allowlist. Fail closed when the pinned binary or sandbox target is unavailable.
