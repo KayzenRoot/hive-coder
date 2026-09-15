@@ -1,11 +1,14 @@
 # HCODER-WO-0019 — Runtime Status Sidecar Helper
 
-**Status:** APPROVED FOR EXECUTION  
+**Status:** TECHNICALLY APPROVED / PROMOTION CANDIDATE — NOT CANONICAL  
 **Risk:** ELEVATED  
 **Task class:** T3  
 **Context radius:** C3  
 **Canonical base:** `HCODER-CP-0018` on `main` at `c0a44d43546b9f176125b9e7099b8422d6b62ba3`  
 **Issue:** `#47`  
+**PR:** `#48` — DRAFT  
+**Technical exact head:** `ba10ba72f76316806cd820dc0d205e68105f61bb`  
+**HEDS technical review:** `5216093993` — APPROVED FOR PROMOTION, H/C 0  
 **Historical evidence only:** PR `#38` / branch `feat/HCODER-WO-0019-runtime-status-sidecar` MUST NOT be merged or cherry-picked.
 
 ## OBJECTIVE
@@ -89,6 +92,14 @@ Python stdlib + existing Hive runtime only. No new dependency, daemon/listener, 
 
 ## REVIEW FORMAT
 HEDS_DELTA exact-head. Provider/model invocation, credential inheritance/read, long-running listener, generic dispatch/RPC, unexpected mutation authority or secret/status leakage is HIGH/CRITICAL.
+
+## TECHNICAL RECEIPT
+Exact technical head `ba10ba72f76316806cd820dc0d205e68105f61bb` passed Governance #250 (`35027148143`) with Ubuntu **288/288 PASS** and Windows HIGH_ASSURANCE **61/61 PASS**, including the sidecar process suite on Windows. Desktop Shell #86 (`35027148075`) passed security gate, frontend **23/23**, npm audit 0, locked Rust audits/tests/check, Windows release build and launch smoke. HEDS technical review `5216093993` returned **APPROVED FOR PROMOTION**, unresolved HIGH/CRITICAL `0`.
+
+`HCODER-WO-0019-CR-001` LOW and `HCODER-WO-0019-CR-002` LOW are resolved. The first hardened process-level one-shot/adversarial coverage; the second extended Windows HIGH_ASSURANCE evidence. Neither correction changed the CP-0018 wire or expanded product authority.
+
+## PROMOTION STATE
+`HCODER-CP-0019` and `DEC-023 — Runtime Status Sidecar Helper Boundary` are staged as promotion candidates only. They are not canonical until promotion/final gates, squash merge and post-merge validation complete.
 
 ## STOP CONDITION
 Exact-head Governance + Desktop Shell green, HEDS approved with unresolved HIGH/CRITICAL = 0, evidence/checkpoint delta accurate, squash merge with expected-head protection, then push-triggered Governance + Desktop Shell green on `main`. CP-0019 is not canonical before post-merge proof. No desktop launcher/process capability is promoted under WO-0019.

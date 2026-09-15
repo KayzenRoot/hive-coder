@@ -70,3 +70,19 @@ Architecture rules:
 - Status transport remains non-authoritative and cannot become a permit, capability verifier, task command or permission decision.
 
 CP-0018 canonicalizes this frozen IPC boundary only. The separately governed runtime sidecar/supervisor layer may later consume this protocol, but it may not expand it silently. Process launch, identity/authenticity, restart/shutdown and containment remain outside WO-0018.
+
+## Fixed runtime-status sidecar boundary — WO-0019 promotion candidate
+WO-0019 introduces the first process-level consumer of the frozen CP-0018 wire without connecting that process to the desktop:
+
+`future trusted supervisor -> fixed status_sidecar.py --stdio-status-v1 -> CP-0018 serve_one -> prebuilt CP-0017 disconnected snapshot`
+
+Architecture rules:
+- the helper has one fixed mode and no caller-selectable executable/command dispatch;
+- it constructs `disconnected_snapshot()` before entering the protocol primitive, so `serve_one()` still owns no observation callback or runtime lifecycle;
+- one process invocation serves one request and exits; there is no loop, daemon, socket, listener, HTTP/WebSocket surface or generic RPC namespace;
+- expected invalid mode/protocol input fails closed with stable process exit codes and no fake snapshot;
+- process-level validation uses canonical `ManagedStdioProcess`, preserving `shell=False` and its least-privilege child environment;
+- the sidecar itself gains no provider/model, credential, task, permission or mutation adapter;
+- presentation truth remains non-authoritative and intentionally DISCONNECTED until a later separately governed trusted observer/supervisor exists.
+
+WO-0019 does not add a Tauri command, process plugin or desktop launcher. The future WO-0020 desktop supervisor must be reconstructed on canonical CP-0019 and separately prove helper identity, fixed launch target, lifecycle/containment and read-only system-truth integration before any desktop process capability can be promoted.
