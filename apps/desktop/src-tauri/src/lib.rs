@@ -24,7 +24,7 @@ struct StatusSignal {
 struct ProductIdentity {
     name: &'static str,
     version: &'static str,
-    checkpoint: &'static str,
+    baseline_checkpoint: &'static str,
 }
 
 #[derive(Serialize)]
@@ -66,7 +66,7 @@ fn desktop_snapshot() -> DesktopSnapshot {
         product: ProductIdentity {
             name: "Hive Coder",
             version: env!("CARGO_PKG_VERSION"),
-            checkpoint: "HCODER-CP-0014",
+            baseline_checkpoint: "HCODER-CP-0014",
         },
         shell: StatusSignal {
             state: OperationalState::Ready,
@@ -132,6 +132,7 @@ mod tests {
     fn snapshot_exposes_no_actionable_mutation_capability() {
         let snapshot = desktop_snapshot();
         assert_eq!(snapshot.schema_version, 1);
+        assert_eq!(snapshot.product.baseline_checkpoint, "HCODER-CP-0014");
         assert!(!snapshot.safety.actionable_session);
         assert!(!snapshot.safety.pause);
         assert!(!snapshot.safety.emergency_stop);
