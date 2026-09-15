@@ -1,7 +1,7 @@
 use std::fs::{self, Metadata};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -47,6 +47,13 @@ fn validated_sidecar_path() -> Result<PathBuf, String> {
     Ok(sidecar)
 }
 
+fn terminate_child(child: &mut Child) {
+    if matches!(child.try_wait(), Ok(None)) {
+        let _ = child.kill();
+    }
+    let _ = child.wait();
+}
+
 pub(crate) fn query_runtime_status_envelope() -> Result<String, String> {
     let sidecar = validated_sidecar_path()?;
     let mut child = Command::new(&sidecar)
@@ -58,18 +65,32 @@ pub(crate) fn query_runtime_status_envelope() -> Result<String, String> {
         .spawn()
         .map_err(|_| "runtime status sidecar could not start".to_owned())?;
 
-    let mut stdin = child
-        .stdin
-        .take()
-        .ok_or_else(|| "runtime status sidecar stdin is unavailable".to_owned())?;
-    write!(stdin, "{}\n", STATUS_REQUEST).map_err(|_| "runtime status request could not be sent".to_owned())?;
-    stdin.flush().map_err(|_| "runtime status request could not be flushed".to_owned())?;
+    let mut stdin = match child.stdin.take() {
+        Some(stdin) => stdin,
+        None => {
+            terminate_child(&mut child);
+            return Err("runtime status sidecar stdin is unavailable".to_owned());
+        }
+    };
+    if write!(stdin, "{}\n", STATUS_REQUEST).is_err() {
+        drop(stdin);
+        terminate_child(&mut child);
+        return Err("runtime status request could not be sent".to_owned());
+    }
+    if stdin.flush().is_err() {
+        drop(stdin);
+        terminate_child(&mut child);
+        return Err("runtime status request could not be flushed".to_owned());
+    }
     drop(stdin);
 
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| "runtime status sidecar stdout is unavailable".to_owned())?;
+    let stdout = match child.stdout.take() {
+        Some(stdout) => stdout,
+        None => {
+            terminate_child(&mut child);
+            return Err("runtime status sidecar stdout is unavailable".to_owned());
+        }
+    };
     let reader = thread::spawn(move || {
         let mut bytes = Vec::new();
         stdout
@@ -84,14 +105,12 @@ pub(crate) fn query_runtime_status_envelope() -> Result<String, String> {
             Ok(Some(status)) => break status,
             Ok(None) if Instant::now() < deadline => thread::sleep(Duration::from_millis(10)),
             Ok(None) => {
-                let _ = child.kill();
-                let _ = child.wait();
+                terminate_child(&mut child);
                 let _ = reader.join();
                 return Err("runtime status sidecar timed out".to_owned());
             }
             Err(_) => {
-                let _ = child.kill();
-                let _ = child.wait();
+                terminate_child(&mut child);
                 let _ = reader.join();
                 return Err("runtime status sidecar state is unavailable".to_owned());
             }
