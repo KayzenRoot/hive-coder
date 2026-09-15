@@ -34,12 +34,16 @@ Open Interpreter `0.0.43` and Cua Driver `0.28.1` are pinned behind Hive-owned b
 
 ## DEC-009 — Real Cua Windows harness contract
 **Status:** APPROVED  
-`HCODER-WO-0006` corrects the production modern MCP contract to `server/discover` followed by `tools/list`, with protocol metadata on every request. Hive resolves concrete Cua click/type tool names only from the pinned driver's advertised capability tokens and required input schema, never from model/task text. The real Windows harness is explicit opt-in, exact-version preflighted, requires a named sandbox application, obtains HWND/PID/process identity through typed Win32 APIs and wires the trusted discovered bindings into the existing permit-gated executor. No capability is added beyond CP-0005. Hosted CI proves contract and Windows logic but does not prove a physical Cua click/type; physical desktop E2E remains UNKNOWN until a safe runner with the pinned binary is explicitly provisioned.
+`HCODER-WO-0006` establishes the explicit opt-in Windows harness while retaining CP-0005 authority. Physical desktop E2E remains UNKNOWN until a safe runner is provisioned.
 
 ## DEC-010 — Advanced capability roadmap
 **Status:** APPROVED DIRECTION  
-Hive Coder will evolve toward model-aware capability negotiation, a Hive-owned versioned/provenance-aware Skills Engine with governed skill learning, long-running autonomous agent workflows and secure remote control from another authorized computer. Remote control is a zero-trust application control plane with encrypted authenticated device sessions, revocation, approvals, audit and emergency stop, not a publicly exposed raw desktop/Cua port.
+Hive Coder will evolve toward model-aware capability negotiation, governed skill learning, long-running autonomous workflows and secure Remote Hive Control.
 
 ## DEC-011 — Evidence-driven model capabilities and governed skills
 **Status:** APPROVED  
-`HCODER-WO-0007` makes explicit verified evidence the only authority for model capability negotiation. Model names, marketing labels, declarations and model-generated prose cannot enable capabilities. Hive skills are versioned/provenance-aware artifacts with separate ingest, deterministic evaluation, activation and rollback states. MCP skill resources are untrusted content regardless of transport trust. Skill activation is subordinate to the existing permission grant and can never mint or broaden authority.
+`HCODER-WO-0007` makes verified evidence the only authority for model capability negotiation and establishes governed skill lifecycle boundaries.
+
+## DEC-012 — Provider/model runtime and ACP prompt boundary
+**Status:** APPROVED  
+`HCODER-WO-0008` normalizes provider catalogs behind Hive-owned adapters, feeds deterministic capability probes into CP-0007, routes only across models satisfying verified requirements and introduces an explicit redacted credential scope. OpenCode Go is the first-class provider identity but its name grants zero capabilities. Open Interpreter ACP `session/prompt` is admitted as a model execution lifecycle only; it does not mint desktop permits or expand CP-0005/0006 authority.
