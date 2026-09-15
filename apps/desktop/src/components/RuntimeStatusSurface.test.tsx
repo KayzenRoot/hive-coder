@@ -55,6 +55,22 @@ describe("Runtime System Truth surface", () => {
     expect(html.match(/disabled=""/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
   });
 
+  it("does not invent zero permission counters when READY counters are unobserved", () => {
+    const readyWithoutCounters: RuntimeStatusEnvelope = {
+      ...liveStatus,
+      snapshot: {
+        ...liveStatus.snapshot,
+        permission: {
+          ...liveStatus.snapshot.permission,
+          state: "READY",
+        },
+      },
+    };
+    const html = renderToStaticMarkup(<ShellView snapshot={disconnectedSnapshot()} runtimeStatus={readyWithoutCounters} />);
+    expect(html).toContain("Permission observer reports READY; session/approval counters are not exposed.");
+    expect(html).not.toContain("0 active session(s)");
+  });
+
   it("keeps disconnected presentation when no live envelope is available", () => {
     const html = renderToStaticMarkup(<ShellView snapshot={disconnectedSnapshot()} runtimeStatus={null} />);
     expect(html).toContain("DISCONNECTED");

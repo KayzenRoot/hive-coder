@@ -53,6 +53,16 @@ function providerStateFromRuntime(live: RuntimeStatusEnvelope["snapshot"]): Oper
   return "UNKNOWN";
 }
 
+function permissionDetailFromRuntime(permission: RuntimeStatusEnvelope["snapshot"]["permission"]): string {
+  if (permission.state !== "READY") {
+    return "No actionable permission authority is exposed through the runtime status channel.";
+  }
+  if (permission.activeSessions === null || permission.pendingApprovals === null) {
+    return "Permission observer reports READY; session/approval counters are not exposed.";
+  }
+  return `Read-only status: ${permission.activeSessions} active session(s), ${permission.pendingApprovals} pending approval(s).`;
+}
+
 export function ShellView({
   snapshot,
   runtimeStatus = null,
@@ -79,9 +89,7 @@ export function ShellView({
     ? {
         state: live.permission.state,
         label: "Permission plane",
-        detail: live.permission.state === "READY"
-          ? `Read-only status: ${live.permission.activeSessions ?? 0} active session(s), ${live.permission.pendingApprovals ?? 0} pending approval(s).`
-          : "No actionable permission authority is exposed through the runtime status channel.",
+        detail: permissionDetailFromRuntime(live.permission),
         provenance: live.permission.provenance,
       }
     : snapshot.permission;
