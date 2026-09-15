@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import tempfile
+import threading
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -21,8 +22,7 @@ from hive_runtime.repository_intelligence import RepoDNAIndexer, TruthWeave
 from hive_runtime.semantic_twin import SemanticTwinBuilder
 
 
-def sha(text: str) -> str:
-    return hashlib.sha256(text.encode()).hexdigest()
+def sha(text: str) -> str: return hashlib.sha256(text.encode()).hexdigest()
 
 
 class MemoryAnchor:
@@ -46,9 +46,13 @@ class PassingGrader:
         return GradeDecision(True, rationale_digest=sha("independent-pass"))
 
 
+class EmptyProofGrader:
+    def grade(self, packet): return GradeDecision(True)
+
+
 class DualEndpoint:
     def run(self, material, *, provider_id: str, model_id: str): return TrialResponse("x")
-    def grade(self, packet): return GradeDecision(True)
+    def grade(self, packet): return GradeDecision(True, rationale_digest=sha("dual"))
 
 
 class CertificationLabTests(unittest.TestCase):
@@ -65,8 +69,12 @@ class CertificationLabTests(unittest.TestCase):
             "lineage.backend.lab", self.descriptor.fingerprint(),
         ))
         self.identity_authority = LabIdentityAuthority(b"lab-identity-authority-key-32-bytes!!")
-        self.runner_actor = self.identity_authority.seal(LabActor("runner.one", LabActorRole.RUNNER, "lineage.runner"))
-        self.grader_actor = self.identity_authority.seal(LabActor("grader.one", LabActorRole.GRADER, "lineage.grader"))
+        self.runner_actor = self.identity_authority.seal(LabActor(
+            "runner.one", LabActorRole.RUNNER, "lineage.runner", sha("endpoint.runner"),
+        ))
+        self.grader_actor = self.identity_authority.seal(LabActor(
+            "grader.one", LabActorRole.GRADER, "lineage.grader", sha("endpoint.grader"),
+        ))
         self.suite_authority = SuiteLineageAuthority(b"suite-lineage-authority-key-32-bytes!")
         self.suite = self.suite_authority.seal(EvaluationSuite(
             "hive-shadow-repo", "1.0.0", "repo-reasoning", "independent.shadow.repo",
@@ -85,23 +93,19 @@ class CertificationLabTests(unittest.TestCase):
     def repository(self, root: Path):
         (root / "app.py").write_text('''\nfrom fastapi import FastAPI\napp = FastAPI()\n@app.get("/health")\ndef health():\n    return "ok"\n''', encoding="utf-8")
         indexed = RepoDNAIndexer().scan(root, repository_id="cert-lab")
-        truth = TruthWeave(indexed).truth_map()
-        twin = SemanticTwinBuilder().build(indexed)
+        truth = TruthWeave(indexed).truth_map(); twin = SemanticTwinBuilder().build(indexed)
         return indexed, truth, twin
 
     def build_lab(self, root: Path, anchor: MemoryAnchor, truth, factory):
         journal = DurableAttestationJournal(root / "attestation.json", b"journal-key-32-bytes-minimum-secret!!", anchor)
         clock = DurableChronoSealClock(journal)
-        certification_authority = CertificationAuthority(
-            b"certification-authority-key-32-bytes!", clock, self.profile_authority,
-        )
+        certification_authority = CertificationAuthority(b"certification-authority-key-32-bytes!", clock, self.profile_authority)
         lab = ProviderCertificationLab(
             profile_authority=self.profile_authority, stack_authority=self.stack_authority,
             identity_authority=self.identity_authority, suite_authority=self.suite_authority,
             trial_authority=self.trial_authority, benchmark_authority=self.benchmark_authority,
             certification_authority=certification_authority, report_authority=self.report_authority,
-            journal=journal, clock=clock,
-            trial_forge=TrialForge(lambda case: factory.verify_case(case, truth)),
+            journal=journal, clock=clock, trial_forge=TrialForge(lambda case: factory.verify_case(case, truth)),
         )
         return lab, journal, clock
 
@@ -122,20 +126,30 @@ class CertificationLabTests(unittest.TestCase):
             case = factory.generate(indexed.snapshot, truth, BenchmarkDimension.REPOSITORY_REASONING, epoch_label="epoch1")[0]
             lab, _, _ = self.build_lab(root, MemoryAnchor(), truth, factory)
             spec = self.sealed_spec(case, twin); runner = PassingRunner(); grader = PassingGrader()
-            receipt = lab.run_trial(
-                spec=spec, profile=self.profile, descriptor=self.descriptor, suite=self.suite,
-                runner_actor=self.runner_actor, grader_actor=self.grader_actor,
-                case=case, twin=twin, runner=runner, grader=grader,
-            )
-            self.assertFalse(runner.saw_oracle_attribute)
-            self.assertEqual(grader.last_oracle, case.oracle_digest)
+            receipt = lab.run_trial(spec=spec, profile=self.profile, descriptor=self.descriptor, suite=self.suite,
+                                    runner_actor=self.runner_actor, grader_actor=self.grader_actor,
+                                    case=case, twin=twin, runner=runner, grader=grader)
+            self.assertFalse(runner.saw_oracle_attribute); self.assertEqual(grader.last_oracle, case.oracle_digest)
             self.assertTrue(self.trial_authority.verify(receipt)); self.assertTrue(receipt.passed)
             with self.assertRaises(ValueError):
-                lab.run_trial(
-                    spec=spec, profile=self.profile, descriptor=self.descriptor, suite=self.suite,
-                    runner_actor=self.runner_actor, grader_actor=self.grader_actor,
-                    case=case, twin=twin, runner=PassingRunner(), grader=PassingGrader(),
-                )
+                lab.run_trial(spec=spec, profile=self.profile, descriptor=self.descriptor, suite=self.suite,
+                              runner_actor=self.runner_actor, grader_actor=self.grader_actor,
+                              case=case, twin=twin, runner=PassingRunner(), grader=PassingGrader())
+
+    def test_one_shot_lineage_is_consumed_even_if_grader_proof_is_invalid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); indexed, truth, twin = self.repository(root)
+            factory = ShadowBenchFactory(b"shadowbench-host-key-32-bytes-minimum!!")
+            case = factory.generate(indexed.snapshot, truth, BenchmarkDimension.DEBUGGING, epoch_label="epoch-proof")[0]
+            lab, _, _ = self.build_lab(root, MemoryAnchor(), truth, factory); spec = self.sealed_spec(case, twin)
+            with self.assertRaises(ValueError):
+                lab.run_trial(spec=spec, profile=self.profile, descriptor=self.descriptor, suite=self.suite,
+                              runner_actor=self.runner_actor, grader_actor=self.grader_actor,
+                              case=case, twin=twin, runner=PassingRunner(), grader=EmptyProofGrader())
+            with self.assertRaises(ValueError):
+                lab.run_trial(spec=spec, profile=self.profile, descriptor=self.descriptor, suite=self.suite,
+                              runner_actor=self.runner_actor, grader_actor=self.grader_actor,
+                              case=case, twin=twin, runner=PassingRunner(), grader=PassingGrader())
 
     def test_same_runtime_object_cannot_be_runner_and_grader(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -144,30 +158,26 @@ class CertificationLabTests(unittest.TestCase):
             case = factory.generate(indexed.snapshot, truth, BenchmarkDimension.REPOSITORY_REASONING, epoch_label="epoch2")[0]
             lab, _, _ = self.build_lab(root, MemoryAnchor(), truth, factory); endpoint = DualEndpoint()
             with self.assertRaises(ValueError):
-                lab.run_trial(
-                    spec=self.sealed_spec(case, twin), profile=self.profile, descriptor=self.descriptor, suite=self.suite,
-                    runner_actor=self.runner_actor, grader_actor=self.grader_actor,
-                    case=case, twin=twin, runner=endpoint, grader=endpoint,
-                )
+                lab.run_trial(spec=self.sealed_spec(case, twin), profile=self.profile, descriptor=self.descriptor, suite=self.suite,
+                              runner_actor=self.runner_actor, grader_actor=self.grader_actor,
+                              case=case, twin=twin, runner=endpoint, grader=endpoint)
 
-    def test_runner_and_grader_lineage_cannot_collapse(self):
-        bad_grader = self.identity_authority.seal(LabActor("grader.bad", LabActorRole.GRADER, "lineage.runner"))
-        spec = TrialSpec(
-            "trial.bad", self.profile.fingerprint(), self.descriptor.fingerprint(),
-            self.descriptor.provider_id, self.descriptor.model_id, "a"*64, "b"*64,
-            BenchmarkDimension.REPOSITORY_REASONING, self.suite.fingerprint(), "c"*64,
-            self.runner_actor.fingerprint(), bad_grader.fingerprint(),
-        )
+    def test_actor_endpoint_identity_cannot_collapse_with_different_lineage_labels(self):
+        bad_grader = self.identity_authority.seal(LabActor(
+            "grader.bad", LabActorRole.GRADER, "lineage.looks-different", self.runner_actor.endpoint_digest,
+        ))
+        spec = TrialSpec("trial.bad", self.profile.fingerprint(), self.descriptor.fingerprint(),
+                         self.descriptor.provider_id, self.descriptor.model_id, "a"*64, "b"*64,
+                         BenchmarkDimension.REPOSITORY_REASONING, self.suite.fingerprint(), "c"*64,
+                         self.runner_actor.fingerprint(), bad_grader.fingerprint())
         with self.assertRaises(ValueError):
             self.stack_authority.seal(spec, self.profile, self.descriptor, self.suite, self.runner_actor, bad_grader)
 
     def test_stack_genome_prevents_provider_model_portability(self):
         altered = replace(self.descriptor, model_id="model-y")
-        spec = TrialSpec(
-            "trial.drift", self.profile.fingerprint(), altered.fingerprint(), altered.provider_id, altered.model_id,
-            "a"*64, "b"*64, BenchmarkDimension.REPOSITORY_REASONING,
-            self.suite.fingerprint(), "c"*64, self.runner_actor.fingerprint(), self.grader_actor.fingerprint(),
-        )
+        spec = TrialSpec("trial.drift", self.profile.fingerprint(), altered.fingerprint(), altered.provider_id, altered.model_id,
+                         "a"*64, "b"*64, BenchmarkDimension.REPOSITORY_REASONING,
+                         self.suite.fingerprint(), "c"*64, self.runner_actor.fingerprint(), self.grader_actor.fingerprint())
         with self.assertRaises(PermissionError):
             self.stack_authority.seal(spec, self.profile, altered, self.suite, self.runner_actor, self.grader_actor)
 
@@ -187,6 +197,18 @@ class CertificationLabTests(unittest.TestCase):
             assessment = ContaminationRadar({case.semantic_fingerprint()}).assess(case)
             self.assertTrue(assessment.blocked); self.assertEqual(assessment.codes, ("known_exposure",))
 
+    def test_atomic_reservation_allows_exactly_one_concurrent_claim(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = DurableAttestationJournal(Path(tmp) / "journal.json", b"journal-key-32-bytes-minimum-secret!!", MemoryAnchor())
+            subject = sha("same-lineage"); successes = []; failures = []
+            def reserve():
+                try: successes.append(journal.reserve_once(epoch=0, kind="trial-lineage", subject_digest=subject).sequence)
+                except ValueError: failures.append(1)
+            threads = [threading.Thread(target=reserve) for _ in range(8)]
+            for thread in threads: thread.start()
+            for thread in threads: thread.join()
+            self.assertEqual(len(successes), 1); self.assertEqual(len(failures), 7); self.assertEqual(journal.sequence(), 1)
+
     def test_durable_journal_detects_signed_rollback_via_external_floor(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "journal.json"; anchor = MemoryAnchor()
@@ -194,14 +216,12 @@ class CertificationLabTests(unittest.TestCase):
             journal.append(epoch=1, kind="trial", subject_digest=sha("one")); old_bytes = path.read_bytes()
             journal.append(epoch=2, kind="trial", subject_digest=sha("two")); self.assertEqual(anchor.floor(), 2)
             path.write_bytes(old_bytes)
-            with self.assertRaises(PermissionError):
-                DurableAttestationJournal(path, b"journal-key-32-bytes-minimum-secret!!", anchor)
+            with self.assertRaises(PermissionError): DurableAttestationJournal(path, b"journal-key-32-bytes-minimum-secret!!", anchor)
 
     def test_durable_clock_survives_restart_and_cannot_move_backwards(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "journal.json"; anchor = MemoryAnchor()
-            clock = DurableChronoSealClock(DurableAttestationJournal(path, b"journal-key-32-bytes-minimum-secret!!", anchor))
-            clock.advance(9)
+            clock = DurableChronoSealClock(DurableAttestationJournal(path, b"journal-key-32-bytes-minimum-secret!!", anchor)); clock.advance(9)
             restarted = DurableChronoSealClock(DurableAttestationJournal(path, b"journal-key-32-bytes-minimum-secret!!", anchor))
             self.assertEqual(restarted.now(), 9)
             with self.assertRaises(ValueError): restarted.advance(8)
@@ -211,14 +231,10 @@ class CertificationLabTests(unittest.TestCase):
             "receipt.synthetic", sha("trial"), self.profile.fingerprint(), self.suite.fingerprint(),
             BenchmarkDimension.DEBUGGING, sha("response"), True, False, False, False, 1, 1,
         ))
-        result = self.benchmark_authority.issue(
-            "trusted.synthetic", self.profile.agent_id, self.profile.fingerprint(),
-            BenchmarkDimension.DEBUGGING, self.suite, (receipt,),
-        )
-        self.assertEqual(result.suite_family, self.suite.diversity_family())
-        self.assertEqual(result.suite, self.suite.suite_id)
-        self.assertTrue(self.benchmark_authority.verify(result))
-        self.assertFalse(self.benchmark_authority.verify(replace(result, successes=0)))
+        result = self.benchmark_authority.issue("trusted.synthetic", self.profile.agent_id, self.profile.fingerprint(),
+                                                BenchmarkDimension.DEBUGGING, self.suite, (receipt,))
+        self.assertEqual(result.suite_family, self.suite.diversity_family()); self.assertEqual(result.suite, self.suite.suite_id)
+        self.assertTrue(self.benchmark_authority.verify(result)); self.assertFalse(self.benchmark_authority.verify(replace(result, successes=0)))
 
 
 if __name__ == "__main__": unittest.main()
