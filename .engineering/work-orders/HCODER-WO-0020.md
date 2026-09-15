@@ -1,6 +1,6 @@
 # HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface
 
-**Status:** APPROVED FOR SQUASH MERGE / NOT CANONICAL  
+**Status:** COMPLETE / CANONICAL — CLOSEOUT SEAL PENDING  
 **Risk:** HIGH_ASSURANCE  
 **Task class:** T3  
 **Context radius:** C4  
@@ -79,4 +79,13 @@ Technical exact head `86c6e956985e0b51e0f56b3568a3fe9db61fef90` passed Governanc
 Promotion head `bf76c2a451763d7bc361437028e819d2df5f97ba` changed exactly 7 documentation/evidence/governance files and no product/runtime/workflow/dependency/capability file. It passed Governance #264 (**288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #100, including strict security gate, frontend **26/26**, locked Rust audit/tests/check, Windows release build + launch smoke. Promotion HEDS `5216925860` approved the final-approval state mutation with unresolved HIGH/CRITICAL `0`.
 
 ## FINAL APPROVAL STATE
-WO-0020 is **APPROVED FOR SQUASH MERGE / NOT CANONICAL**. The final state mutation must remain documentation/evidence-only and must pass its own exact-head Governance + Desktop Shell + HEDS before PR #54 can be squash-merged. Canonical completion additionally requires product post-merge validation and documentation-only canonical closeout.
+Final reviewed product head `344130199536e33a656d49a365e746610f89e245` passed Governance #265 (**288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #101 (strict security gate, frontend **26/26**, npm audit 0, Rust **13/13**, locked RustSec/check, Windows release build and launch smoke). Final HEDS `5217039528` approved squash merge with unresolved HIGH/CRITICAL `0`.
+
+## CANONICAL CLOSEOUT APPENDIX
+PR #54 was squash-merged with expected-head protection as GitHub-signed product commit `621732c00ba1f3325272dfa1631fddbbabf3dfc4`, parented directly on canonical CP-0019 `e4bc74d1ae6c4054cd98cd34b16e6357f911224c`.
+
+Post-merge on exact product SHA `621732c00ba1f3325272dfa1631fddbbabf3dfc4`:
+- Governance #266 (`35037526420`): SUCCESS — **288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE**.
+- Desktop Shell #102 (`35037526361`): SUCCESS — security gate PASS, frontend **26/26**, npm audit 0, RustSec executed over 432 locked dependencies with 7 warning-class residuals, Rust **13/13**, locked cargo check, Windows release build and launch smoke PASS.
+
+The Work Order product STOP conditions are satisfied. This document records `COMPLETE / CANONICAL` subject only to the documentation-only closeout branch itself passing exact-head Governance + Desktop Shell + HEDS, squash merge and push validation. The original WO scope, exclusions, requirements and authority boundaries above remain immutable and fully applicable.

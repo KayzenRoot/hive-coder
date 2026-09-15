@@ -20,11 +20,11 @@
 17. `HCODER-WO-0017` Runtime Observability Contract & Safe Status Export — DONE / CANONICAL `HCODER-CP-0017`.
 18. `HCODER-WO-0018` Cross-Runtime Status IPC Contract — DONE / CANONICAL `HCODER-CP-0018`.
 19. `HCODER-WO-0019` Runtime Status Sidecar Helper — DONE / CANONICAL `HCODER-CP-0019`. Canonical closeout `main` SHA `e4bc74d1ae6c4054cd98cd34b16e6357f911224c`; push Governance #255 and Desktop Shell #91 SUCCESS.
-20. `HCODER-WO-0020` Desktop Runtime Status Supervisor & System Truth Surface — **PROMOTION CANDIDATE / CP-0020 NOT CANONICAL**. Technical head `86c6e956985e0b51e0f56b3568a3fe9db61fef90` passed Governance #263, Desktop #99 and HEDS `5216871217`; CR-001/CR-002 resolved. Product merge is not yet authorized by this backlog entry.
+20. `HCODER-WO-0020` Desktop Runtime Status Supervisor & System Truth Surface — **DONE / CANONICAL `HCODER-CP-0020` SUBJECT TO CLOSEOUT SEAL**. Product PR #54 squash-merged as GitHub-signed `621732c00ba1f3325272dfa1631fddbbabf3dfc4`; post-merge Governance #266 and Desktop Shell #102 SUCCESS; final HEDS `5217039528`, unresolved HIGH/CRITICAL 0.
 
 ## Product capability roadmap
-- **Desktop Shell/UI:** governed native substrate, explicit trusted workspace opening, truthful bounded workspace/Git/evidence reads, and candidate read-only runtime System Truth through the fixed supervisor boundary.
-- **Runtime Observability:** canonical `RuntimeStatusSnapshot v1` through CP-0017, canonical `hive-runtime-status-ipc-v1` through CP-0018, canonical fixed one-shot sidecar through CP-0019, and CP-0020 candidate fixed desktop supervisor + System Truth consumption.
+- **Desktop Shell/UI:** governed native substrate, explicit trusted workspace opening, truthful bounded workspace/Git/evidence reads, and fixed read-only runtime System Truth through the CP-0020 supervisor boundary.
+- **Runtime Observability:** canonical `RuntimeStatusSnapshot v1` through CP-0017, canonical `hive-runtime-status-ipc-v1` through CP-0018, canonical fixed one-shot sidecar through CP-0019, and canonical fixed desktop supervisor/System Truth observation boundary through CP-0020.
 - **Model Capability Negotiator:** normalize provider/model capabilities and expose only verified capability state.
 - **Hive Skills Engine:** discover, verify, install, version, activate, compose and learn reusable skills under the permission boundary.
 - **Agent Runtime:** long-running task UX over the approved resumable runtime, checkpoints, plans, subagents and evidence.
@@ -36,9 +36,9 @@
 - **Packaging/Updates:** signed Windows packaging, controlled acquisition, update channels, rollback and health diagnostics.
 
 ## Current governed product increment
-Finish `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface` through promotion/final gates, squash product merge, exact-SHA post-merge validation and documentation-only canonical closeout. Do not select a new product Work Order before CP-0020 is fully canonical and a fresh source-check is performed.
+No new product Work Order is selected by CP-0020 closeout. First seal this documentation-only closeout with exact-head Governance + Desktop Shell + HEDS, squash merge and push validation. Then run a fresh source-check against the canonical Project Brain and select only the next objectively NECESSARY increment.
 
-WO-0020 laws:
+CP-0020 laws:
 - runtime status is presentation state, never authorization;
 - wire remains canonical `hive-runtime-status-ipc-v1` with sole `status.snapshot` operation;
 - exactly one fixed Hive-owned supervisor process site is admitted; generic process/shell remains forbidden;
@@ -50,7 +50,7 @@ WO-0020 laws:
 - mutation controls remain disabled and the Permission & Control Plane remains the authority choke point.
 
 ## Open residual work
-- Package/sign/attest the runtime-status sidecar and prove packaged live sidecar E2E; WO-0020 does not claim this.
+- Package/sign/attest the runtime-status sidecar and prove packaged live sidecar E2E; CP-0020 does not claim this.
 - Define future restart/health/process-containment policy only if objectively needed; no generic daemon supervisor is approved.
 - Rust dependency refresh/target-chain analysis for the 7 RustSec warning-class advisories.
 - Stricter desktop CSP than `style-src 'unsafe-inline'`.
