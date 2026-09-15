@@ -3,7 +3,8 @@
 **Risk:** HIGH_ASSURANCE  
 **Base:** `c30531c6d53f252a3a8f965a55f17fe37b58468d`  
 **Technical reviewed head:** `54d19f3acbac6e20f34287d5fe12cc2316d89e23`  
-**Promotion status:** CANDIDATE — final promotion head still requires exact-head Governance + final HEDS
+**Promotion candidate head:** `ef34acc493a10f16ba79459c5d7d9d4b39005e4a`  
+**Promotion status:** APPROVED — approved documentation head still requires its own exact-head Governance before merge
 
 ## Required invariants
 - specialist labels/model names/self-description carry zero competence or permission authority;
@@ -38,17 +39,12 @@ Governance run `34965734345` on exact head `54d19f3acbac6e20f34287d5fe12cc2316d8
 
 Operational docs-only handoff head `2cc3d93a1e01e40e0d73b398da920fda22eeb1be` passed Governance run `34969891281` successfully on exact head. Its delta from the technical reviewed head is the `AGENTS.md` cross-chat continuation handoff rule only.
 
-## Promotion-document delta
-The WO-0014 promotion sequence stages:
-- `DEC-018` as CANDIDATE;
-- `HCODER-CP-0014` as CANDIDATE;
-- WO-0014 Security, Test/Benchmark Plan and Integration Contracts extensions;
-- this Evidence Bundle;
-- `.engineering/checkpoint-deltas/HCODER-WO-0014.md`;
-- already-materialized CR-001..CR-004 records;
-- the already-added `AGENTS.md` continuation handoff rule.
+## Promotion-document evidence
+Promotion candidate `ef34acc493a10f16ba79459c5d7d9d4b39005e4a` passed Governance run `34973660965` on exact head. The `source-pack` Ubuntu job and `control-plane-windows` HIGH_ASSURANCE job both completed successfully with exact-head checkout verification.
 
-This documentation delta must not introduce runtime behavior or claim real-provider evidence. After the final candidate documentation mutation, the resulting exact head must independently pass Governance and final HEDS before DEC-018/CP-0014 can be promoted to APPROVED.
+HEDS promotion review `5210423743` audited `54d19f3acbac6e20f34287d5fe12cc2316d89e23..ef34acc493a10f16ba79459c5d7d9d4b39005e4a` and found 9 commits touching only documentation/governance paths, with no runtime or test mutation. It confirmed DEC-018/CP-0014 did not overclaim real-provider evidence and found no unresolved HIGH/CRITICAL finding.
+
+The final APPROVED documentation mutation after that review must remain documentation-only and independently pass exact-head Governance before merge.
 
 ## Explicit residual boundaries
 - Hosted CI uses deterministic/mock evaluation surfaces and does not prove any real provider/model stack is elite or `DISTINGUISHED`.
