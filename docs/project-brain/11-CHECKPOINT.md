@@ -1,63 +1,55 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** `HCODER-CP-0016`  
-**Status:** APPROVED / CANONICAL  
+**Checkpoint:** `HCODER-CP-0017`  
+**Status:** CANDIDATE — NOT YET CANONICAL  
 **Date:** 2026-09-15  
 **Repository:** `KayzenRoot/hive-coder`  
-**Work Order:** `HCODER-WO-0016` — COMPLETE  
-**Issue:** `#34` — CLOSED / COMPLETED  
-**Product PR:** `#35` — SQUASH MERGED  
-**Base checkpoint:** `HCODER-CP-0015`  
-**Canonical base main SHA:** `330be799eedc3ea2478034039236d4a965f55274`  
-**Final reviewed product head:** `f979d4776cf1eacff9e44dc4a8a5cacca2370fec`  
-**Canonical product merge SHA:** `6483ed36393b02f45e286590e75bc9fb36d48727`  
-**Final HEDS product review:** `5214385916`
+**Work Order:** `HCODER-WO-0017` — PROMOTION CANDIDATE  
+**Issue:** `#41` — OPEN  
+**Product PR:** `#42` — DRAFT / PROMOTION IN PROGRESS  
+**Base checkpoint:** `HCODER-CP-0016`  
+**Canonical base main SHA:** `442733aeae6bd2f615dc0bc4c76dda024455c212`  
+**Technical reviewed head:** `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef`  
+**HEDS technical review:** `5215028501`
 
-## Canonical product state
-- All CP-0005 through CP-0015 permission/security boundaries remain authoritative and unchanged.
-- `DesktopSnapshot v2` provides truthful bounded workspace, Git and Hive evidence presentation state.
-- The desktop exposes the named native commands `get_desktop_snapshot` and `choose_workspace`.
-- `choose_workspace` is initiated by explicit user interaction and accepts no caller-controlled target/path payload.
-- The trusted Rust application layer validates/canonicalizes the selected directory and retains an application-owned session identity. That identity is presentation state, not authorization.
-- Workspace reads are root-contained, bounded and read-only. Parent traversal and static symlink/reparse escapes fail closed.
-- Git branch/detached/HEAD observation reads bounded `.git` metadata directly. No external `git` or generic process is invoked.
-- Hive checkpoint/evidence discovery is bounded. Symlinked evidence cannot silently masquerade as trusted in-root evidence.
-- Physical text reads enforce an actual byte ceiling before UTF-8 decoding.
-- Tauri capability `desktop-read-only` remains restricted to window `main` with zero plugin permissions.
-- No terminal/shell, filesystem mutation, provider credential/model execution, Python runtime spawn, computer-use mutation, remote control, automatic skill activation, purchase/billing authority or Permission & Control Plane expansion is introduced.
+## Candidate product state
+- All CP-0005 through CP-0016 permission/security boundaries remain authoritative and unchanged.
+- `RuntimeStatusSnapshot v1` is a bounded non-authoritative presentation schema for runtime/provider/task/permission state.
+- Operational states are `READY`, `UNKNOWN`, `DISCONNECTED` and `DEGRADED`; unknown/unconnected state is never inferred READY.
+- Runtime/provider/task/permission records carry canonical Hive provenance. Caller-defined provenance labels are rejected.
+- Strict JSON decoding enforces UTF-8, total input ceiling, exact object shapes, duplicate-key rejection, collection/string/counter ceilings and semantic state invariants.
+- Python boolean values cannot masquerade as numeric counters.
+- In-memory status state must use the governed `StatusState` enum before serialization.
+- Provider READY means only bounded concrete catalog observation; it does not verify provider health/authentication and cannot create VERIFIED model-capability evidence.
+- Permission/control-plane private internals are not serialized. When no safe public observer exists, permission presentation remains UNKNOWN/DISCONNECTED with no authoritative-looking counters.
+- Rejected encoding/decoding may map to one fixed generic non-secret DEGRADED snapshot.
+- `tools/runtime/status_snapshot.py` emits one deterministic DISCONNECTED snapshot and performs no provider/model/process/network/mutation action.
+- No new desktop Tauri command, capability permission, subprocess bridge, shell execution, filesystem/Git mutation, model execution, credential access, permission/task mutation or computer-use authority is introduced.
 
-## Corrections
-- `HCODER-WO-0016-CR-001` HIGH: **RESOLVED**. Root-containment/no-follow handling, dangling links, evidence link escape and malformed Git branch references were hardened and regression-tested.
-- `HCODER-WO-0016-CR-002` MEDIUM: **RESOLVED**. Bounded file reads now enforce a physical `max_bytes + 1` ceiling before UTF-8 decode.
+## Correction
+`HCODER-WO-0017-CR-001` MEDIUM: **RESOLVED IN TECHNICAL CANDIDATE**. HEDS semantic pre-review found incomplete provenance, missing strict decoder semantics, boolean-as-integer acceptance and runtime type/provenance ambiguity. The reviewed head hardens all of these without expanding authority.
 
-## Pre-merge proof
-Final exact product head `f979d4776cf1eacff9e44dc4a8a5cacca2370fec`:
-- Governance `35008893606` (#214): SUCCESS; Ubuntu **256/256 PASS**; Windows HIGH_ASSURANCE PASS.
-- Desktop Shell `35008894044` (#50): SUCCESS; security gate PASS; TypeScript PASS; Vitest **12/12 PASS**; Vite production build PASS; npm audit **0 vulnerabilities**; RustSec scanned **432** locked crate dependencies with no blocking vulnerability and **7 allowed warning-class advisories**; Windows Rust **11/11 PASS**; `cargo check --locked` PASS; Tauri release build PASS; `DESKTOP_LAUNCH_SMOKE=PASS`.
-- HEDS final review `5214385916`: **APPROVED FOR SQUASH MERGE**, unresolved HIGH/CRITICAL **0**.
-- Final approval delta from reviewed promotion state was documentation/evidence/governance only. Temporary approval-applier files self-deleted and are absent from the merged product tree.
+## Technical proof
+Exact technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef`:
+- Governance `35015244682` (#225): **SUCCESS**; Ubuntu **273/273 PASS**; Windows HIGH_ASSURANCE **56/56 PASS**.
+- Desktop Shell `35015244727` (#61): **SUCCESS**; desktop security gate PASS; TypeScript PASS; Vitest **12/12 PASS**; Vite production build PASS; npm audit **0 vulnerabilities**; RustSec scanned **432** locked crates with no blocking vulnerability and **7 warning-class advisories**; Windows Rust **11/11 PASS**; `cargo check --locked` PASS; Tauri release build PASS; `DESKTOP_LAUNCH_SMOKE=PASS`.
+- HEDS technical review `5215028501`: **APPROVED FOR PROMOTION CANDIDATE**, unresolved HIGH/CRITICAL **0**.
 
-## Merge proof
-- PR `#35` squash-merged successfully.
-- GitHub-signed merge SHA: `6483ed36393b02f45e286590e75bc9fb36d48727`.
-- Issue `#34` closed automatically as completed.
-
-## Post-merge proof on canonical product SHA
-Exact `main` product SHA `6483ed36393b02f45e286590e75bc9fb36d48727`:
-- Governance `35009304333` (#215): **SUCCESS**; Ubuntu source-pack PASS and Windows HIGH_ASSURANCE PASS.
-- Desktop Shell `35009304230` (#51): **SUCCESS**; desktop-web PASS and desktop-windows PASS including RustSec audit, locked Rust tests/check, Tauri Windows release build and `DESKTOP_LAUNCH_SMOKE=PASS`.
-
-## Decision
-`DEC-020 — Trusted Workspace & Git Read Boundary` is now canonical with CP-0016. It grants no mutation authority.
+## Candidate decision
+`DEC-021 — Runtime Observability Presentation Contract` is staged by WO-0017. It is not canonical until the final approval path completes.
 
 ## Explicit residual boundaries
-- Native folder-picker click/select is not yet physically automated E2E.
-- Unix-only link regressions are not exercised by the Windows desktop job; Windows reparse handling has no direct reparse fixture yet.
-- Arbitrarily concurrent external workspace mutation is not transactionally frozen. This read-only residual cannot be inherited by future privileged workspace/file operations without stronger handle-relative/no-follow capability I/O.
-- Linked worktrees whose `.git` is an external pointer intentionally report DEGRADED.
-- Seven RustSec warning-class transitive advisories remain dependency debt; the graph is not claimed warning-free.
-- Live runtime/provider/permission adapters, write/terminal paths, installer/signing/updater, screenshot/pixel fidelity and full native interaction E2E remain unapproved.
+- No live desktop-to-Python runtime-status transport is approved by CP-0017 candidate.
+- No desktop child-process launch, helper identity/authenticity or sidecar lifecycle is approved here.
+- Provider READY is not network-health, authentication or capability-certification evidence.
+- Permission live counts remain unobserved until a safe public observer exists.
+- `RuntimeStatusSnapshot` is presentation data and cannot authorize any operation.
+- Seven RustSec warning-class transitive advisories remain dependency debt.
+- Installer/signing/updater, full native interaction E2E, visual screenshot/pixel fidelity and accessibility automation remain unproven.
 - Final Hive Coder project license remains undecided.
 
-## Next governed increment
-`HCODER-WO-0017 — Runtime Observability Contract & Safe Status Export` is the next staged NECESSARY increment. Its historical technical evidence may be reused only as supporting evidence; before promotion it must be reconciled onto canonical CP-0016, rerun exact-head gates, receive HEDS on the reconciled delta, and remain presentation-only/non-authoritative.
+## Promotion remaining
+CP-0017 remains **CANDIDATE / NOT CANONICAL**. This documentation/evidence promotion head must pass fresh exact-head Governance + Desktop Shell and promotion HEDS. After that, a final approval mutation must mark DEC-021 and CP-0017 approved for squash merge, then pass fresh exact-head gates/HEDS, squash merge, and post-merge Governance + Desktop Shell on `main` before canonical closeout.
+
+## Next governed increment after canonical CP-0017
+`HCODER-WO-0018 — Cross-Runtime Status IPC Contract` may be reconstructed from its historical staged implementation only after CP-0017 is canonical. It must consume the strict canonical `RuntimeStatusSnapshot v1` contract, not the older pre-correction parser assumptions, and must not inherit divergent pre-squash history.
