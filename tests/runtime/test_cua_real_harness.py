@@ -4,7 +4,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from hive_runtime.cua import CUA_MCP_PROTOCOL_VERSION, CuaDiscovery, CuaTool
+from hive_runtime.cua import CUA_MCP_PROTOCOL_VERSION, CuaAdapter, CuaDiscovery, CuaTool
 from hive_runtime.cua_harness import CuaContractResolver, RealCuaWindowsHarness
 from hive_runtime.errors import AuthorizationDenied, RpcProtocolError
 
@@ -15,6 +15,18 @@ def tool(name, caps, props, *, read_only=False):
 
 def discovery(*tools):
     return CuaDiscovery(protocol_version=CUA_MCP_PROTOCOL_VERSION, supported_versions=(CUA_MCP_PROTOCOL_VERSION,), server_name="cua-driver", tool_names=tuple(t.name for t in tools), raw_capabilities={"tools": {}}, tools=tuple(tools))
+
+
+class CuaInventoryTests(unittest.TestCase):
+    def test_canonical_tools_list_preserves_schema_and_capabilities(self):
+        result = {"resultType": "complete", "tools": [{"name": "click", "inputSchema": {"type": "object", "properties": {"x": {}, "y": {}}}, "capabilities": ["input.pointer.click.left"], "annotations": {"readOnlyHint": False}}]}
+        tools = CuaAdapter._validate_tools_list(result)
+        self.assertEqual(tools[0].name, "click")
+        self.assertIn("input.pointer.click.left", tools[0].capabilities)
+
+    def test_incomplete_tool_metadata_fails_closed(self):
+        with self.assertRaises(RpcProtocolError):
+            CuaAdapter._validate_tools_list({"resultType": "complete", "tools": [{"name": "click"}]})
 
 
 class CuaContractResolverTests(unittest.TestCase):
