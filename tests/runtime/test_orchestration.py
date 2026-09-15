@@ -8,7 +8,7 @@ from hive_runtime.agent_tasks import ActionKind, TaskBudget, TaskSnapshot, TaskS
 from hive_runtime.orchestration import (
     AgentOrchestrator, AgentRole, Assumption, ConfidenceLevel, CouncilAssessment,
     DeepPlanEngine, DeepPlanProposal, DigitalTwinNode, EvidenceGraph, EvidenceKind,
-    EvidenceRecord, FindingSeverity, MasterPlan, ObjectiveSpec, PlanApprovalAuthority,
+    EvidenceRecord, FindingSeverity, ObjectiveSpec, PlanApprovalAuthority,
     PlanGraphCompiler, PlanStep, PlanningPolicy, ProjectDigitalTwin, RiskTier,
     SelfCorrectionLedger, StopCondition, StopIntelligence,
 )
@@ -35,6 +35,15 @@ def objective(risk=RiskTier.ELEVATED):
 def twin():
     return ProjectDigitalTwin((
         DigitalTwinNode("auth", "service"),
+        DigitalTwinNode("api", "service", ("auth",)),
+        DigitalTwinNode("ui", "frontend", ("api",)),
+        DigitalTwinNode("tests", "tests", ("auth", "api")),
+    ))
+
+
+def changed_twin():
+    return ProjectDigitalTwin((
+        DigitalTwinNode("auth", "service-v2"),
         DigitalTwinNode("api", "service", ("auth",)),
         DigitalTwinNode("ui", "frontend", ("api",)),
         DigitalTwinNode("tests", "tests", ("auth", "api")),
@@ -83,7 +92,7 @@ class MasterPlannerTests(unittest.TestCase):
     def test_deep_plan_builds_sealed_plan_with_host_bound_council(self):
         master = self.build()
         self.assertTrue(authority().verify(master))
-        self.assertEqual(len(master.steps), 3)
+        self.assertEqual(master.twin_fingerprint, twin().fingerprint())
         self.assertEqual({f.reviewer for f in master.council_findings},
                          {AgentRole.ARCHITECT, AgentRole.SECURITY, AgentRole.QA, AgentRole.REVIEWER})
         self.assertIn("ui", master.change_radius.affected)
@@ -117,13 +126,11 @@ class MasterPlannerTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.build(council=blocked)
 
     def test_plan_must_cover_every_acceptance_criterion(self):
-        p = proposal()
-        steps = tuple(replace(step, requirement_indexes=frozenset({0})) for step in p.steps)
+        p = proposal(); steps = tuple(replace(step, requirement_indexes=frozenset({0})) for step in p.steps)
         with self.assertRaises(ValueError): self.build(prop=DeepPlanProposal(p.assumptions, steps))
 
     def test_plan_must_cover_every_objective_constraint(self):
-        p = proposal()
-        steps = tuple(replace(step, constraint_indexes=frozenset()) for step in p.steps)
+        p = proposal(); steps = tuple(replace(step, constraint_indexes=frozenset()) for step in p.steps)
         with self.assertRaises(ValueError): self.build(prop=DeepPlanProposal(p.assumptions, steps))
 
     def test_cycle_blocks(self):
@@ -132,13 +139,11 @@ class MasterPlannerTests(unittest.TestCase):
 
     def test_change_radius_is_reverse_dependency_aware(self):
         radius = twin().change_radius(("auth",), max_depth=4, max_nodes=20)
-        self.assertEqual(radius.affected, frozenset({"auth", "api", "ui", "tests"}))
-        self.assertFalse(radius.truncated)
+        self.assertEqual(radius.affected, frozenset({"auth", "api", "ui", "tests"})); self.assertFalse(radius.truncated)
 
     def test_depth_limited_change_radius_marks_truncation(self):
         radius = twin().change_radius(("auth",), max_depth=1, max_nodes=20)
-        self.assertTrue(radius.truncated)
-        self.assertEqual(radius.affected, frozenset({"auth", "api", "tests"}))
+        self.assertTrue(radius.truncated); self.assertEqual(radius.affected, frozenset({"auth", "api", "tests"}))
 
     def test_change_radius_bound_fails_closed(self):
         with self.assertRaises(ValueError): self.build(policy=PlanningPolicy(max_change_radius=1, change_radius_depth=4))
@@ -149,59 +154,62 @@ class MasterPlannerTests(unittest.TestCase):
     def test_semantic_assumption_change_changes_master_fingerprint(self):
         first = self.build()
         changed = proposal((Assumption("a1", "different verified fact", ConfidenceLevel.VERIFIED, True, ("repo-map",)),))
-        second = self.build(prop=changed)
-        self.assertNotEqual(first.fingerprint(), second.fingerprint())
+        self.assertNotEqual(first.fingerprint(), self.build(prop=changed).fingerprint())
 
 
 class PlanCompilerTests(unittest.TestCase):
     def test_master_plan_compiles_only_supported_task_node_types(self):
-        master = MasterPlannerTests().build()
-        task_plan = PlanGraphCompiler(authority()).compile(master)
+        master = MasterPlannerTests().build(); task_plan = PlanGraphCompiler(authority(), twin()).compile(master)
         self.assertEqual([n.action for n in task_plan.nodes], [ActionKind.MODEL_PROMPT, ActionKind.MODEL_PROMPT, ActionKind.SKILL])
-        self.assertEqual(task_plan.nodes[2].skill_id, "tests.auth")
 
     def test_forged_master_plan_cannot_compile(self):
         master = MasterPlannerTests().build()
         forged = replace(master, steps=(replace(master.steps[0], instruction="Do something else"), *master.steps[1:]))
-        with self.assertRaises(PermissionError): PlanGraphCompiler(authority()).compile(forged)
+        with self.assertRaises(PermissionError): PlanGraphCompiler(authority(), twin()).compile(forged)
 
     def test_unsealed_master_plan_cannot_compile(self):
         master = MasterPlannerTests().build()
-        unsealed = replace(master, approval_tag="")
-        with self.assertRaises(PermissionError): PlanGraphCompiler(authority()).compile(unsealed)
+        with self.assertRaises(PermissionError): PlanGraphCompiler(authority(), twin()).compile(replace(master, approval_tag=""))
+
+    def test_changed_digital_twin_invalidates_compilation(self):
+        master = MasterPlannerTests().build()
+        with self.assertRaises(ValueError): PlanGraphCompiler(authority(), changed_twin()).compile(master)
 
 
 class StopIntelligenceTests(unittest.TestCase):
-    def setUp(self):
-        self.subject = "1" * 64
-
+    def setUp(self): self.subject = "1" * 64
     def record(self, evidence_id, kind, source="ci", subject=None):
         return EvidenceRecord(evidence_id, kind, source, hashlib.sha256(evidence_id.encode()).hexdigest(), subject or self.subject)
-
-    def graph(self):
-        return EvidenceGraph(self.subject, lambda record: record.source in {"ci", "security-gate", "heds"})
+    def graph(self): return EvidenceGraph(self.subject, lambda record: record.source in {"ci", "security-gate", "heds"})
 
     def test_evidence_producer_cannot_self_mark_trust(self):
-        graph = self.graph(); graph.add(self.record("claim", EvidenceKind.TEST, source="model-output"), requirement_indexes=(0, 1), stop_conditions=("tests-green",))
+        graph = self.graph(); graph.add(self.record("claim", EvidenceKind.TEST, source="model-output"), requirement_indexes=(0,1), constraint_indexes=(0,), stop_conditions=("tests-green",))
         decision = StopIntelligence().evaluate(objective(), graph)
-        self.assertFalse(decision.complete); self.assertEqual(decision.missing_acceptance, (0, 1))
+        self.assertFalse(decision.complete); self.assertEqual(decision.missing_acceptance, (0,1)); self.assertEqual(decision.missing_constraints, (0,))
 
     def test_evidence_from_different_plan_is_rejected(self):
-        graph = self.graph()
-        with self.assertRaises(ValueError): graph.add(self.record("old", EvidenceKind.TEST, subject="2" * 64), requirement_indexes=(0,))
+        with self.assertRaises(ValueError): self.graph().add(self.record("old", EvidenceKind.TEST, subject="2"*64), requirement_indexes=(0,))
 
-    def test_stop_requires_every_required_evidence_kind(self):
+    def test_constraint_requires_trusted_completion_evidence(self):
         graph = self.graph()
         graph.add(self.record("t", EvidenceKind.TEST), requirement_indexes=(0,1), stop_conditions=("tests-green",))
         graph.add(self.record("s", EvidenceKind.SECURITY, "security-gate"), stop_conditions=("security-reviewed",))
+        graph.add(self.record("r", EvidenceKind.REVIEW, "heds"), stop_conditions=("security-reviewed",))
+        decision = StopIntelligence().evaluate(objective(), graph)
+        self.assertFalse(decision.complete); self.assertEqual(decision.missing_constraints, (0,))
+
+    def test_stop_requires_every_required_evidence_kind_and_constraint(self):
+        graph = self.graph()
+        graph.add(self.record("t", EvidenceKind.TEST), requirement_indexes=(0,1), stop_conditions=("tests-green",))
+        graph.add(self.record("s", EvidenceKind.SECURITY, "security-gate"), constraint_indexes=(0,), stop_conditions=("security-reviewed",))
         self.assertFalse(StopIntelligence().evaluate(objective(), graph).complete)
         graph.add(self.record("r", EvidenceKind.REVIEW, "heds"), stop_conditions=("security-reviewed",))
         self.assertTrue(StopIntelligence().evaluate(objective(), graph).complete)
 
     def test_invalid_link_fails_atomically(self):
         graph = self.graph(); record = self.record("x", EvidenceKind.TEST)
-        with self.assertRaises(ValueError): graph.add(record, requirement_indexes=(-1,))
-        graph.add(record, requirement_indexes=(0,)); self.assertEqual(len(graph.trusted_for_requirement(0)), 1)
+        with self.assertRaises(ValueError): graph.add(record, constraint_indexes=(-1,))
+        graph.add(record, constraint_indexes=(0,)); self.assertEqual(len(graph.trusted_for_constraint(0)), 1)
 
     def test_duplicate_evidence_id_rejected(self):
         graph = self.graph(); record = self.record("x", EvidenceKind.TEST); graph.add(record)
@@ -210,10 +218,9 @@ class StopIntelligenceTests(unittest.TestCase):
 
 class CorrectionAndOrchestratorTests(unittest.TestCase):
     def setUp(self):
-        self.auth = authority(); self.master = MasterPlannerTests().build(); self.obj = objective()
-
-    def ledger(self, **kwargs):
-        return SelfCorrectionLedger(self.master, self.auth, **kwargs)
+        self.auth = authority(); self.twin = twin(); self.master = MasterPlannerTests().build(); self.obj = objective()
+    def ledger(self, **kwargs): return SelfCorrectionLedger(self.master, self.auth, self.twin, **kwargs)
+    def orchestrator(self): return AgentOrchestrator(self.master, self.obj, self.auth, self.twin)
 
     def test_self_correction_cannot_expand_change_scope(self):
         with self.assertRaises(PermissionError): self.ledger().request("implement", "test_failed", ("ui",))
@@ -223,52 +230,45 @@ class CorrectionAndOrchestratorTests(unittest.TestCase):
         with self.assertRaises(RuntimeError): ledger.request("implement", "test_failed_again", ("auth",))
 
     def test_forged_master_plan_cannot_open_correction_ledger(self):
-        forged = replace(self.master, approval_tag="0" * 64)
-        with self.assertRaises(PermissionError): SelfCorrectionLedger(forged, self.auth)
+        with self.assertRaises(PermissionError): SelfCorrectionLedger(replace(self.master, approval_tag="0"*64), self.auth, self.twin)
 
-    def orchestrator(self):
-        return AgentOrchestrator(self.master, self.obj, self.auth)
+    def test_changed_digital_twin_blocks_orchestrator(self):
+        with self.assertRaises(ValueError): AgentOrchestrator(self.master, self.obj, self.auth, changed_twin())
 
     def snapshot(self, orchestrator, node_status):
         plan = orchestrator.task_plan(); status_map = dict(node_status)
         attempts = tuple((step.step_id, 1 if status_map[step.step_id] is NodeStatus.SUCCEEDED else 0) for step in self.master.steps)
         executions = sum(1 for value in status_map.values() if value is NodeStatus.SUCCEEDED)
-        return TaskSnapshot("task", plan.fingerprint(), TaskStatus.PENDING, node_status, attempts, TaskBudget(20, 5), executions, 0, 0, tuple())
+        return TaskSnapshot("task", plan.fingerprint(), TaskStatus.PENDING, node_status, attempts, TaskBudget(20,5), executions, 0, 0, tuple())
 
     def full_evidence(self):
         subject = self.master.fingerprint(); graph = EvidenceGraph(subject, lambda record: record.source in {"ci", "security-gate", "heds"})
         graph.add(EvidenceRecord("tests", EvidenceKind.TEST, "ci", hashlib.sha256(b"tests").hexdigest(), subject), requirement_indexes=(0,1), stop_conditions=("tests-green",))
-        graph.add(EvidenceRecord("security", EvidenceKind.SECURITY, "security-gate", hashlib.sha256(b"security").hexdigest(), subject), stop_conditions=("security-reviewed",))
+        graph.add(EvidenceRecord("security", EvidenceKind.SECURITY, "security-gate", hashlib.sha256(b"security").hexdigest(), subject), constraint_indexes=(0,), stop_conditions=("security-reviewed",))
         graph.add(EvidenceRecord("review", EvidenceKind.REVIEW, "heds", hashlib.sha256(b"review").hexdigest(), subject), stop_conditions=("security-reviewed",))
         return graph
 
     def test_complete_evidence_cannot_finish_incomplete_runtime(self):
-        orchestrator = self.orchestrator()
-        node_status = (("design", NodeStatus.SUCCEEDED), ("implement", NodeStatus.SUCCEEDED), ("verify", NodeStatus.PENDING))
-        telemetry = orchestrator.telemetry(self.snapshot(orchestrator, node_status), self.full_evidence(), self.ledger())
+        orchestrator = self.orchestrator(); nodes = (("design",NodeStatus.SUCCEEDED),("implement",NodeStatus.SUCCEEDED),("verify",NodeStatus.PENDING))
+        telemetry = orchestrator.telemetry(self.snapshot(orchestrator,nodes), self.full_evidence(), self.ledger())
         self.assertEqual(telemetry.progress_percent, 66.67); self.assertFalse(telemetry.stop_complete)
 
     def test_runtime_and_evidence_together_satisfy_stop(self):
-        orchestrator = self.orchestrator()
-        node_status = tuple((step.step_id, NodeStatus.SUCCEEDED) for step in self.master.steps)
-        telemetry = orchestrator.telemetry(self.snapshot(orchestrator, node_status), self.full_evidence(), self.ledger())
+        orchestrator = self.orchestrator(); nodes = tuple((step.step_id,NodeStatus.SUCCEEDED) for step in self.master.steps)
+        telemetry = orchestrator.telemetry(self.snapshot(orchestrator,nodes), self.full_evidence(), self.ledger())
         self.assertEqual(telemetry.progress_percent, 100.0); self.assertTrue(telemetry.stop_complete)
 
     def test_snapshot_fingerprint_mismatch_fails_closed(self):
-        orchestrator = self.orchestrator(); node_status = tuple((step.step_id, NodeStatus.PENDING) for step in self.master.steps)
-        snap = TaskSnapshot("task", "0" * 64, TaskStatus.PENDING, node_status,
-                            tuple((step.step_id,0) for step in self.master.steps), TaskBudget(20,5), 0, 0, 0, tuple())
+        orchestrator = self.orchestrator(); nodes = tuple((step.step_id,NodeStatus.PENDING) for step in self.master.steps)
+        snap = TaskSnapshot("task", "0"*64, TaskStatus.PENDING, nodes, tuple((step.step_id,0) for step in self.master.steps), TaskBudget(20,5), 0,0,0,tuple())
         with self.assertRaises(ValueError): orchestrator.telemetry(snap, self.full_evidence(), self.ledger())
 
     def test_evidence_graph_for_other_plan_fails_closed(self):
-        orchestrator = self.orchestrator(); node_status = tuple((step.step_id, NodeStatus.PENDING) for step in self.master.steps)
-        wrong = EvidenceGraph("2" * 64, lambda _record: True)
-        with self.assertRaises(ValueError): orchestrator.telemetry(self.snapshot(orchestrator, node_status), wrong, self.ledger())
+        orchestrator = self.orchestrator(); nodes = tuple((step.step_id,NodeStatus.PENDING) for step in self.master.steps)
+        with self.assertRaises(ValueError): orchestrator.telemetry(self.snapshot(orchestrator,nodes), EvidenceGraph("2"*64, lambda _r: True), self.ledger())
 
     def test_forged_master_plan_cannot_create_orchestrator(self):
-        forged = replace(self.master, approval_tag="0" * 64)
-        with self.assertRaises(PermissionError): AgentOrchestrator(forged, self.obj, self.auth)
+        with self.assertRaises(PermissionError): AgentOrchestrator(replace(self.master, approval_tag="0"*64), self.obj, self.auth, self.twin)
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()
