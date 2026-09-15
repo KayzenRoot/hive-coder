@@ -9,7 +9,7 @@ import hashlib
 import hmac
 from dataclasses import dataclass, replace
 from enum import Enum
-from typing import Iterable, Mapping
+from typing import Callable, Iterable, Mapping
 
 from .expert_common import BenchmarkDimension, CompetenceLevel, _SAFE_ID, _SAFE_TOKEN, _SHA256, _sha
 from .expert_context import CodeTruthMap
@@ -131,13 +131,13 @@ class ShadowBenchFactory:
                 f"rank|{self.VERSION}|{epoch_label}|{snapshot_digest}|{dimension.value}|{fact.fingerprint()}"
             ),
         )
-        mutation_options = self._MUTATIONS[dimension]
+        mutations = self._MUTATIONS[dimension]
         cases: list[ShadowBenchCase] = []
         for fact in ranked[:count]:
-            mutation_selector = int(self._hmac(
+            selector = int(self._hmac(
                 f"mutation|{epoch_label}|{snapshot_digest}|{dimension.value}|{fact.fact_id}"
             )[:8], 16)
-            mutation = mutation_options[mutation_selector % len(mutation_options)]
+            mutation = mutations[selector % len(mutations)]
             lineage_root = _sha({
                 "factory": self.VERSION,
                 "snapshot": snapshot_digest,
@@ -157,13 +157,13 @@ class ShadowBenchFactory:
             oracle_digest = self._hmac(
                 f"oracle|{self.VERSION}|{epoch_label}|{snapshot_digest}|{dimension.value}|{mutation}|{fact.fingerprint()}|{nonce}"
             )
-            case_digest = self._hmac(f"case|{epoch_label}|{lineage_root}|{mutation}|{prompt_digest}|{oracle_digest}|{nonce}")
+            case_digest = self._hmac(
+                f"case|{epoch_label}|{lineage_root}|{mutation}|{prompt_digest}|{oracle_digest}|{nonce}"
+            )
             case = ShadowBenchCase(
-                case_id=f"shadow.{case_digest[:28]}", lineage_id=lineage_id,
-                lineage_root=lineage_root, factory_version=self.VERSION, epoch_label=epoch_label,
-                repository_snapshot_digest=snapshot_digest, dimension=dimension,
-                mutation_kind=mutation, source_fact_ids=(fact.fact_id,), prompt_digest=prompt_digest,
-                oracle_digest=oracle_digest, hidden_nonce_digest=nonce,
+                f"shadow.{case_digest[:28]}", lineage_id, lineage_root, self.VERSION,
+                epoch_label, snapshot_digest, dimension, mutation, (fact.fact_id,),
+                prompt_digest, oracle_digest, nonce,
             )
             case.validate()
             cases.append(case)
@@ -176,14 +176,18 @@ class ShadowBenchFactory:
             return False
         if case.factory_version != self.VERSION or len(case.source_fact_ids) != 1:
             return False
-        fact_id = case.source_fact_ids[0]
         try:
-            fact = next(item for item in truth.query((), verified_only=True) if item.fact_id == fact_id)
+            fact = next(
+                item for item in truth.query((), verified_only=True)
+                if item.fact_id == case.source_fact_ids[0]
+            )
         except StopIteration:
             return False
         expected_root = _sha({
-            "factory": self.VERSION, "snapshot": case.repository_snapshot_digest,
-            "dimension": case.dimension.value, "source_fact": fact.fact_id,
+            "factory": self.VERSION,
+            "snapshot": case.repository_snapshot_digest,
+            "dimension": case.dimension.value,
+            "source_fact": fact.fact_id,
         })
         if not hmac.compare_digest(case.lineage_root, expected_root):
             return False
@@ -193,9 +197,12 @@ class ShadowBenchFactory:
         if not hmac.compare_digest(case.hidden_nonce_digest, expected_nonce):
             return False
         expected_prompt = _sha({
-            "technology": self.VERSION, "snapshot": case.repository_snapshot_digest,
-            "dimension": case.dimension.value, "mutation": case.mutation_kind,
-            "source_fact": fact.fact_id, "source_fingerprint": fact.fingerprint(),
+            "technology": self.VERSION,
+            "snapshot": case.repository_snapshot_digest,
+            "dimension": case.dimension.value,
+            "mutation": case.mutation_kind,
+            "source_fact": fact.fact_id,
+            "source_fingerprint": fact.fingerprint(),
         })
         if not hmac.compare_digest(case.prompt_digest, expected_prompt):
             return False
@@ -211,15 +218,20 @@ class ShadowBenchFactory:
 
 
 class BenchmarkNoveltyLedger:
-    """Rejects ID churn, replay and trivial variants over the same source lineage."""
+    """Records only host-verified cases and rejects replay/trivial lineage variants."""
 
-    def __init__(self) -> None:
+    def __init__(self, case_verifier: Callable[[ShadowBenchCase], bool]) -> None:
+        if not callable(case_verifier):
+            raise TypeError("benchmark novelty ledger requires a trusted case verifier")
+        self._case_verifier = case_verifier
         self._case_ids: set[str] = set()
         self._semantic: set[str] = set()
         self._lineage_roots: set[str] = set()
 
     def add(self, case: ShadowBenchCase) -> None:
         case.validate()
+        if self._case_verifier(case) is not True:
+            raise PermissionError("unverified ShadowBench case cannot enter novelty ledger")
         semantic = case.semantic_fingerprint()
         if case.case_id in self._case_ids:
             raise ValueError("duplicate ShadowBench case id")
@@ -247,7 +259,9 @@ class CounterfactualProbe:
     def validate(self) -> None:
         if not _SAFE_ID.fullmatch(self.probe_id) or not _SAFE_ID.fullmatch(self.changed_fact_id):
             raise ValueError("invalid counterfactual probe identity")
-        if not self.expected_drift_invariants or any(not _SAFE_ID.fullmatch(item) for item in self.expected_drift_invariants):
+        if not self.expected_drift_invariants or any(
+            not _SAFE_ID.fullmatch(item) for item in self.expected_drift_invariants
+        ):
             raise ValueError("counterfactual probe requires expected invariants")
         for digest in (self.repository_snapshot_digest, self.replacement_object_digest, self.probe_digest):
             if not _SHA256.fullmatch(digest):
@@ -267,8 +281,10 @@ class CounterfactualForge:
         if not invariants:
             raise ValueError("counterfactual fact is not bound to a mined invariant")
         payload = {
-            "technology": self.VERSION, "snapshot": repository_snapshot_digest,
-            "fact": fact_id, "replacement": replacement_object_digest,
+            "technology": self.VERSION,
+            "snapshot": repository_snapshot_digest,
+            "fact": fact_id,
+            "replacement": replacement_object_digest,
             "expected_drift": list(invariants),
         }
         digest = _sha(payload)
@@ -303,7 +319,9 @@ class CertificationEvidence:
                 raise ValueError("certification evidence digests must be sha256")
         if self.observed_epoch < 0:
             raise ValueError("invalid certification epoch")
-        if not self.benchmark_families or any(not _SAFE_TOKEN.fullmatch(item) for item in self.benchmark_families):
+        if not self.benchmark_families or any(
+            not _SAFE_TOKEN.fullmatch(item) for item in self.benchmark_families
+        ):
             raise ValueError("certification evidence requires benchmark families")
         if len(self.benchmark_families) != len(set(self.benchmark_families)):
             raise ValueError("duplicate certification benchmark family")
@@ -311,10 +329,14 @@ class CertificationEvidence:
     def fingerprint(self) -> str:
         self.validate_unsigned()
         return _sha({
-            "id": self.evidence_id, "profile": self.profile_fingerprint,
-            "standard": self.standard_fingerprint, "report": self.competence_report_fingerprint,
-            "snapshot": self.repository_snapshot_digest, "epoch": self.observed_epoch,
-            "families": list(self.benchmark_families), "passed": self.passed,
+            "id": self.evidence_id,
+            "profile": self.profile_fingerprint,
+            "standard": self.standard_fingerprint,
+            "report": self.competence_report_fingerprint,
+            "snapshot": self.repository_snapshot_digest,
+            "epoch": self.observed_epoch,
+            "families": list(self.benchmark_families),
+            "passed": self.passed,
         })
 
 
@@ -515,10 +537,14 @@ class OutcomeRecord:
     def fingerprint(self) -> str:
         self.validate_unsigned()
         return _sha({
-            "id": self.outcome_id, "profile": self.profile_fingerprint,
-            "plan": self.master_plan_fingerprint, "snapshot": self.repository_snapshot_digest,
-            "epoch": self.observed_epoch, "success": self.success,
-            "regressions": self.regressions, "rollbacks": self.rollbacks,
+            "id": self.outcome_id,
+            "profile": self.profile_fingerprint,
+            "plan": self.master_plan_fingerprint,
+            "snapshot": self.repository_snapshot_digest,
+            "epoch": self.observed_epoch,
+            "success": self.success,
+            "regressions": self.regressions,
+            "rollbacks": self.rollbacks,
             "evidence": self.evidence_digest,
         })
 
