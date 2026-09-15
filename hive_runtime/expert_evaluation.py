@@ -144,6 +144,13 @@ class CompetenceStandard:
     min_lower_bound: float
     min_independent_suites: int = 2
 
+    _LEVEL_FLOORS = {
+        CompetenceLevel.QUALIFIED: (10, 0.50, 1),
+        CompetenceLevel.SENIOR: (20, 0.65, 2),
+        CompetenceLevel.PRINCIPAL: (30, 0.75, 2),
+        CompetenceLevel.DISTINGUISHED: (40, 0.80, 2),
+    }
+
     def validate(self) -> None:
         if not self.required_dimensions:
             raise ValueError("competence standard requires dimensions")
@@ -153,12 +160,30 @@ class CompetenceStandard:
             raise ValueError("invalid competence lower bound")
         if not 1 <= self.min_independent_suites <= 20:
             raise ValueError("invalid independent-suite floor")
+        sample_floor, confidence_floor, suite_floor = self._LEVEL_FLOORS[self.level]
+        if self.min_samples_per_dimension < sample_floor:
+            raise ValueError(f"{self.level.value} sample floor cannot be weakened")
+        if self.min_lower_bound < confidence_floor:
+            raise ValueError(f"{self.level.value} confidence floor cannot be weakened")
+        if self.min_independent_suites < suite_floor:
+            raise ValueError(f"{self.level.value} suite-diversity floor cannot be weakened")
+
+    def fingerprint(self) -> str:
+        self.validate()
+        return _sha({
+            "level": self.level.value,
+            "dimensions": sorted(item.value for item in self.required_dimensions),
+            "min_samples_per_dimension": self.min_samples_per_dimension,
+            "min_lower_bound": self.min_lower_bound,
+            "min_independent_suites": self.min_independent_suites,
+        })
 
 
 @dataclass(frozen=True)
 class CompetenceReport:
     agent_id: str
     profile_fingerprint: str
+    standard_fingerprint: str
     level: CompetenceLevel
     scores: tuple[DimensionScore, ...]
     passed: bool
@@ -168,6 +193,7 @@ class CompetenceReport:
         return _sha({
             "agent": self.agent_id,
             "profile": self.profile_fingerprint,
+            "standard": self.standard_fingerprint,
             "level": self.level.value,
             "passed": self.passed,
             "blocking": list(self.blocking_codes),
@@ -222,7 +248,8 @@ class ExperienceRouter:
                 blocking.append(f"{prefix}:policy_violation")
             if score.tamper_events:
                 blocking.append(f"{prefix}:tamper_event")
-        return CompetenceReport(profile.agent_id, profile.fingerprint(), standard.level, scores, not blocking, tuple(blocking))
+        return CompetenceReport(profile.agent_id, profile.fingerprint(), standard.fingerprint(),
+                                standard.level, scores, not blocking, tuple(blocking))
 
     def route(self, profiles: Iterable[AgentProfile], capsules: Mapping[str, ExpertiseCapsule],
               role: AgentRole, standard: CompetenceStandard) -> tuple[AgentProfile, CompetenceReport]:
@@ -245,8 +272,11 @@ class ExperienceRouter:
             total_samples = sum(score.samples for score in report.scores)
             return (min(lowers), sum(lowers) / len(lowers), total_samples, profile.agent_id)
 
-        candidates.sort(key=route_key, reverse=True)
+        candidates.sort(key=lambda item: (
+            -route_key(item)[0], -route_key(item)[1], -route_key(item)[2], item[0].agent_id
+        ))
         return candidates[0]
+
 
 def required_dimensions_for_role(role: AgentRole) -> frozenset[BenchmarkDimension]:
     common = {BenchmarkDimension.REPOSITORY_REASONING, BenchmarkDimension.TOOL_RELIABILITY,
