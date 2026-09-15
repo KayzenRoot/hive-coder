@@ -96,7 +96,7 @@ function booleanField(value: unknown, field: string): boolean {
 }
 
 function boundedInteger(value: unknown, field: string, max: number): number {
-  if (!Number.isSafeInteger(value) || typeof value !== "number" || value < 0 || value > max) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > max) {
     throw new Error(`invalid ${field}`);
   }
   return value;
