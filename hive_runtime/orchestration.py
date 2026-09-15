@@ -1,16 +1,16 @@
 """Expert-grade Hive planning and orchestration primitives.
 
-LLM/planner/council output is proposal data only. Deterministic validation,
-trusted evidence and existing Hive authority boundaries decide what may execute.
+Planner/council/model output is proposal data only. Trusted host verifiers,
+deterministic validation and existing Hive authority boundaries decide promotion.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Iterable, Mapping, Protocol
+from typing import Iterable, Protocol
 
 from .agent_tasks import ActionKind, TaskNode, TaskPlan, TaskSnapshot, NodeStatus
 
@@ -107,16 +107,12 @@ class ObjectiveSpec:
             "constraints": list(self.constraints),
             "acceptance_criteria": list(self.acceptance_criteria),
             "stop_conditions": [
-                {
-                    "id": item.condition_id,
-                    "description": item.description,
-                    "required_evidence": sorted(kind.value for kind in item.required_evidence),
-                }
+                {"id": item.condition_id, "description": item.description,
+                 "required_evidence": sorted(kind.value for kind in item.required_evidence)}
                 for item in self.stop_conditions
             ],
         }
-        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-        return hashlib.sha256(canonical.encode()).hexdigest()
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -131,7 +127,14 @@ class Assumption:
         if not _SAFE_ID.fullmatch(self.assumption_id) or not self.statement.strip():
             raise ValueError("invalid assumption")
         if self.confidence is ConfidenceLevel.VERIFIED and not self.evidence_refs:
-            raise ValueError("verified assumption requires evidence reference")
+            raise ValueError("verified assumption requires evidence references")
+        if any(not _SAFE_ID.fullmatch(ref) for ref in self.evidence_refs):
+            raise ValueError("invalid assumption evidence reference")
+
+
+class AssumptionEvidenceVerifier(Protocol):
+    """Trusted host boundary that verifies referenced facts independently of planner prose."""
+    def __call__(self, assumption: Assumption) -> bool: ...
 
 
 @dataclass(frozen=True)
@@ -158,6 +161,8 @@ class ProjectDigitalTwin:
                 raise ValueError("invalid digital twin node")
             if node.node_id in self._nodes:
                 raise ValueError("duplicate digital twin node")
+            if len(set(node.depends_on)) != len(node.depends_on) or node.node_id in node.depends_on:
+                raise ValueError("invalid digital twin dependencies")
             self._nodes[node.node_id] = node
         known = set(self._nodes)
         if any(not set(node.depends_on).issubset(known) for node in self._nodes.values()):
@@ -169,28 +174,29 @@ class ProjectDigitalTwin:
             raise ValueError("change target not present in digital twin")
         if not 0 <= max_depth <= 20 or not 1 <= max_nodes <= 10_000:
             raise ValueError("invalid change-radius bounds")
+        if len(roots) > max_nodes:
+            return ChangeRadius(roots, roots, True)
         reverse: dict[str, set[str]] = {key: set() for key in self._nodes}
         for node in self._nodes.values():
             for dep in node.depends_on:
                 reverse[dep].add(node.node_id)
-        affected = set(roots)
-        frontier = set(roots)
-        truncated = False
-        for _ in range(max_depth):
+        affected = set(roots); frontier = set(roots); depth = 0; truncated = False
+        while frontier and depth < max_depth:
             nxt: set[str] = set()
             for current in sorted(frontier):
                 nxt.update(reverse[current])
             nxt -= affected
             if not nxt:
-                break
+                frontier = set(); break
             for item in sorted(nxt):
                 if len(affected) >= max_nodes:
-                    truncated = True
-                    break
+                    truncated = True; break
                 affected.add(item)
             if truncated:
                 break
-            frontier = nxt
+            frontier = nxt; depth += 1
+        if not truncated and frontier and depth >= max_depth:
+            truncated = any(child not in affected for current in frontier for child in reverse[current])
         return ChangeRadius(roots, frozenset(affected), truncated)
 
 
@@ -213,7 +219,7 @@ class PlanStep:
     def validate(self, acceptance_count: int) -> None:
         if not _SAFE_ID.fullmatch(self.step_id) or not self.title.strip():
             raise ValueError("invalid plan step")
-        if any(index < 0 or index >= acceptance_count for index in self.requirement_indexes):
+        if any(not isinstance(index, int) or index < 0 or index >= acceptance_count for index in self.requirement_indexes):
             raise ValueError("plan step references unknown acceptance criterion")
         if self.action is ActionKind.MODEL_PROMPT:
             if not self.instruction or not self.instruction.strip():
@@ -238,22 +244,24 @@ class DeepPlanProposal:
 
 
 @dataclass(frozen=True)
-class CouncilFinding:
-    reviewer: AgentRole
+class CouncilAssessment:
     severity: FindingSeverity
     code: str
     target_step: str | None = None
 
     def validate(self) -> None:
-        if self.reviewer in {AgentRole.PLANNER, AgentRole.BACKEND, AgentRole.FRONTEND, AgentRole.DATA,
-                             AgentRole.PERFORMANCE, AgentRole.DEVOPS, AgentRole.DOCUMENTATION}:
-            # These specialists may participate later, but the approval council in
-            # this increment is deliberately restricted to independent review roles.
-            raise ValueError("reviewer role is not an approval-council role")
         if not _SAFE_CODE.fullmatch(self.code):
-            raise ValueError("invalid finding code")
+            raise ValueError("invalid council assessment code")
         if self.target_step is not None and not _SAFE_ID.fullmatch(self.target_step):
-            raise ValueError("invalid finding target")
+            raise ValueError("invalid council target")
+
+
+@dataclass(frozen=True)
+class CouncilFinding:
+    reviewer: AgentRole
+    severity: FindingSeverity
+    code: str
+    target_step: str | None = None
 
 
 class PlannerPort(Protocol):
@@ -261,12 +269,14 @@ class PlannerPort(Protocol):
 
 
 class CouncilPort(Protocol):
-    def __call__(self, objective: ObjectiveSpec, proposal: DeepPlanProposal) -> Iterable[CouncilFinding]: ...
+    """Host chooses reviewer identity; model output cannot impersonate another council role."""
+    def __call__(self, objective: ObjectiveSpec, proposal: DeepPlanProposal, reviewer: AgentRole) -> Iterable[CouncilAssessment]: ...
 
 
 @dataclass(frozen=True)
 class PlanningPolicy:
     required_council_roles: frozenset[AgentRole] = frozenset({AgentRole.ARCHITECT, AgentRole.SECURITY, AgentRole.QA, AgentRole.REVIEWER})
+    blocking_findings: frozenset[FindingSeverity] = frozenset({FindingSeverity.MEDIUM, FindingSeverity.HIGH, FindingSeverity.CRITICAL})
     max_change_radius: int = 200
     change_radius_depth: int = 4
 
@@ -283,21 +293,12 @@ class MasterPlan:
         payload = {
             "objective": self.objective_fingerprint,
             "steps": [
-                {
-                    "id": step.step_id,
-                    "role": step.role.value,
-                    "action": step.action.value,
-                    "deps": list(step.depends_on),
-                    "requirements": sorted(step.requirement_indexes),
-                    "targets": sorted(step.change_targets),
-                    "capabilities": sorted(step.required_model_capabilities),
-                    "provider": step.provider,
-                    "instruction_sha256": hashlib.sha256((step.instruction or "").encode()).hexdigest(),
-                    "skill_id": step.skill_id,
-                    "skill_version": step.skill_version,
-                    "max_attempts": step.max_attempts,
-                }
-                for step in self.steps
+                {"id": s.step_id, "role": s.role.value, "action": s.action.value, "deps": list(s.depends_on),
+                 "requirements": sorted(s.requirement_indexes), "targets": sorted(s.change_targets),
+                 "capabilities": sorted(s.required_model_capabilities), "provider": s.provider,
+                 "instruction_sha256": hashlib.sha256((s.instruction or "").encode()).hexdigest(),
+                 "skill_id": s.skill_id, "skill_version": s.skill_version, "max_attempts": s.max_attempts}
+                for s in self.steps
             ],
             "assumptions": [
                 {"id": a.assumption_id, "confidence": a.confidence.value, "critical": a.critical, "refs": list(a.evidence_refs)}
@@ -309,8 +310,7 @@ class MasterPlan:
             ],
             "radius": sorted(self.change_radius.affected),
         }
-        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-        return hashlib.sha256(canonical.encode()).hexdigest()
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 class DeepPlanEngine:
@@ -319,25 +319,32 @@ class DeepPlanEngine:
     def __init__(self, policy: PlanningPolicy = PlanningPolicy()) -> None:
         self.policy = policy
 
-    def build(self, objective: ObjectiveSpec, *, twin: ProjectDigitalTwin, planner: PlannerPort, council: CouncilPort) -> MasterPlan:
+    def build(self, objective: ObjectiveSpec, *, twin: ProjectDigitalTwin, planner: PlannerPort,
+              council: CouncilPort, assumption_verifier: AssumptionEvidenceVerifier) -> MasterPlan:
         objective.validate()
         proposal = planner(objective, twin)
         if not isinstance(proposal, DeepPlanProposal):
             raise TypeError("planner returned invalid proposal type")
-        self._validate_proposal(objective, proposal, twin)
-        findings = tuple(council(objective, proposal))
-        self._validate_council(proposal, findings)
+        self._validate_proposal(objective, proposal, twin, assumption_verifier)
+        findings = self._collect_council(objective, proposal, council)
         targets = frozenset(target for step in proposal.steps for target in step.change_targets)
         radius = twin.change_radius(targets, max_depth=self.policy.change_radius_depth, max_nodes=self.policy.max_change_radius)
         if radius.truncated:
             raise ValueError("change radius exceeded planning bound")
         return MasterPlan(objective.fingerprint(), proposal.steps, proposal.assumptions, findings, radius)
 
-    def _validate_proposal(self, objective: ObjectiveSpec, proposal: DeepPlanProposal, twin: ProjectDigitalTwin) -> None:
+    def _validate_proposal(self, objective: ObjectiveSpec, proposal: DeepPlanProposal, twin: ProjectDigitalTwin,
+                           verifier: AssumptionEvidenceVerifier) -> None:
         if not proposal.steps:
             raise ValueError("planner produced empty plan")
+        assumption_ids: set[str] = set()
         for assumption in proposal.assumptions:
             assumption.validate()
+            if assumption.assumption_id in assumption_ids:
+                raise ValueError("duplicate assumption id")
+            assumption_ids.add(assumption.assumption_id)
+            if assumption.confidence is ConfidenceLevel.VERIFIED and verifier(assumption) is not True:
+                raise ValueError("planner VERIFIED claim rejected by trusted host verifier")
             if assumption.critical and assumption.confidence is ConfidenceLevel.UNKNOWN:
                 raise ValueError("critical UNKNOWN assumption blocks planning")
             if objective.risk is RiskTier.HIGH_ASSURANCE and assumption.critical and assumption.confidence is not ConfidenceLevel.VERIFIED:
@@ -345,64 +352,55 @@ class DeepPlanEngine:
         ids = [step.step_id for step in proposal.steps]
         if len(ids) != len(set(ids)):
             raise ValueError("duplicate plan step")
-        known = set(ids)
-        covered: set[int] = set()
+        known = set(ids); covered: set[int] = set()
         for step in proposal.steps:
             step.validate(len(objective.acceptance_criteria))
             if not set(step.depends_on).issubset(known) or step.step_id in step.depends_on:
                 raise ValueError("invalid plan dependency")
             if not step.change_targets:
                 raise ValueError("every plan step requires explicit change target")
-            twin.change_radius(step.change_targets, max_depth=0, max_nodes=self.policy.max_change_radius)
+            radius = twin.change_radius(step.change_targets, max_depth=0, max_nodes=self.policy.max_change_radius)
+            if radius.truncated:
+                raise ValueError("step targets exceed change-radius bound")
             covered.update(step.requirement_indexes)
         if covered != set(range(len(objective.acceptance_criteria))):
             raise ValueError("plan does not cover every acceptance criterion")
-        graph = {step.step_id: step.depends_on for step in proposal.steps}
-        visiting: set[str] = set(); visited: set[str] = set()
+        graph = {step.step_id: step.depends_on for step in proposal.steps}; visiting: set[str] = set(); visited: set[str] = set()
         def visit(node: str) -> None:
-            if node in visited:
-                return
-            if node in visiting:
-                raise ValueError("plan graph contains dependency cycle")
+            if node in visited: return
+            if node in visiting: raise ValueError("plan graph contains dependency cycle")
             visiting.add(node)
-            for dep in graph[node]:
-                visit(dep)
+            for dep in graph[node]: visit(dep)
             visiting.remove(node); visited.add(node)
-        for node in ids:
-            visit(node)
+        for node in ids: visit(node)
 
-    def _validate_council(self, proposal: DeepPlanProposal, findings: tuple[CouncilFinding, ...]) -> None:
-        roles: set[AgentRole] = set()
-        known_steps = {step.step_id for step in proposal.steps}
-        for finding in findings:
-            finding.validate()
-            roles.add(finding.reviewer)
-            if finding.target_step is not None and finding.target_step not in known_steps:
-                raise ValueError("council finding references unknown step")
-            if finding.severity in {FindingSeverity.HIGH, FindingSeverity.CRITICAL}:
-                raise ValueError(f"blocking council finding: {finding.code}")
-        if not self.policy.required_council_roles.issubset(roles):
-            raise ValueError("required independent council roles did not review plan")
+    def _collect_council(self, objective: ObjectiveSpec, proposal: DeepPlanProposal, council: CouncilPort) -> tuple[CouncilFinding, ...]:
+        known_steps = {step.step_id for step in proposal.steps}; findings: list[CouncilFinding] = []
+        for role in sorted(self.policy.required_council_roles, key=lambda item: item.value):
+            assessments = tuple(council(objective, proposal, role))
+            if not assessments:
+                raise ValueError(f"required council role produced no assessment: {role.value}")
+            for assessment in assessments:
+                if not isinstance(assessment, CouncilAssessment):
+                    raise TypeError("council returned invalid assessment type")
+                assessment.validate()
+                if assessment.target_step is not None and assessment.target_step not in known_steps:
+                    raise ValueError("council assessment references unknown step")
+                finding = CouncilFinding(role, assessment.severity, assessment.code, assessment.target_step)
+                findings.append(finding)
+                if assessment.severity in self.policy.blocking_findings:
+                    raise ValueError(f"blocking council finding: {assessment.code}")
+        return tuple(findings)
 
 
 class PlanGraphCompiler:
     def compile(self, master: MasterPlan) -> TaskPlan:
-        nodes = []
-        for step in master.steps:
-            nodes.append(TaskNode(
-                node_id=step.step_id,
-                action=step.action,
-                depends_on=step.depends_on,
-                required_model_capabilities=step.required_model_capabilities,
-                provider=step.provider,
-                prompt=step.instruction,
-                skill_id=step.skill_id,
-                skill_version=step.skill_version,
-                max_attempts=step.max_attempts,
-            ))
-        plan = TaskPlan(tuple(nodes))
-        plan.validate()
-        return plan
+        nodes = tuple(TaskNode(
+            node_id=s.step_id, action=s.action, depends_on=s.depends_on,
+            required_model_capabilities=s.required_model_capabilities, provider=s.provider,
+            prompt=s.instruction, skill_id=s.skill_id, skill_version=s.skill_version, max_attempts=s.max_attempts,
+        ) for s in master.steps)
+        plan = TaskPlan(nodes); plan.validate(); return plan
 
 
 @dataclass(frozen=True)
@@ -411,7 +409,6 @@ class EvidenceRecord:
     kind: EvidenceKind
     source: str
     digest: str
-    trusted: bool
 
     def validate(self) -> None:
         if not _SAFE_ID.fullmatch(self.evidence_id) or not self.source.strip():
@@ -420,31 +417,37 @@ class EvidenceRecord:
             raise ValueError("evidence digest must be sha256 hex")
 
 
+class EvidenceTrustVerifier(Protocol):
+    """Trusted host boundary. Evidence producers cannot self-mark records trusted."""
+    def __call__(self, record: EvidenceRecord) -> bool: ...
+
+
 class EvidenceGraph:
-    def __init__(self) -> None:
-        self._records: dict[str, EvidenceRecord] = {}
-        self._requirements: dict[int, set[str]] = {}
-        self._stops: dict[str, set[str]] = {}
+    def __init__(self, trust_verifier: EvidenceTrustVerifier) -> None:
+        self._verifier = trust_verifier
+        self._records: dict[str, EvidenceRecord] = {}; self._trusted: set[str] = set()
+        self._requirements: dict[int, set[str]] = {}; self._stops: dict[str, set[str]] = {}
 
     def add(self, record: EvidenceRecord, *, requirement_indexes: Iterable[int] = (), stop_conditions: Iterable[str] = ()) -> None:
         record.validate()
+        requirements = tuple(requirement_indexes); stops = tuple(stop_conditions)
         if record.evidence_id in self._records:
             raise ValueError("duplicate evidence id")
+        if any(not isinstance(index, int) or index < 0 for index in requirements):
+            raise ValueError("invalid requirement index")
+        if any(not _SAFE_ID.fullmatch(condition) for condition in stops):
+            raise ValueError("invalid stop condition id")
+        trusted = self._verifier(record) is True
         self._records[record.evidence_id] = record
-        for index in requirement_indexes:
-            if index < 0:
-                raise ValueError("invalid requirement index")
-            self._requirements.setdefault(index, set()).add(record.evidence_id)
-        for condition in stop_conditions:
-            if not _SAFE_ID.fullmatch(condition):
-                raise ValueError("invalid stop condition id")
-            self._stops.setdefault(condition, set()).add(record.evidence_id)
+        if trusted: self._trusted.add(record.evidence_id)
+        for index in requirements: self._requirements.setdefault(index, set()).add(record.evidence_id)
+        for condition in stops: self._stops.setdefault(condition, set()).add(record.evidence_id)
 
     def trusted_for_requirement(self, index: int) -> tuple[EvidenceRecord, ...]:
-        return tuple(self._records[item] for item in sorted(self._requirements.get(index, ())) if self._records[item].trusted)
+        return tuple(self._records[item] for item in sorted(self._requirements.get(index, ())) if item in self._trusted)
 
     def trusted_for_stop(self, condition_id: str) -> tuple[EvidenceRecord, ...]:
-        return tuple(self._records[item] for item in sorted(self._stops.get(condition_id, ())) if self._records[item].trusted)
+        return tuple(self._records[item] for item in sorted(self._stops.get(condition_id, ())) if item in self._trusted)
 
 
 @dataclass(frozen=True)
@@ -455,16 +458,13 @@ class StopDecision:
 
 
 class StopIntelligence:
-    """Evidence-based STOP evaluator. Agent/model assertions are not evidence."""
-
     def evaluate(self, objective: ObjectiveSpec, evidence: EvidenceGraph) -> StopDecision:
         objective.validate()
-        missing_acceptance = tuple(index for index in range(len(objective.acceptance_criteria)) if not evidence.trusted_for_requirement(index))
+        missing_acceptance = tuple(i for i in range(len(objective.acceptance_criteria)) if not evidence.trusted_for_requirement(i))
         missing_conditions = []
         for condition in objective.stop_conditions:
             kinds = {record.kind for record in evidence.trusted_for_stop(condition.condition_id)}
-            if not condition.required_evidence.issubset(kinds):
-                missing_conditions.append(condition.condition_id)
+            if not condition.required_evidence.issubset(kinds): missing_conditions.append(condition.condition_id)
         return StopDecision(not missing_acceptance and not missing_conditions, missing_acceptance, tuple(missing_conditions))
 
 
@@ -477,31 +477,24 @@ class CorrectionEntry:
 
 
 class SelfCorrectionLedger:
-    """Bounded correction requests that cannot broaden the approved change scope."""
-
+    """Session-bounded correction ledger; external host persistence is required before auto-restart correction."""
     def __init__(self, master: MasterPlan, *, max_total: int = 12, max_per_step: int = 3) -> None:
         if not 0 <= max_total <= 100 or not 0 <= max_per_step <= 20:
             raise ValueError("invalid correction bounds")
         self.master = master; self.max_total = max_total; self.max_per_step = max_per_step
-        self._entries: list[CorrectionEntry] = []
-        self._allowed = {step.step_id: step.change_targets for step in master.steps}
+        self._entries: list[CorrectionEntry] = []; self._allowed = {s.step_id: s.change_targets for s in master.steps}
 
     def request(self, step_id: str, reason_code: str, targets: Iterable[str]) -> CorrectionEntry:
-        if step_id not in self._allowed or not _SAFE_CODE.fullmatch(reason_code):
-            raise ValueError("invalid correction request")
+        if step_id not in self._allowed or not _SAFE_CODE.fullmatch(reason_code): raise ValueError("invalid correction request")
         requested = frozenset(targets)
         if not requested or not requested.issubset(self._allowed[step_id]):
             raise PermissionError("self-correction cannot expand approved change scope")
-        if len(self._entries) >= self.max_total:
-            raise RuntimeError("global correction budget exhausted")
+        if len(self._entries) >= self.max_total: raise RuntimeError("global correction budget exhausted")
         if sum(1 for item in self._entries if item.step_id == step_id) >= self.max_per_step:
             raise RuntimeError("step correction budget exhausted")
-        entry = CorrectionEntry(len(self._entries) + 1, step_id, reason_code, requested)
-        self._entries.append(entry)
-        return entry
+        entry = CorrectionEntry(len(self._entries)+1, step_id, reason_code, requested); self._entries.append(entry); return entry
 
-    def entries(self) -> tuple[CorrectionEntry, ...]:
-        return tuple(self._entries)
+    def entries(self) -> tuple[CorrectionEntry, ...]: return tuple(self._entries)
 
 
 @dataclass(frozen=True)
@@ -515,29 +508,19 @@ class OrchestratorTelemetry:
 
 
 class AgentOrchestrator:
-    """Compiles approved intelligence into CP-0009 execution and evidence telemetry."""
-
     def __init__(self, master: MasterPlan, objective: ObjectiveSpec) -> None:
-        if master.objective_fingerprint != objective.fingerprint():
-            raise ValueError("master plan/objective mismatch")
+        if master.objective_fingerprint != objective.fingerprint(): raise ValueError("master plan/objective mismatch")
         self.master = master; self.objective = objective
 
-    def task_plan(self) -> TaskPlan:
-        return PlanGraphCompiler().compile(self.master)
+    def task_plan(self) -> TaskPlan: return PlanGraphCompiler().compile(self.master)
 
     def telemetry(self, snapshot: TaskSnapshot, evidence: EvidenceGraph, corrections: SelfCorrectionLedger) -> OrchestratorTelemetry:
-        step_ids = {step.step_id for step in self.master.steps}
-        state = dict(snapshot.node_status)
-        if set(state) != step_ids:
-            raise ValueError("task snapshot does not match master plan")
+        plan = self.task_plan()
+        if snapshot.plan_fingerprint != plan.fingerprint(): raise ValueError("task snapshot fingerprint does not match master plan")
+        step_ids = {step.step_id for step in self.master.steps}; state = dict(snapshot.node_status)
+        if set(state) != step_ids: raise ValueError("task snapshot does not match master plan")
         completed = sum(1 for value in state.values() if value is NodeStatus.SUCCEEDED)
         stop = StopIntelligence().evaluate(self.objective, evidence)
         unknown = sum(1 for item in self.master.assumptions if item.confidence is ConfidenceLevel.UNKNOWN)
-        return OrchestratorTelemetry(
-            completed,
-            len(step_ids),
-            round((completed / len(step_ids)) * 100.0, 2),
-            len(corrections.entries()),
-            unknown,
-            stop.complete,
-        )
+        return OrchestratorTelemetry(completed, len(step_ids), round((completed/len(step_ids))*100.0,2),
+                                     len(corrections.entries()), unknown, stop.complete)
