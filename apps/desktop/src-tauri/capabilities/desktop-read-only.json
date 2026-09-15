@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop-read-only",
+  "description": "WO-0015 read-only desktop window. No shell, filesystem, process, computer-use, remote-control or provider permissions.",
+  "windows": ["main"],
+  "permissions": []
+}

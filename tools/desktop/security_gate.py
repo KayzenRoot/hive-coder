@@ -1,0 +1,93 @@
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+DESKTOP = ROOT / "apps" / "desktop"
+
+FORBIDDEN_TEXT = {
+    "tauri_plugin_shell": "Rust shell plugin",
+    "@tauri-apps/plugin-shell": "frontend shell plugin",
+    "std::process::Command": "direct Rust process execution",
+    "Command::new": "direct Rust process execution",
+    "@tauri-apps/plugin-fs": "filesystem plugin",
+    "tauri_plugin_fs": "Rust filesystem plugin",
+    "@tauri-apps/plugin-process": "process plugin",
+    "tauri_plugin_process": "Rust process plugin",
+    "dangerouslySetInnerHTML": "untrusted HTML sink",
+}
+
+ALLOWED_INVOKE_FILE = (DESKTOP / "src" / "lib" / "desktopBridge.ts").resolve()
+ALLOWED_COMMANDS = {"get_desktop_snapshot"}
+
+
+def text_files() -> list[Path]:
+    suffixes = {".rs", ".ts", ".tsx", ".json", ".toml"}
+    return [p for p in DESKTOP.rglob("*") if p.is_file() and p.suffix in suffixes]
+
+
+def main() -> int:
+    failures: list[str] = []
+    files = text_files()
+    if not files:
+        failures.append("desktop source tree is empty")
+
+    command_names: set[str] = set()
+    invoke_count = 0
+
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        rel = path.relative_to(ROOT)
+        for needle, reason in FORBIDDEN_TEXT.items():
+            if needle in text:
+                failures.append(f"{rel}: forbidden {reason}: {needle}")
+
+        if "invoke(" in text:
+            invoke_count += text.count("invoke(")
+            if path.resolve() != ALLOWED_INVOKE_FILE:
+                failures.append(f"{rel}: invoke() outside the single desktop bridge")
+
+        if path.suffix == ".rs":
+            lines = text.splitlines()
+            for index, line in enumerate(lines):
+                if "#[tauri::command]" in line:
+                    following = "\n".join(lines[index + 1:index + 4])
+                    match = re.search(r"fn\s+([A-Za-z0-9_]+)\s*\(", following)
+                    if not match:
+                        failures.append(f"{rel}: unable to resolve tauri command after annotation")
+                    else:
+                        command_names.add(match.group(1))
+
+    if invoke_count != 1:
+        failures.append(f"expected exactly one frontend invoke(), found {invoke_count}")
+    if command_names != ALLOWED_COMMANDS:
+        failures.append(f"Tauri command allowlist mismatch: {sorted(command_names)}")
+
+    capability = DESKTOP / "src-tauri" / "capabilities" / "desktop-read-only.json"
+    data = json.loads(capability.read_text(encoding="utf-8"))
+    permissions = data.get("permissions")
+    if permissions != []:
+        failures.append(f"desktop capability permissions must be empty, got {permissions!r}")
+
+    package = json.loads((DESKTOP / "package.json").read_text(encoding="utf-8"))
+    all_deps = {**package.get("dependencies", {}), **package.get("devDependencies", {})}
+    for dep in all_deps:
+        if dep.startswith("@tauri-apps/plugin-"):
+            failures.append(f"Tauri plugin not approved in WO-0015: {dep}")
+
+    if failures:
+        print("DESKTOP_SECURITY_GATE=FAIL")
+        for failure in failures:
+            print(f"- {failure}")
+        return 1
+
+    print("DESKTOP_SECURITY_GATE=PASS")
+    print(f"TAURI_COMMANDS={','.join(sorted(command_names))}")
+    print("CAPABILITY_PERMISSIONS=0")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

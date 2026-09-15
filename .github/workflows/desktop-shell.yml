@@ -1,0 +1,94 @@
+name: Desktop Shell
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  desktop-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact-head checkout
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "EXACT_HEAD_OK=$EXPECTED_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+      - name: Desktop security gate
+        run: python tools/desktop/security_gate.py
+      - name: Resolve exact npm graph during bootstrap
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci --ignore-scripts --no-audit
+          else
+            npm install --ignore-scripts --no-audit
+          fi
+      - name: Typecheck
+        working-directory: apps/desktop
+        run: npm run typecheck
+      - name: Component and contract tests
+        working-directory: apps/desktop
+        run: npm test
+      - name: Production web build
+        working-directory: apps/desktop
+        run: npm run build:web
+      - name: Production dependency audit
+        working-directory: apps/desktop
+        run: npm audit --omit=dev --audit-level=high
+
+  desktop-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact-head checkout
+        shell: pwsh
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          $actual = (git rev-parse HEAD).Trim()
+          if ($actual -ne $env:EXPECTED_SHA) { throw "exact-head mismatch: $actual != $env:EXPECTED_SHA" }
+          Write-Output "EXACT_HEAD_OK=$actual"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.98.1
+      - name: Resolve exact npm graph during bootstrap
+        working-directory: apps/desktop
+        shell: pwsh
+        run: |
+          if (Test-Path package-lock.json) {
+            npm ci --ignore-scripts --no-audit
+          } else {
+            npm install --ignore-scripts --no-audit
+          }
+      - name: Rust unit tests and lock resolution
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Tauri Windows build without bundle
+        working-directory: apps/desktop
+        run: npm run tauri -- build --no-bundle
+      - name: Upload bootstrap lockfiles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-lockfiles
+          if-no-files-found: warn
+          retention-days: 1
+          path: |
+            apps/desktop/package-lock.json
+            apps/desktop/src-tauri/Cargo.lock
