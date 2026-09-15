@@ -41,8 +41,9 @@ PRODUCTION_RUST_WRITE_PRIMITIVES = {
 }
 
 ALLOWED_INVOKE_FILE = (DESKTOP / "src" / "lib" / "desktopBridge.ts").resolve()
-ALLOWED_COMMANDS = {"get_desktop_snapshot", "choose_workspace"}
-EXPECTED_INVOKES = 2
+ALLOWED_PROCESS_FILE = (TAURI / "src" / "runtime_status_supervisor.rs").resolve()
+ALLOWED_COMMANDS = {"get_desktop_snapshot", "choose_workspace", "get_runtime_status_envelope"}
+EXPECTED_INVOKES = 3
 EXPECTED_CAPABILITY = "desktop-read-only"
 EXPECTED_WINDOW = "main"
 
@@ -77,6 +78,8 @@ def main() -> int:
         rel = path.relative_to(ROOT)
         for needle, reason in FORBIDDEN_TEXT.items():
             if needle in text:
+                if reason == "direct Rust process execution" and path.resolve() == ALLOWED_PROCESS_FILE:
+                    continue
                 failures.append(f"{rel}: forbidden {reason}: {needle}")
 
         if path.suffix == ".rs":
@@ -111,6 +114,10 @@ def main() -> int:
         failures.append("choose_workspace frontend invocation must carry no caller-controlled path/payload")
     if re.search(r"invoke\(CHOOSE_WORKSPACE_COMMAND\s*,", bridge_text):
         failures.append("choose_workspace must not receive frontend arguments")
+    if "invoke(RUNTIME_STATUS_COMMAND);" not in bridge_text:
+        failures.append("runtime status invocation must use the named argument-free command")
+    if re.search(r"invoke\(RUNTIME_STATUS_COMMAND\s*,", bridge_text):
+        failures.append("runtime status command must not receive frontend arguments")
 
     capability_path = TAURI / "capabilities" / "desktop-read-only.json"
     capability = json.loads(capability_path.read_text(encoding="utf-8"))
@@ -172,6 +179,26 @@ def main() -> int:
     if "std::process" in prod_rust:
         failures.append("workspace/Git read path must not invoke an external process command")
 
+    supervisor_text = ALLOWED_PROCESS_FILE.read_text(encoding="utf-8") if ALLOWED_PROCESS_FILE.is_file() else ""
+    required_supervisor_guards = [
+        'const SIDECAR_MODE: &str = "--stdio-status-v1";',
+        "std::env::current_exe()",
+        "Command::new(&sidecar)",
+        ".arg(SIDECAR_MODE)",
+        ".env_clear()",
+        "MAX_STATUS_RESPONSE_BYTES",
+        "SIDECAR_TIMEOUT",
+    ]
+    for guard in required_supervisor_guards:
+        if guard not in supervisor_text:
+            failures.append(f"fixed runtime supervisor guard missing: {guard}")
+    for forbidden in (".args(", "powershell", "cmd.exe", "sh -c", "bash -c", "std::env::var("):
+        if forbidden in supervisor_text:
+            failures.append(f"fixed runtime supervisor contains forbidden dynamic execution surface: {forbidden}")
+    process_sites = [path for path in files if path.suffix == ".rs" and "Command::new" in production_rust(path.read_text(encoding="utf-8"))]
+    if process_sites != [ALLOWED_PROCESS_FILE]:
+        failures.append(f"process execution must exist only in fixed runtime supervisor, got {[str(path.relative_to(ROOT)) for path in process_sites]}")
+
     package = json.loads((DESKTOP / "package.json").read_text(encoding="utf-8"))
     all_deps = {**package.get("dependencies", {}), **package.get("devDependencies", {})}
     for dep in all_deps:
@@ -216,6 +243,7 @@ def main() -> int:
     print("WORKSPACE_SELECTION_ARGS=0")
     print("FILESYSTEM_MUTATION_PRIMITIVES=0")
     print("GENERIC_PROCESS_EXECUTION=0")
+    print("FIXED_RUNTIME_SIDECAR_PROCESS=1")
     print("APPLE_SPECIFIC_FONT_REFERENCES=0")
     print("LOCKFILES=COMMITTED")
     return 0
