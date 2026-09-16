@@ -65,6 +65,24 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 **Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)  
 **Authority head:** `52d8cc3195bd4f9c948b1327ed124042739b2530` (Prompt 03: dedicated `git.write` authority, publication and native E2E)
 
+### Exact-head CI at `411c9facb6649315e85072f43dd53438250bdc02` (Prompt 04 correction head)
+
+| Workflow | Run | Result |
+|---|---|---|
+| Governance | `35147086747` | **SUCCESS** |
+| Desktop Shell | `35147086909` | **SUCCESS** |
+
+Governance jobs: `source-pack` SUCCESS, `governed-runtime-linux` SUCCESS, `control-plane-windows` SUCCESS, `workspace-replace-macos` SUCCESS.
+
+Native governed Git staging proof, executed independently per platform on the corrected publication primitive:
+- `Native Linux governed Git staging proof (codec, object, authority, E2E)`: **SUCCESS**
+- `Native Windows HIGH_ASSURANCE governed Git staging proof (codec, object, authority, E2E)`: **SUCCESS**
+- `Native macOS governed Git staging proof (codec, object, authority, E2E)`: **SUCCESS**
+
+Desktop Shell jobs: `desktop-web`, `desktop-windows`, `desktop-linux`, `desktop-macos` — all SUCCESS.
+
+At this head: 527 tests OK, 53 skipped (1 capability-gated symlink fixture plus pre-existing POSIX-primitive fixtures, each with a Windows-native counterpart). `PREBUILT:` skips remaining: 0.
+
 ### Exact-head CI at `52d8cc3195bd4f9c948b1327ed124042739b2530`
 
 | Workflow | Run | Result |
