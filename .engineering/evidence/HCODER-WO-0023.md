@@ -63,7 +63,25 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 **Implementation head:** `9ac5ad43742376245da09de48ce812a7f7678d2e`  
 **Verified head:** `19c8c1abdd960196b1e9b8bb52ebba90843a77a3` (adds the observation-idempotence fix below)  
 **Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)  
-**Authority head:** Prompt 03 dedicated `git.write` authority, publication and native E2E (see the authority slice section below)
+**Authority head:** `52d8cc3195bd4f9c948b1327ed124042739b2530` (Prompt 03: dedicated `git.write` authority, publication and native E2E)
+
+### Exact-head CI at `52d8cc3195bd4f9c948b1327ed124042739b2530`
+
+| Workflow | Run | Result |
+|---|---|---|
+| Governance | `35143445682` | **SUCCESS** |
+| Desktop Shell | `35143445758` | **SUCCESS** |
+
+Governance jobs: `source-pack` SUCCESS, `governed-runtime-linux` SUCCESS, `control-plane-windows` SUCCESS, `workspace-replace-macos` SUCCESS.
+
+Native governed Git staging proof, executed independently per platform:
+- `Native Linux governed Git staging proof (codec, object, authority, E2E)`: **SUCCESS**
+- `Native Windows HIGH_ASSURANCE governed Git staging proof (codec, object, authority, E2E)`: **SUCCESS**
+- `Native macOS governed Git staging proof (codec, object, authority, E2E)`: **SUCCESS**
+
+Desktop Shell jobs: `desktop-web`, `desktop-windows`, `desktop-linux`, `desktop-macos` — all SUCCESS.
+
+Platform-specific regression found and fixed at this head: a POSIX-gated pre-authority gate still asserted that `publish()` was unavailable, so it failed on Linux, macOS and source-pack while the local Windows run skipped it. That gate was updated to assert the real fail-closed and atomic-publication semantics, and equivalent coverage was added to the platform-neutral authority lane so that class of hidden regression cannot recur.
 
 ## Authority slice — dedicated git.write capability and publication
 
@@ -154,13 +172,13 @@ Fixed in `git_stage_observer.py`, `git_loose_object_transaction.py`, `git_object
 | `doctor.py --inventory-only` | PASS (`LOCKED`, side effects NONE) |
 | `verify_python_dependencies.py` | PASS (`LOCKED`, wheel tag `py3-none-any`) |
 | `compileall hive_runtime tools` | PASS |
-| Full Python suite | PASS — **502 tests**, `OK`, 52 skipped |
+| Full Python suite | PASS — **506 tests**, `OK`, 53 skipped (1 capability-gated symlink fixture) |
 | `tools/desktop/security_gate.py` | PASS (run under the CI precondition; see note) |
 | Desktop `npm ci` / typecheck / vitest / build:web / audit | PASS / PASS / **26/26** / PASS / **0 vulnerabilities** |
 | `cargo test --locked` | PASS — **13/13** |
 | `cargo check --locked` | PASS |
 
-Focused WO-0023 lanes at this head: codec 19 tests; private object preparation 13 tests (1 capability skip); binary byte fidelity 5 tests; observer revalidation 6 tests; real-Git TREE cache-tree semantics 4 tests; governed authority/E2E 18 tests; activated security acceptance gates 5 tests; control-plane `git.write` 11 tests. All non-skipped.
+Focused WO-0023 lanes at this head: codec 19 tests; private object preparation 13 tests (1 capability skip); binary byte fidelity 5 tests; observer revalidation 6 tests; real-Git TREE cache-tree semantics 4 tests; governed authority/E2E and failure injection 21 tests; activated security acceptance gates 5 tests; control-plane `git.write` 11 tests. All non-skipped.
 
 Note on the desktop security gate: CI runs it **before** `npm ci`, so it never sees `node_modules`. Running it locally after `npm ci` makes it scan dependency sources and fail on third-party `invoke()`/`-apple-system`/`dangerouslySetInnerHTML` occurrences. Under the CI precondition it reports `DESKTOP_SECURITY_GATE=PASS` with `FRONTEND_INVOKES=3` and the expected capability surface. This is a pre-existing gate/ordering property, not a regression from this head.
 
