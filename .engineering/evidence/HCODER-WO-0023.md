@@ -1,6 +1,6 @@
 # HCODER-WO-0023 — Evidence Ledger
 
-**Status:** SLICE 01 IMPLEMENTED / MUTATION STILL UNPROVEN  
+**Status:** AUTHORITY SLICE IMPLEMENTED / NATIVE E2E PROVEN / PROMOTION PENDING REVIEW  
 **Canonical base:** `22b56b0f3111158cbf50789b1647c5a578a171c1`  
 **Canonical main at execution:** `ccfed1f960c80dc58e4f45cb627451e77c7d5a79`  
 **Issue:** `#68`  
@@ -9,19 +9,19 @@
 ## Claims allowed now
 
 - Current desktop Git observation is read-only and does not execute Git.
-- Canonical workspace create/replace capabilities provide the control-plane pattern this WO must preserve.
-- `git_stage_paths_v1` product contract, request fields and redaction model are prebuilt.
-- The reviewed codec backend provenance gate is **closed for the data-only slice**: `dulwich==1.2.15` is pinned to the exact pure-Python wheel by hash, and the resolver/verifier are committed and consumed by CI.
+- Canonical workspace create/replace capabilities provide the control-plane pattern this WO preserves.
+- The reviewed codec backend provenance gate is **closed**: `dulwich==1.2.15` is pinned to the exact pure-Python wheel by hash, and the resolver/verifier are committed and consumed by CI.
 - A data-only index candidate can be built from an approved observation plus an authority-free stage plan, and the produced bytes are accepted by Git as a correct index.
+- **`Capability.GIT_WRITE` / `git_stage_paths_v1` is implemented and reachable only through the Permission & Control Plane**, with mandatory trusted approval and a request-bound single-use permit consumed at the final safe boundary.
+- **Blob publication into the repository-local `.git/objects` store and atomic `.git/index` publication are implemented** and proven by a real-Git end-to-end lane on Windows, Linux and macOS independently.
 
 ## Claims explicitly NOT allowed yet
 
-- Git staging is implemented end-to-end.
-- Any Git mutation is safe or production-ready.
-- `git.write` is canonical.
-- Windows, Linux or macOS Git staging is proven end-to-end.
+- Any Git mutation is safe or production-ready in general.
+- `git.write` is canonical (DEC-027 remains PROPOSED until the promotion gates pass).
 - Strict CAS of index/worktree state exists.
-- Object publication or index publication is enabled.
+- Any capability beyond `git_stage_paths_v1` exists: no commit, tag, ref, branch, remote, credential, generic Git argv or shell surface.
+- Staged content is committed. This slice updates the index only.
 
 ## Backend provenance record
 
@@ -62,7 +62,42 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 
 **Implementation head:** `9ac5ad43742376245da09de48ce812a7f7678d2e`  
 **Verified head:** `19c8c1abdd960196b1e9b8bb52ebba90843a77a3` (adds the observation-idempotence fix below)  
-**Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)
+**Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)  
+**Authority head:** Prompt 03 dedicated `git.write` authority, publication and native E2E (see the authority slice section below)
+
+## Authority slice — dedicated git.write capability and publication
+
+Granted by **WO-0023 Context Lock Delta 004**, bounded to exactly `git_stage_paths_v1` for explicit regular files in the already-proven ordinary local SHA-1 repository envelope.
+
+### Control plane
+- `Capability.GIT_WRITE = "git.write"` added, risk **HIGH**, materially sensitive, **mandatory approval**, required target field `workspace`.
+- Exactly one allowlisted action: `git_stage_paths_v1`. `FILESYSTEM_WRITE` and `SHELL_EXECUTE` are not reused and cannot satisfy a `git.write` rule.
+- Trusted UI resolution remains the only approval route; the capability mints no approval and no permit.
+
+### Frozen request binding
+The approval fingerprint commits to 17 exact argument keys, with no raw-byte representation anywhere: contract, repository identity, repository HEAD, index state/identity/source digest, path count, paths, canonical worktree states, deterministic per-path bindings (path, content SHA-256, byte length, resulting blob OID), candidate index SHA-256 and byte length, object-store contract/format/git-dir identity/store identity, and `target_state=index_update`.
+
+### Preparation before authority
+Normalize paths, observe repository/HEAD/index/worktree, prepare each blob candidate and OID, inspect the object store, build the authority-free stage plan, and build the extension-free candidate index with Dulwich primitives only. All of this happens in `prepare_stage_request`, which mutates nothing.
+
+**Deliberate design decision worth review:** the capability does *not* hold `.git/index.lock` across the approval window. Holding the index lock while waiting for human approval would block the user's own Git operations and manufacture a stale lock that this Work Order forbids removing. The lock is therefore acquired inside `stage_paths`, and its identity and exact candidate digest are verified before the permit is consumed — the ordering the prompt requires is preserved, but the lock is never held while an unbounded human decision is pending.
+
+### Final safe boundary (ordering proven by tests, not comments)
+1. validate request shape and exact prepared metadata; 2. late observer revalidation of HEAD, source index and worktree; 3. late object-store revalidation; rebuild the plan and candidate from live bytes and prove they reproduce the approved bindings exactly; 4. acquire the owned `index.lock`, write the candidate, verify digest/length and lock identity; 5. session ACTIVE check; 6. **consume the request-bound single-use permit**; 7. session ACTIVE check again; 8. publish content-addressed blobs; 9. session and state recheck; 10. atomic index publication; 11. postconditions; 12. receipt only after verification.
+
+### Publication law
+- Blobs are published content-addressed, no-follow, no-clobber. An existing object is accepted only after proving it is the exact approved blob; it is never overwritten and never deleted. Fanout directories are created only with bounded identity checks and fail closed on symlink/reparse/non-directory collisions.
+- The index is published only by the capability-owned `index.lock` transaction. A foreign or pre-existing lock fails closed and is never removed.
+- A crash after blob publication but before index publication may leave an unreachable content-addressed blob. That is the documented, accepted outcome; it is never reported as success and the blob is not rolled back.
+
+### Windows platform finding
+`os.replace` fails with `WinError 32` while a handle to the source file is still open, so the owned lock handle is released immediately before the atomic replacement, with the lock identity re-proved on the pathname in between. Publication remains a single atomic same-filesystem replacement; ownership cannot be lost silently because a changed identity aborts before the call.
+
+### Residual bounded-race claim
+Consistent with CP-0022, this slice claims an atomic **publication**, not strict CAS. An uncooperative external process may act between the last successful revalidation and the atomic call. This is stated here and must never be represented as strict CAS.
+
+### Public API and receipt
+`prepare_stage_request` and `stage_paths` are separable so approval occurs over stable bounded metadata. `stage_paths` is exact-path only; pathspecs, globs and generic argv are rejected by the pre-existing normalizer. `GitStageReceipt` reports workspace, repository identity/HEAD, previous and committed index SHA-256, deterministic staged paths and `committed_state=index_updated`. Approval display, audit and receipt contain no raw worktree bytes, raw index bytes, compressed object bytes, credentials or permit tokens.
 
 ### Exact-head CI at `ceb6cda42c3a6b3864b39a75afb27fb1982053ba`
 
@@ -119,42 +154,42 @@ Fixed in `git_stage_observer.py`, `git_loose_object_transaction.py`, `git_object
 | `doctor.py --inventory-only` | PASS (`LOCKED`, side effects NONE) |
 | `verify_python_dependencies.py` | PASS (`LOCKED`, wheel tag `py3-none-any`) |
 | `compileall hive_runtime tools` | PASS |
-| Full Python suite | PASS — **468 tests**, `OK`, 57 skipped |
+| Full Python suite | PASS — **502 tests**, `OK`, 52 skipped |
 | `tools/desktop/security_gate.py` | PASS (run under the CI precondition; see note) |
 | Desktop `npm ci` / typecheck / vitest / build:web / audit | PASS / PASS / **26/26** / PASS / **0 vulnerabilities** |
 | `cargo test --locked` | PASS — **13/13** |
 | `cargo check --locked` | PASS |
 
-Focused WO-0023 lanes at this head: codec 19 tests; private object preparation 13 tests (1 capability skip); binary byte fidelity 5 tests; observer revalidation 6 tests; real-Git TREE cache-tree semantics 4 tests. All non-skipped.
+Focused WO-0023 lanes at this head: codec 19 tests; private object preparation 13 tests (1 capability skip); binary byte fidelity 5 tests; observer revalidation 6 tests; real-Git TREE cache-tree semantics 4 tests; governed authority/E2E 18 tests; activated security acceptance gates 5 tests; control-plane `git.write` 11 tests. All non-skipped.
 
 Note on the desktop security gate: CI runs it **before** `npm ci`, so it never sees `node_modules`. Running it locally after `npm ci` makes it scan dependency sources and fail on third-party `invoke()`/`-apple-system`/`dangerouslySetInnerHTML` occurrences. Under the CI precondition it reports `DESKTOP_SECURITY_GATE=PASS` with `FRONTEND_INVOKES=3` and the expected capability surface. This is a pre-existing gate/ordering property, not a regression from this head.
 
 ## Prebuilt gates implemented
 
-Removed from the prebuilt-skip set by this head:
+Every prebuilt gate for this Work Order is now activated. The data-only codec gates went first:
 - `test_real_codec_round_trip_preserves_supported_index_semantics`
 - `test_real_codec_rejects_sparse_split_conflicted_and_unknown_required_extensions`
 - `test_real_codec_cannot_invoke_porcelain_shell_hooks_filters_network_or_credentials`
+
+The five authority/publication gates are now real tests in `tests/runtime/test_git_stage_security.py`: permit request-binding and single use, cancellation/takeover/expiry/emergency stop, authority isolation (no shell/process/hook/filter/network/credentials), request/audit/receipt redaction, and independent non-skipped native proof.
+
+**`PREBUILT:` skips remaining: 0.** No required security acceptance test is skipped for implementation incompleteness.
 
 ## Skips remaining and why
 
 | Skip | Reason it is still legitimate |
 |---|---|
-| `PREBUILT: integrate dedicated git.write control-plane action` | Control-plane authority delta — later phase |
-| `PREBUILT: integrate session state with staging executor` | Requires the executor — later phase |
-| `PREBUILT: implement Git adapter without executable extension points` | Staging executor seam — later phase |
-| `PREBUILT: implement redacted request/audit/receipt` | Publication-phase receipt — later phase |
-| `PREBUILT: add native CI proof on all target platforms` | End-to-end staging proof — later phase |
-| `symlink fixture unavailable on this platform/privilege level` | Capability-based; a cross-platform non-directory variant runs instead |
-| `POSIX ...` variants | Pre-existing Windows platform skips, unchanged |
+| `symlink fixture unavailable on this platform/privilege level` | Capability-based: Windows requires a privilege this environment lacks. A cross-platform non-directory variant proves the same fail-closed branch instead |
+| `POSIX ...` variants | Pre-existing platform fixtures that need POSIX primitives; unchanged, and each has a Windows-native counterpart lane |
 
-No new blanket skip was introduced. Skipped security acceptance tests remain a hard non-promotion state for the publication phase.
+No new blanket skip was introduced, and no skip remains that is caused by incomplete implementation. Every authority, publication, permit-ordering, redaction and failure-injection gate executes on all three platforms.
 
 ## Known blockers
 
 - The `DEC-025` ADR header still reads `APPROVED / FINAL CANDIDATE — NOT CANONICAL` while `HCODER-CP-0021` records it canonical. Recorded as `KNOWN_DOC_DRIFT` in the ledger and in Context Lock Delta 002; the historical ADR was deliberately not rewritten.
-- `git.write`, permit consumption, blob publication to final object paths and atomic `.git/index` publication remain unimplemented and unavailable. That is the next reviewed phase, not a defect.
-- The private-temp cleanup path performs a name-based deletion after an identity check. The residual window is a documented bounded race, matching the CP-0022 posture, and is a hardening item before publication authority rather than a defect in this slice.
+- The private-temp cleanup path performs a name-based deletion after an identity check. The residual window is a documented bounded race, matching the CP-0022 posture. It is a hardening item, not a defect in this slice, and the failure path no longer removes a pathname it cannot prove it owns.
+- `DEC-027` remains **PROPOSED**. This head implements the decision's bounded action and produces the evidence, but promotion is the independent review's decision, not the executor's.
+- Residual bounded race on publication, as stated above: atomic publication, not strict CAS.
 
 ## Main reconciliation
 

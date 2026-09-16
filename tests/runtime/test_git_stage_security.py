@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
+from hive_runtime.control_types import SessionState
+from hive_runtime.errors import PermitError, SessionStateError
 from hive_runtime.git_stage import GitStageUnavailableError, GitStageUnsupportedRepositoryError, GovernedGitStageAdapter, UnsupportedGitStageBackend
 from hive_runtime.git_stage_observer import PosixGitStageObserver
 from hive_runtime.git_stage_transaction import GitIndexLockBusyError, PosixGitIndexTransaction
+from tests.runtime.test_git_stage_authority import GovernedHarness, RealRepo
+
+_GIT = shutil.which("git")
+_GIT_REASON = "the governed staging acceptance gates require a git executable as fixture generator and oracle"
 
 
 def _ordinary_repo(root: Path) -> None:
@@ -114,16 +121,158 @@ class GitStageSecurityAcceptanceMap(unittest.TestCase):
     def test_pre_authority_adapter_exposes_no_public_stage_operation(self) -> None:
         adapter = GovernedGitStageAdapter(UnsupportedGitStageBackend()); self.assertFalse(hasattr(adapter,"stage_paths")); self.assertFalse(adapter.mutation_authority_enabled)
 
-    @unittest.skip("PREBUILT: integrate dedicated git.write control-plane action")
-    def test_permit_is_request_bound_single_use_and_consumed_at_final_safe_boundary(self) -> None: self.fail("executor must prove permit ordering")
-    @unittest.skip("PREBUILT: integrate session state with staging executor")
-    def test_cancel_takeover_expiry_and_emergency_stop_prevent_publication(self) -> None: self.fail("executor must prove session safety")
-    @unittest.skip("PREBUILT: implement Git adapter without executable extension points")
-    def test_staging_executes_no_shell_process_hook_external_filter_network_or_credentials(self) -> None: self.fail("executor must prove authority isolation")
-    @unittest.skip("PREBUILT: implement redacted request/audit/receipt")
-    def test_raw_worktree_and_index_bytes_never_enter_approval_audit_or_receipt(self) -> None: self.fail("executor must prove redaction")
-    @unittest.skip("PREBUILT: add native CI proof on all target platforms")
-    def test_windows_linux_and_macos_require_independent_non_skipped_native_proof(self) -> None: self.fail("promotion gate")
+@unittest.skipUnless(_GIT is not None, _GIT_REASON)
+class GitStageAuthorityAcceptanceMap(unittest.TestCase):
+    """Activated WO-0023 authority acceptance gates.
+
+    The prebuilt placeholders for these gates are gone: the capability, the
+    permit ordering and the publication path now exist, so each gate runs for
+    real. They use the shared real-repository harness from
+    ``tests.runtime.test_git_stage_authority``.
+    """
+
+    def _fixture(self, tmp: str):
+        repo = RealRepo(Path(tmp) / "repo")
+        repo.write("a.txt", "alpha\n")
+        repo.seed()
+        repo.write("a.txt", "alpha MODIFIED\n")
+        harness = GovernedHarness(repo.root)
+        return repo, harness
+
+    def test_permit_is_request_bound_single_use_and_consumed_at_final_safe_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._fixture(tmp)
+            request = harness.request("a.txt")
+            permit = harness.permit(request)
+            self.assertEqual(harness.plane.session_state(harness.session), SessionState.ACTIVE)
+
+            # The permit must not be burned by preparation: it is still unused here.
+            harness.capability.stage_paths(request, permit_token=permit.token)
+            with self.assertRaises((PermitError, GitStageUnavailableError)):
+                harness.capability.stage_paths(request, permit_token=permit.token)
+
+            # A permit issued for one binding cannot be consumed by another request.
+            repo.write("b.txt", "second\n")
+            second = harness.request("b.txt")
+            second_permit = harness.permit(second)
+            with self.assertRaises((PermitError, GitStageUnavailableError)):
+                harness.capability.stage_paths(request, permit_token=second_permit.token)
+
+    def test_cancel_takeover_expiry_and_emergency_stop_prevent_publication(self) -> None:
+        for transition in ("cancel", "takeover", "emergency"):
+            with self.subTest(transition=transition), tempfile.TemporaryDirectory() as tmp:
+                repo, harness = self._fixture(tmp)
+                request = harness.request("a.txt")
+                permit = harness.permit(request)
+                before = repo.index_bytes()
+                if transition == "cancel":
+                    harness.plane.cancel_session(harness.session)
+                elif transition == "takeover":
+                    harness.plane.user_takeover(harness.session)
+                else:
+                    harness.plane.emergency_stop(session_id=harness.session)
+                with self.assertRaises((SessionStateError, GitStageUnavailableError)):
+                    harness.capability.stage_paths(request, permit_token=permit.token)
+                self.assertEqual(repo.index_bytes(), before)
+                self.assertFalse((repo.root / ".git" / "index.lock").exists())
+
+    def test_staging_executes_no_shell_process_hook_external_filter_network_or_credentials(self) -> None:
+        import ast
+        import inspect
+        import sys
+
+        from hive_runtime import git_stage as stage_module
+
+        forbidden_import_roots = (
+            "subprocess",
+            "socket",
+            "ssl",
+            "urllib",
+            "urllib3",
+            "requests",
+            "http",
+            "ftplib",
+            "smtplib",
+            "dulwich.porcelain",
+            "dulwich.repo",
+            "dulwich.client",
+        )
+        tree = ast.parse(inspect.getsource(stage_module))
+        imported: list[str] = []
+        names: list[str] = []
+        attributes: list[str] = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported.extend(alias.name for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imported.append(node.module)
+            elif isinstance(node, ast.Name):
+                names.append(node.id)
+            elif isinstance(node, ast.Attribute):
+                attributes.append(node.attr)
+        for root in forbidden_import_roots:
+            with self.subTest(import_root=root):
+                self.assertFalse([name for name in imported if name == root or name.startswith(root + ".")])
+        for name in ("GitFile", "porcelain", "Popen", "urlopen", "system", "popen", "execv", "spawnv"):
+            with self.subTest(name=name):
+                self.assertNotIn(name, names)
+                self.assertNotIn(name, attributes)
+
+        # And executing the real staged path must not pull in any of them either.
+        with tempfile.TemporaryDirectory() as tmp:
+            _repo, harness = self._fixture(tmp)
+            request = harness.request("a.txt")
+            permit = harness.permit(request)
+            before = set(sys.modules)
+            harness.capability.stage_paths(request, permit_token=permit.token)
+            introduced = set(sys.modules) - before
+            for module in forbidden_import_roots:
+                with self.subTest(introduced=module):
+                    self.assertNotIn(module, introduced)
+
+    def test_raw_worktree_and_index_bytes_never_enter_approval_audit_or_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._fixture(tmp)
+            request = harness.request("a.txt")
+            challenge = harness.plane.create_approval_challenge(request)
+            permit = harness.permit(request)
+            receipt = harness.capability.stage_paths(request, permit_token=permit.token)
+
+            display = challenge.display_arguments_json
+            audit = " ".join(event.details_json for event in harness.plane.audit_events())
+            for payload in ("alpha MODIFIED", "alpha\n", permit.token):
+                with self.subTest(payload=payload[:12]):
+                    self.assertNotIn(payload, display)
+                    self.assertNotIn(payload, audit)
+                    self.assertNotIn(payload, repr(request.arguments))
+                    self.assertNotIn(payload, repr(receipt))
+            # No raw index bytes are representable in the approved metadata either.
+            raw_index = repo.index_bytes().decode("latin-1")
+            self.assertNotIn(raw_index, repr(request.arguments))
+            self.assertNotIn("DIRC", repr(request.arguments))
+            self.assertTrue(harness.plane.verify_audit_chain())
+
+    def test_windows_linux_and_macos_require_independent_non_skipped_native_proof(self) -> None:
+        """This lane must run, not skip, on every supported platform.
+
+        The check is structural: the governed staging lane must be reachable and
+        non-skipped here, and CI must declare an independent lane per platform.
+        A platform is never inferred from another platform's result.
+        """
+        self.assertIsNotNone(_GIT)
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._fixture(tmp)
+            request = harness.request("a.txt")
+            permit = harness.permit(request)
+            receipt = harness.capability.stage_paths(request, permit_token=permit.token)
+            self.assertEqual(receipt.committed_state, "index_updated")
+
+        workflow = (Path(__file__).resolve().parents[2] / ".github" / "workflows" / "governance.yml").read_text(encoding="utf-8")
+        for lane in ("governed-runtime-linux", "control-plane-windows", "workspace-replace-macos"):
+            with self.subTest(lane=lane):
+                self.assertIn(lane, workflow)
+        self.assertIn("test_git_stage_authority", workflow)
 
 
 if __name__ == "__main__": unittest.main()

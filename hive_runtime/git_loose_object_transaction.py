@@ -84,4 +84,104 @@ class PreAuthorityLooseObjectTransaction:
         del preparation,compressed; raise GitStageUnavailableError("loose-object publication authority is unavailable")
     def close(self)->None:return None
 
-__all__=["LOOSE_OBJECT_TRANSACTION_CONTRACT","MAX_LOOSE_OBJECT_COMPRESSED_BYTES","GitLooseObjectPreparation","ExistingLooseObjectProof","PreAuthorityLooseObjectTransaction","prepare_loose_blob","verify_existing_loose_blob"]
+
+PUBLISHED_CREATED = "created"
+PUBLISHED_ALREADY_PRESENT = "already_present"
+
+
+def _lstat_real_directory(path: Path, label: str) -> os.stat_result:
+    try: st = path.lstat()
+    except OSError as exc: raise GitStageUnsupportedRepositoryError(f"{label} is unprovable") from exc
+    if stat.S_ISLNK(st.st_mode) or not stat.S_ISDIR(st.st_mode):
+        raise GitStageUnsupportedRepositoryError(f"{label} is not a real directory")
+    return st
+
+
+def _ensure_fanout_directory(objects_dir: Path, fanout: str) -> Path:
+    """Create the 2-hex fanout directory if absent, proving it is a real directory.
+
+    Fails closed on symlink/reparse/non-directory collisions rather than writing
+    through them.
+    """
+    if len(fanout) != 2 or any(ch not in "0123456789abcdef" for ch in fanout):
+        raise GitStageUnsupportedRepositoryError("object fanout path is not canonical")
+    directory = objects_dir / fanout
+    try:
+        os.mkdir(directory, 0o755)
+    except FileExistsError:
+        pass
+    except OSError as exc:
+        raise GitStageUnsupportedRepositoryError("cannot create the object fanout directory") from exc
+    _lstat_real_directory(directory, "object fanout directory")
+    return directory
+
+
+class LooseObjectPublisher:
+    """Content-addressed, no-clobber publication of one governed loose blob.
+
+    This is the only place the capability writes into `.git/objects`. It never
+    overwrites an existing object and never deletes one: an object already at the
+    final path is accepted only after proving it is the exact approved blob.
+    """
+
+    mutation_authority_enabled = True
+
+    def __init__(self, workspace_root: str | Path) -> None:
+        self.workspace_root = Path(workspace_root)
+
+    def publish(self, preparation: GitLooseObjectPreparation, compressed: bytes) -> str:
+        digest = hashlib.sha256(compressed).hexdigest()
+        if digest != preparation.compressed_sha256 or len(compressed) != preparation.compressed_bytes:
+            raise GitStageUnavailableError("compressed object no longer matches the approved preparation")
+        store = inspect_local_object_store(self.workspace_root)
+        if store != preparation.store:
+            raise GitStageUnavailableError("Git object-store identity changed before publication")
+        if store.object_format != "sha1":
+            raise GitStageUnsupportedRepositoryError("only the SHA-1 object format is supported")
+
+        objects_dir = Path(self.workspace_root).resolve(strict=True) / ".git" / "objects"
+        path = objects_dir / preparation.fanout / preparation.leaf
+
+        existing = self._prove_existing_loose_blob(preparation)
+        if existing is not None:
+            return PUBLISHED_ALREADY_PRESENT
+
+        _ensure_fanout_directory(objects_dir, preparation.fanout)
+
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0) | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(path, flags, 0o444)
+        except FileExistsError:
+            # A concurrent publisher won the race. Accept only an exact identity proof.
+            if self._prove_existing_loose_blob(preparation) is None:
+                raise GitStageUnsupportedRepositoryError("object path appeared but is not the approved blob")
+            return PUBLISHED_ALREADY_PRESENT
+        except OSError as exc:
+            raise GitStageUnsupportedRepositoryError("cannot create the content-addressed object") from exc
+        try:
+            view = memoryview(compressed)
+            while view:
+                written = os.write(fd, view)
+                if written <= 0:
+                    raise GitStageUnsupportedRepositoryError("short write while publishing a blob object")
+                view = view[written:]
+            os.fsync(fd)
+        except BaseException:
+            os.close(fd)
+            # The path was created exclusively by us microseconds ago. Removing it
+            # can only discard our own partial object, never a foreign one.
+            try: os.unlink(path)
+            except OSError: pass
+            raise
+        else:
+            os.close(fd)
+
+        if self._prove_existing_loose_blob(preparation) is None:
+            raise GitStageUnsupportedRepositoryError("published blob did not prove its own identity")
+        return PUBLISHED_CREATED
+
+    def _prove_existing_loose_blob(self, preparation: GitLooseObjectPreparation) -> ExistingLooseObjectProof | None:
+        return verify_existing_loose_blob(self.workspace_root, preparation)
+
+
+__all__=["LOOSE_OBJECT_TRANSACTION_CONTRACT","MAX_LOOSE_OBJECT_COMPRESSED_BYTES","PUBLISHED_ALREADY_PRESENT","PUBLISHED_CREATED","LooseObjectPublisher","GitLooseObjectPreparation","ExistingLooseObjectProof","PreAuthorityLooseObjectTransaction","prepare_loose_blob","verify_existing_loose_blob"]

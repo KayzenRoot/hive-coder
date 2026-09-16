@@ -18,12 +18,145 @@ GIT_STAGE_ARGUMENT_KEYS = frozenset(
         "index_state",
         "index_identity",
         "index_sha256",
+        "path_count",
         "paths",
         "worktree_states",
-        "path_count",
+        "path_bindings",
+        "candidate_index_sha256",
+        "candidate_index_bytes",
+        "object_store_contract",
+        "object_store_format",
+        "git_dir_identity",
+        "object_store_identity",
         "target_state",
     }
 )
+
+_HEX = "0123456789abcdef"
+
+
+def _require_hex(value: object, length: int, label: str) -> str:
+    if not isinstance(value, str) or len(value) != length or any(ch not in _HEX for ch in value):
+        raise ValueError(f"{label} must be a lowercase hexadecimal string of length {length}")
+    return value
+
+
+@dataclass(frozen=True)
+class GitStagePathBinding:
+    """Deterministic per-path binding of approved content to a Git blob identity."""
+
+    path: str
+    content_sha256: str
+    content_bytes: int
+    blob_oid: str
+
+    def __post_init__(self) -> None:
+        if not self.path:
+            raise ValueError("binding path must be non-empty")
+        _require_hex(self.content_sha256, 64, "binding content digest")
+        if not isinstance(self.content_bytes, int) or self.content_bytes < 0:
+            raise ValueError("binding byte length must be a non-negative integer")
+        _require_hex(self.blob_oid, 40, "binding blob object id")
+
+    def canonical(self) -> dict[str, object]:
+        return {
+            "path": self.path,
+            "content_sha256": self.content_sha256,
+            "content_bytes": self.content_bytes,
+            "blob_oid": self.blob_oid,
+        }
+
+
+@dataclass(frozen=True)
+class GitStageObjectStoreBinding:
+    """Bounded identity of the repository-local object store that will receive publication.
+
+    Held as plain fields so the contract module keeps no dependency on the
+    inspector that produces them.
+    """
+
+    contract: str
+    object_format: str
+    git_dir_identity: str
+    objects_identity: str
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("object store contract", self.contract),
+            ("object store format", self.object_format),
+            ("git dir identity", self.git_dir_identity),
+            ("objects identity", self.objects_identity),
+        ):
+            if not isinstance(value, str) or not value:
+                raise ValueError(f"{label} must be a non-empty string")
+
+    def canonical(self) -> dict[str, str]:
+        return {
+            "object_store_contract": self.contract,
+            "object_store_format": self.object_format,
+            "git_dir_identity": self.git_dir_identity,
+            "object_store_identity": self.objects_identity,
+        }
+
+
+@dataclass(frozen=True)
+class GitStageIndexCandidateBinding:
+    """Bounded identity of the exact candidate index the approval commits to."""
+
+    sha256: str
+    content_bytes: int
+
+    def __post_init__(self) -> None:
+        _require_hex(self.sha256, 64, "candidate index digest")
+        if not isinstance(self.content_bytes, int) or self.content_bytes <= 0:
+            raise ValueError("candidate index byte length must be a positive integer")
+
+    def canonical(self) -> dict[str, object]:
+        return {"candidate_index_sha256": self.sha256, "candidate_index_bytes": self.content_bytes}
+
+
+@dataclass(frozen=True)
+class GitStageRequestBinding:
+    """The exact, raw-byte-free metadata a git.write approval authorizes.
+
+    Every field is bounded metadata. Raw worktree bytes, raw index bytes and raw
+    compressed object bytes have no representation here, by construction.
+    """
+
+    observed: GitStageObservedState
+    path_bindings: tuple[GitStagePathBinding, ...]
+    candidate: GitStageIndexCandidateBinding
+    object_store: GitStageObjectStoreBinding
+
+    def __post_init__(self) -> None:
+        observed_paths = tuple(state.path for state in self.observed.worktree_states)
+        bound_paths = tuple(binding.path for binding in self.path_bindings)
+        if not self.path_bindings or bound_paths != observed_paths:
+            raise ValueError("path bindings must exactly match the approved worktree paths")
+        for state, binding in zip(self.observed.worktree_states, self.path_bindings):
+            if binding.content_sha256 != state.content_sha256 or binding.content_bytes != state.content_bytes:
+                raise ValueError("path binding disagrees with the approved worktree state")
+
+    def arguments(self) -> dict[str, object]:
+        """Canonical, JSON-safe argument mapping for the control-plane request."""
+        arguments: dict[str, object] = {
+            "contract": GIT_STAGE_CONTRACT,
+            "repository_identity": self.observed.repository_identity,
+            "repository_head": self.observed.repository_head,
+            "index_state": self.observed.index_state,
+            "index_identity": self.observed.index_identity,
+            "index_sha256": self.observed.index_sha256,
+            "path_count": len(self.path_bindings),
+            "paths": [binding.path for binding in self.path_bindings],
+            "worktree_states": [state.canonical() for state in self.observed.worktree_states],
+            "path_bindings": [binding.canonical() for binding in self.path_bindings],
+            "target_state": GIT_STAGE_TARGET_STATE,
+        }
+        arguments.update(self.candidate.canonical())
+        arguments.update(self.object_store.canonical())
+        if set(arguments) != GIT_STAGE_ARGUMENT_KEYS:
+            raise ValueError("git stage arguments do not match the frozen argument key set")
+        return arguments
 
 
 @dataclass(frozen=True)

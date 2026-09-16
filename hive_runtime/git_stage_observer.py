@@ -22,6 +22,7 @@ from .workspace_files import normalize_relative_file_path
 _MAX_HEAD_BYTES = 4096
 _MAX_REF_BYTES = 256
 _MAX_OBSERVED_FILE_BYTES = 16 * 1024 * 1024
+_MAX_INDEX_BYTES = 256 * 1024 * 1024
 
 
 def _sha256_file(fd: int) -> tuple[str, int]:
@@ -121,6 +122,27 @@ class PosixGitStageObserver:
     def revalidate(self, expected: GitStageObservedState) -> None:
         paths = tuple(item.path for item in expected.worktree_states); current = self.observe(paths)
         if current != expected: raise GitStageUnavailableError("approved Git repository state is stale")
+
+    def read_index_bytes(self) -> bytes | None:
+        """Read the current index bytes without following links or reparse points.
+
+        Returns ``None`` only for true absence. The caller must verify that the
+        digest of these bytes equals the approved ``index_sha256``; this method
+        performs no authority-bearing work and writes nothing.
+        """
+        path = self.git_dir / "index"
+        try: fd, _ = _open_regular_nofollow(path)
+        except FileNotFoundError: return None
+        try:
+            chunks: list[bytes] = []; total = 0
+            while True:
+                chunk = os.read(fd, 1024 * 1024)
+                if not chunk: break
+                total += len(chunk)
+                if total > _MAX_INDEX_BYTES: raise GitStageUnsupportedRepositoryError("Git index exceeds governed ceiling")
+                chunks.append(chunk)
+            return b"".join(chunks)
+        finally: os.close(fd)
 
     def _reject_unsupported_repository_features(self) -> None:
         for name in ("commondir", "modules", "shallow"):

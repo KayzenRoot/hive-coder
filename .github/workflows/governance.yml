@@ -78,11 +78,11 @@ jobs:
           PYTHONWARNINGS: error::ResourceWarning
         run: |
           python -m unittest tests.runtime.test_workspace_files tests.runtime.test_workspace_file_path_security tests.runtime.test_workspace_file_replace_contract tests.runtime.test_workspace_file_replace_security
-      - name: Native Linux governed Git index codec/object proof
+      - name: Native Linux governed Git staging proof (codec, object, authority, E2E)
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: |
-          python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security tests.runtime.test_git_stage_tree_cache_semantics
+          python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security tests.runtime.test_git_stage_tree_cache_semantics tests.runtime.test_git_stage_authority
 
   control-plane-windows:
     runs-on: windows-latest
@@ -107,10 +107,10 @@ jobs:
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: python -m unittest tests.control_plane.test_control_plane tests.control_plane.test_surface tests.runtime.test_cua_executor tests.runtime.test_cua_real_harness tests.runtime.test_workspace_files tests.runtime.test_workspace_file_path_security tests.runtime.test_workspace_files_windows tests.runtime.test_workspace_file_replace_windows_contract tests.runtime.test_runtime_status_sidecar
-      - name: Native Windows HIGH_ASSURANCE governed Git index codec/object proof
+      - name: Native Windows HIGH_ASSURANCE governed Git staging proof (codec, object, authority, E2E)
         env:
           PYTHONWARNINGS: error::ResourceWarning
-        run: python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security tests.runtime.test_git_stage_tree_cache_semantics
+        run: python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security tests.runtime.test_git_stage_tree_cache_semantics tests.runtime.test_git_stage_authority
 
   workspace-replace-macos:
     runs-on: macos-latest
@@ -138,8 +138,8 @@ jobs:
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: python -m unittest tests.runtime.test_workspace_file_replace_contract tests.runtime.test_workspace_file_replace_security
-      - name: Native macOS governed Git index codec/object proof
+      - name: Native macOS governed Git staging proof (codec, object, authority, E2E)
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: |
-          python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security tests.runtime.test_git_stage_tree_cache_semantics
+          python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security tests.runtime.test_git_stage_tree_cache_semantics tests.runtime.test_git_stage_authority

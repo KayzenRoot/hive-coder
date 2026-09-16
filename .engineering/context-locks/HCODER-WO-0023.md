@@ -72,6 +72,44 @@ Reproduced objectively against a real repository: with the previous region carri
 ### Cleanup-hardening review (Prompt 02 §8)
 `PrivateObjectPreparer.cleanup_private_temp` was re-audited. Outcome: the failure path no longer removes a pathname it cannot prove it owns, and the residual name-based deletion window is stated precisely in the docstring as a bounded race — the same posture CP-0022 records for its own replacement contract, rather than a race-free identity deletion claim. The Hive-owned temporary directory claim is also narrowed: mode 0700 applies only where the platform honours POSIX permission bits, and on Windows the effective control is the inherited ACL of `.git`.
 
+## Context Lock Delta 004 — dedicated git.write authority and publication slice
+This delta grants the **first repository-mutation authority** for HCODER-WO-0023. It is bounded to exactly one action, `git_stage_paths_v1`, staging explicit regular files in the already-proven ordinary local SHA-1 repository envelope. It is HIGH_ASSURANCE, default deny, mandatory trusted approval, and permit-gated.
+
+### Exact authority granted
+- Exactly one new capability: `Capability.GIT_WRITE = "git.write"`, risk HIGH, materially sensitive, mandatory approval, required target field `workspace`.
+- Exactly one allowed action under it: `git_stage_paths_v1`, target state `index_update`.
+- The only product effect is: publish the approved content-addressed blob objects into the repository-local `.git/objects` store, then atomically publish the approved candidate index to `.git/index`.
+
+### Explicitly NOT granted
+No commit, tag, ref, branch, remote or credential capability. No generic Git command or argv surface. No `stage_paths` over pathspecs/globs. No reuse of `FILESYSTEM_WRITE` or `SHELL_EXECUTE`. No hooks, executable clean/smudge/process filters, network, remotes or config mutation. No arbitrary `.git` writer outside the exact blob and index objects this action publishes. No expansion to linked worktrees, submodules/nested repos, bare repos, sparse/split index, conflicts, alternates/shared object DB, promisor/partial clone, SHA-256 repos, deleted-path staging or unproven extensions. No rollback of a published-but-unreachable blob.
+
+### Authorized files
+This delta authorizes exactly these files, and nothing else:
+- `hive_runtime/control_types.py` (add `Capability.GIT_WRITE` and its `CapabilitySpec` only)
+- `hive_runtime/git_stage_contract.py` (frozen request binding)
+- `hive_runtime/git_stage.py` (the `GovernedGitStageCapability` executor and its public prepare/execute phases)
+- `hive_runtime/git_stage_transaction.py` (owned index lock transaction and atomic index publication)
+- `hive_runtime/git_loose_object_transaction.py` (content-addressed blob publication)
+- `hive_runtime/git_object_private_prep.py` (only if the preparation seam requires it)
+- `tests/control_plane/test_control_plane.py` (git.write policy acceptance)
+- `tests/runtime/test_git_stage_security.py` (activate the prebuilt authority gates)
+- `tests/runtime/test_git_stage_authority.py` (new focused authority and E2E lane)
+- `hive_runtime/git_stage_codex_frontier.py` (record accurately which pre-Codex seams are now complete)
+- `tests/runtime/test_git_stage_codex_frontier.py` (matching frontier-record assertions)
+- `.github/workflows/governance.yml` (native Windows/Linux/macOS governed staging proof lanes)
+- `.engineering/evidence/HCODER-WO-0023.md`
+
+No new executor module is created: the orchestration lives in the existing `hive_runtime/git_stage.py`, which is already the declared Hive-owned boundary around the Git index backend, and the parser/transaction primitives remain in their existing modules.
+
+### Publication law for this delta
+- Blobs are published content-addressed, no-follow, no-clobber. An existing final object is accepted only after proving it is the exact approved blob; it is never overwritten and never deleted.
+- The index is published only by the capability-owned `index.lock` transaction, with an atomic same-filesystem replacement primitive. A foreign or pre-existing `index.lock` fails closed and is never removed.
+- A crash after blob publication but before index publication may leave an unreachable content-addressed blob. That state must never be reported as success, and the blob must not be rolled back without independent ownership and reachability proof.
+- Permit consumption happens at the final safe boundary, after all non-authoritative preparation that can safely precede mutation.
+
+### Residual bounded-race claim
+Consistent with CP-0022, this slice does not claim strict CAS across an uncooperative external writer acting after the last successful revalidation. The index publication primitive is atomic, but an external process may act between the final revalidation and the atomic call. This must be stated, never represented as strict CAS.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 

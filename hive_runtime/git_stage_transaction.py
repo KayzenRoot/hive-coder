@@ -7,12 +7,26 @@ publish an index and it never removes a foreign lock. Lock acquisition is a
 pre-authority concurrency reservation, not Git staging authority.
 """
 
+import hashlib
 import os
 import stat
 from dataclasses import dataclass
 from pathlib import Path
 
 from .git_stage import GitStageUnavailableError, GitStageUnsupportedRepositoryError
+
+
+def _digest_fd(fd: int) -> tuple[str, int]:
+    digest = hashlib.sha256()
+    os.lseek(fd, 0, os.SEEK_SET)
+    total = 0
+    while True:
+        chunk = os.read(fd, 1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        digest.update(chunk)
+    return digest.hexdigest(), total
 
 
 @dataclass(frozen=True)
@@ -106,10 +120,63 @@ class PosixGitIndexTransaction:
         os.fsync(self._fd)
         self.verify_owned()
 
-    def publish(self) -> None:
-        raise GitStageUnavailableError(
-            "index publication is intentionally unavailable before Git mutation authority"
-        )
+    def publish(self, *, expected_sha256: str, expected_bytes: int) -> None:
+        """Atomically publish the prepared lock as the live `.git/index`.
+
+        The candidate digest and length are re-verified from the lock's own bytes
+        immediately before the atomic replacement, so the published index is
+        provably the exact approved candidate. A foreign or pre-existing
+        `index.lock` can never reach this method: acquisition fails closed.
+
+        The replacement primitive is `os.replace`, which is an atomic
+        same-filesystem rename on POSIX and an atomic replace-existing move on
+        Windows. Consistent with CP-0022, this is an atomic *publication*, not a
+        strict CAS: an external process may still act between the last
+        revalidation and this call.
+        """
+        if len(expected_sha256) != 64:
+            raise ValueError("expected candidate digest must be SHA-256")
+        self.verify_owned()
+        assert self._fd is not None
+        actual_digest, actual_bytes = _digest_fd(self._fd)
+        if actual_bytes != expected_bytes or actual_digest != expected_sha256:
+            raise GitStageUnavailableError("prepared index.lock no longer matches the approved candidate")
+        self.verify_owned()
+
+        # Windows refuses to rename a file that still has an open handle, so the
+        # owned handle is released immediately before the atomic replacement. The
+        # lock identity is re-proved on the pathname in between, so a lock that is
+        # no longer ours can never be published.
+        os.close(self._fd)
+        self._fd = None
+        try:
+            live = GitIndexLockIdentity.from_stat(os.lstat(self.lock_path))
+        except OSError as exc:
+            raise GitStageUnavailableError("owned index.lock is no longer provable") from exc
+        if live != self._identity:
+            raise GitStageUnavailableError("owned index.lock identity changed before publication")
+
+        target = self.git_dir / "index"
+        try:
+            os.replace(self.lock_path, target)
+        except OSError as exc:
+            raise GitStageUnavailableError("atomic index publication failed") from exc
+        self._published = True
+        self.verify_published(expected_sha256=expected_sha256, expected_bytes=expected_bytes)
+
+    def verify_published(self, *, expected_sha256: str, expected_bytes: int) -> None:
+        """Postcondition: the live index bytes hash exactly to the approved candidate."""
+        path = self.git_dir / "index"
+        try:
+            fd = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0))
+        except OSError as exc:
+            raise GitStageUnavailableError("published index is not readable") from exc
+        try:
+            digest, size = _digest_fd(fd)
+        finally:
+            os.close(fd)
+        if size != expected_bytes or digest != expected_sha256:
+            raise GitStageUnavailableError("published index does not match the approved candidate")
 
     def close(self) -> None:
         fd, identity = self._fd, self._identity

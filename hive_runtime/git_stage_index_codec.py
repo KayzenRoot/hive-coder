@@ -373,13 +373,41 @@ class DulwichGitIndexCodec:
             raise GitStageUnavailableError("produced index candidate lost a staged path")
 
 
+def git_index_entry_oids(data: bytes) -> dict[str, str]:
+    """Return ``path -> blob object id`` for a validated index, as data only.
+
+    Used to verify postconditions on a published index and to compare a source
+    index against a committed one. The envelope inspector already enforces the
+    extension policy, so a source index that carries a proven optional extension
+    is still inspectable here; only a *candidate* must be extension-free, and that
+    is enforced by the codec's own self-verification.
+    """
+    envelope = inspect_git_index_envelope(data)
+    backend = _load_backend()
+    entries, version, _ = backend["read_index_dict_with_version"](io.BytesIO(data))
+    if version != envelope.version or len(entries) != envelope.entry_count:
+        raise GitStageUnsupportedRepositoryError("Git index disagrees between envelope and codec")
+    result: dict[str, str] = {}
+    for name, entry in entries.items():
+        if isinstance(entry, backend["ConflictedIndexEntry"]):
+            raise GitStageUnsupportedRepositoryError("conflicted Git index entries are unsupported")
+        sha = entry.sha
+        if isinstance(sha, bytes):
+            sha = sha.decode("ascii")
+        result[name.decode("utf-8")] = str(sha)
+    return result
+
+
 __all__ = [
     "ADMITTED_DULWICH_WHEEL_TAG",
+    "CANDIDATE_EXTENSION_POLICY",
     "DULWICH_CANDIDATE_VERSION",
     "DULWICH_CODEC_ID",
     "DulwichGitIndexCodec",
     "GitIndexCandidate",
     "GitIndexCodec",
     "INDEX_CODEC_CONTRACT",
+    "SOURCE_EXTENSIONS_ACCEPTED_FOR_VALIDATION",
     "UnavailableGitIndexCodec",
+    "git_index_entry_oids",
 ]

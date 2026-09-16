@@ -4,7 +4,7 @@ import unittest
 
 from hive_runtime.git_stage import GitStageUnavailableError
 from hive_runtime.git_stage_index_codec import DULWICH_CANDIDATE_VERSION, DulwichGitIndexCodec, GitIndexCandidate, UnavailableGitIndexCodec
-from hive_runtime.git_stage_contract import ABSENT_INDEX_IDENTITY, ABSENT_INDEX_SHA256, GIT_STAGE_ACTION, GIT_STAGE_ARGUMENT_KEYS, GIT_STAGE_CONTRACT, GIT_STAGE_TARGET_STATE, MAX_STAGE_PATHS, UNBORN_HEAD, GitStageObservedState, GitStageReceipt, GitStageWorktreeState, GitStageWorktreeStat
+from hive_runtime.git_stage_contract import ABSENT_INDEX_IDENTITY, ABSENT_INDEX_SHA256, GIT_STAGE_ACTION, GIT_STAGE_ARGUMENT_KEYS, GIT_STAGE_CONTRACT, GIT_STAGE_TARGET_STATE, MAX_STAGE_PATHS, UNBORN_HEAD, GitStageIndexCandidateBinding, GitStageObjectStoreBinding, GitStageObservedState, GitStagePathBinding, GitStageReceipt, GitStageRequestBinding, GitStageWorktreeState, GitStageWorktreeStat
 
 DIGEST_A = "a" * 64
 DIGEST_B = "b" * 64
@@ -16,7 +16,71 @@ def state(path: str = "src/app.py", *, digest: str = DIGEST_A) -> GitStageWorktr
 class GitStageContractTests(unittest.TestCase):
     def test_fixed_contract_constants(self) -> None:
         self.assertEqual(GIT_STAGE_CONTRACT, "hive-git-stage-v1"); self.assertEqual(GIT_STAGE_ACTION, "git_stage_paths_v1"); self.assertEqual(GIT_STAGE_TARGET_STATE, "index_update"); self.assertEqual(MAX_STAGE_PATHS, 128)
-        self.assertEqual(GIT_STAGE_ARGUMENT_KEYS, {"contract","repository_identity","repository_head","index_state","index_identity","index_sha256","paths","worktree_states","path_count","target_state"})
+        self.assertEqual(GIT_STAGE_ARGUMENT_KEYS, {
+            "contract","repository_identity","repository_head","index_state","index_identity","index_sha256",
+            "path_count","paths","worktree_states","path_bindings",
+            "candidate_index_sha256","candidate_index_bytes",
+            "object_store_contract","object_store_format","git_dir_identity","object_store_identity",
+            "target_state",
+        })
+
+    def test_path_binding_rejects_malformed_identities(self) -> None:
+        good = GitStagePathBinding("src/app.py", DIGEST_A, 7, "1" * 40)
+        self.assertEqual(good.canonical()["blob_oid"], "1" * 40)
+        with self.assertRaises(ValueError): GitStagePathBinding("", DIGEST_A, 7, "1" * 40)
+        with self.assertRaises(ValueError): GitStagePathBinding("a.py", "short", 7, "1" * 40)
+        with self.assertRaises(ValueError): GitStagePathBinding("a.py", DIGEST_A, -1, "1" * 40)
+        with self.assertRaises(ValueError): GitStagePathBinding("a.py", DIGEST_A, 7, "xyz")
+
+    def test_request_binding_binds_exact_candidate_store_and_has_no_raw_bytes(self) -> None:
+        bound = GitStageRequestBinding(
+            observed=GitStageObservedState("repo:1", OID, "regular", "index:1", DIGEST_B, (state(),)),
+            path_bindings=(GitStagePathBinding("src/app.py", DIGEST_A, 7, "2" * 40),),
+            candidate=GitStageIndexCandidateBinding(DIGEST_A, 512),
+            object_store=GitStageObjectStoreBinding("s", "sha1", "gitdir:1", "objects:1"),
+        )
+        arguments = bound.arguments()
+        self.assertEqual(set(arguments), GIT_STAGE_ARGUMENT_KEYS)
+        self.assertEqual(arguments["path_count"], 1)
+        self.assertEqual(arguments["candidate_index_sha256"], DIGEST_A)
+        self.assertEqual(arguments["candidate_index_bytes"], 512)
+        self.assertEqual(arguments["object_store_identity"], "objects:1")
+        self.assertEqual(arguments["target_state"], "index_update")
+        # No raw byte payload may be representable in the approved metadata.
+        for value in (arguments["paths"], arguments["worktree_states"], arguments["path_bindings"]):
+            self.assertNotIsInstance(value, (bytes, bytearray))
+        import json
+        json.dumps(arguments)  # the approved metadata must be JSON-serializable
+
+    def test_request_binding_rejects_binding_that_disagrees_with_observation(self) -> None:
+        with self.assertRaises(ValueError):
+            GitStageRequestBinding(
+                observed=GitStageObservedState("repo:1", OID, "regular", "index:1", DIGEST_B, (state(),)),
+                path_bindings=(GitStagePathBinding("other.py", DIGEST_A, 7, "2" * 40),),
+                candidate=GitStageIndexCandidateBinding(DIGEST_A, 512),
+                object_store=GitStageObjectStoreBinding("s", "sha1", "g", "o"),
+            )
+        # Content digest disagrees with the approved worktree state.
+        with self.assertRaises(ValueError):
+            GitStageRequestBinding(
+                observed=GitStageObservedState("repo:1", OID, "regular", "index:1", DIGEST_B, (state(),)),
+                path_bindings=(GitStagePathBinding("src/app.py", DIGEST_B, 7, "2" * 40),),
+                candidate=GitStageIndexCandidateBinding(DIGEST_A, 512),
+                object_store=GitStageObjectStoreBinding("s", "sha1", "g", "o"),
+            )
+        # Byte length disagrees with the approved worktree state.
+        with self.assertRaises(ValueError):
+            GitStageRequestBinding(
+                observed=GitStageObservedState("repo:1", OID, "regular", "index:1", DIGEST_B, (state(),)),
+                path_bindings=(GitStagePathBinding("src/app.py", DIGEST_A, 999, "2" * 40),),
+                candidate=GitStageIndexCandidateBinding(DIGEST_A, 512),
+                object_store=GitStageObjectStoreBinding("s", "sha1", "g", "o"),
+            )
+
+    def test_candidate_and_store_bindings_are_strict(self) -> None:
+        with self.assertRaises(ValueError): GitStageIndexCandidateBinding("short", 10)
+        with self.assertRaises(ValueError): GitStageIndexCandidateBinding(DIGEST_A, 0)
+        with self.assertRaises(ValueError): GitStageObjectStoreBinding("", "sha1", "g", "o")
 
     def test_worktree_state_is_redacted_metadata_only(self) -> None:
         observed = state()
