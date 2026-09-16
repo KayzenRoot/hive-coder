@@ -4,9 +4,8 @@
   "repository": "KayzenRoot/hive-coder",
   "branch": "feat/HCODER-WO-0023-git-stage-capability",
   "baseSha": "aaa75242826db33442cd96cdc1d550d69bd25faa",
-  "headSha": "b904b473416786e72c7e805e2e8c8b557d377166",
+  "headSha": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
   "technicalHedsHead": "b904b473416786e72c7e805e2e8c8b557d377166",
-  "promotionCandidateHead": "SELF_REFERENTIAL_SEE_NOTE",
   "taskClass": "T3",
   "contextRadius": "C4",
   "risk": "HIGH_ASSURANCE",
@@ -140,11 +139,21 @@
     "approvalMintingByCapability": false
   },
   "integration": {
-    "nativeStagingLanes": {
-      "linux": "PROVEN_CI",
-      "windows": "PROVEN_CI",
-      "macos": "PROVEN_CI"
-    }
+    "nativeStagingLanesAtReviewedHead": {
+      "linux": {
+        "sha": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
+        "result": "SUCCESS"
+      },
+      "windows": {
+        "sha": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
+        "result": "SUCCESS_HIGH_ASSURANCE"
+      },
+      "macos": {
+        "sha": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
+        "result": "SUCCESS"
+      }
+    },
+    "platformIndependence": "Each platform lane passed independently; no platform result is inferred from another."
   },
   "benchmarks": {
     "state": "NOT_REQUIRED"
@@ -152,15 +161,31 @@
   "hostedGates": [
     {
       "workflow": "Governance",
+      "runId": 35161417857,
+      "sha": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
+      "conclusion": "SUCCESS",
+      "scope": "reviewed promotion-candidate head"
+    },
+    {
+      "workflow": "Desktop Shell",
+      "runId": 35161417859,
+      "sha": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
+      "conclusion": "SUCCESS",
+      "scope": "reviewed promotion-candidate head"
+    },
+    {
+      "workflow": "Governance",
       "runId": 35159183327,
       "sha": "b904b473416786e72c7e805e2e8c8b557d377166",
-      "conclusion": "SUCCESS"
+      "conclusion": "SUCCESS",
+      "scope": "last behavior-changing head (historical, not the reviewed head)"
     },
     {
       "workflow": "Desktop Shell",
       "runId": 35159183326,
       "sha": "b904b473416786e72c7e805e2e8c8b557d377166",
-      "conclusion": "SUCCESS"
+      "conclusion": "SUCCESS",
+      "scope": "last behavior-changing head (historical, not the reviewed head)"
     }
   ],
   "resolvedFindings": [
@@ -186,5 +211,51 @@
   "checkpointDelta": ".engineering/checkpoint-deltas/HCODER-WO-0023.md",
   "canonicalCheckpointMutated": false,
   "stopState": "PROMOTION_CANDIDATE_READY_FOR_REVIEW",
-  "promotionCandidateHeadNote": "This artifact is committed inside the promotion-candidate head, so it cannot contain that head's own SHA. The exact promotion-candidate head SHA is recorded in the Prompt 06 return and on PR #69, and the fresh exact-head Governance and Desktop Shell receipts for it are recorded in the same return. The technical HEDS head is exact and verified above."
+  "lastBehaviorChangingHead": "b904b473416786e72c7e805e2e8c8b557d377166",
+  "independentHedsReviewId": "5229345968",
+  "independentHedsHead": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
+  "independentHedsResult": {
+    "critical": 0,
+    "high": 0
+  },
+  "evidenceCommitSelfReferencePolicy": "headSha is the reviewed head this evidence describes, never the commit that contains this file. A commit cannot contain its own SHA, so the SHA of any evidence-only correction commit is recorded externally: by GitHub exact-head receipts on that commit and in the corresponding Prompt return. No future or self-referential SHA is fabricated inside this file.",
+  "futureEvidenceCorrectionHeadPolicy": "The evidence-only correction head that carries this file is recorded externally by its exact-head Governance and Desktop Shell receipts and by the Prompt 07 return. Technical HEDS review 5229345968 at b827cb2e is carried forward only because that correction is strictly evidence/metadata-only; any runtime, authority, dependency, workflow or test-semantics change invalidates the carry-forward.",
+  "carriedProofs": [
+    {
+      "proof": "independent A4/HEDS review 5229345968",
+      "head": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
+      "state": "CARRY_FORWARD",
+      "basis": "Prompt 07 is strictly evidence/metadata-only; no runtime, authority, dependency, workflow or test-semantics input changed."
+    },
+    {
+      "proof": "CR-05-A final-link freshness",
+      "head": "b904b473416786e72c7e805e2e8c8b557d377166",
+      "state": "CARRY_FORWARD",
+      "basis": "No relevant behavior input changed after b904b473."
+    },
+    {
+      "proof": "CR-05-B approval-confusion rejection",
+      "head": "b904b473416786e72c7e805e2e8c8b557d377166",
+      "state": "CARRY_FORWARD",
+      "basis": "No relevant behavior input changed after b904b473."
+    }
+  ],
+  "invalidatedProofs": [],
+  "evidenceCorrectionChangedFiles": [
+    ".engineering/evidence/HCODER-WO-0023.md",
+    ".engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json",
+    ".engineering/work-orders/HCODER-WO-0023.md",
+    ".engineering/checkpoint-deltas/HCODER-WO-0023.md",
+    "docs/project-brain/adrs/DEC-027-GOVERNED-GIT-STAGING.md"
+  ],
+  "sourceAccuracyCorrections": {
+    "introducedBy": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
+    "documentationOnly": true,
+    "runtimeSemanticsUnchangedFrom": "b904b473416786e72c7e805e2e8c8b557d377166",
+    "items": [
+      "Work Order status reconciled from PREBUILT / BACKEND GATE OPEN",
+      "hive_runtime/git_stage.py module banner reconciled from pre-authority wording",
+      "hive_runtime/git_object_private_prep.py module banner reconciled from 'a later governed phase'"
+    ]
+  }
 }

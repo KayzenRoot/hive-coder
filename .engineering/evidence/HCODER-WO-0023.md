@@ -67,28 +67,44 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 
 ## FINAL TECHNICAL HEDS and promotion candidate (Prompt 06)
 
-**Technical HEDS head:** `b904b473416786e72c7e805e2e8c8b557d377166`  
+**Last behavior-changing implementation head:** `b904b473416786e72c7e805e2e8c8b557d377166`  
+**Independently reviewed promotion-candidate / HEDS head:** `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a`  
+**Independent A4/HEDS review artifact:** PR review `5229345968`  
 **Promotion-preflight canonical main:** `aaa75242826db33442cd96cdc1d550d69bd25faa`  
 **Promotion candidate:** `.engineering/checkpoint-deltas/HCODER-WO-0023.md`  
 **Machine evidence:** `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json`
 
-### Technical HEDS result — APPROVED FOR PROMOTION CANDIDATE
-Audit scope: the complete HCODER-WO-0023 technical delta at the exact head above, across scope/preservation, control plane, request binding, final authority ordering, object publication, index publication, failure and cancellation semantics, platform independence, backend provenance, TREE semantics, residual-race claims and evidence accuracy.
+### HEDS provenance and chronology (corrected)
+
+Three heads must not be conflated:
+
+| Role | Head | What it is |
+|---|---|---|
+| Last behavior-changing implementation head | `b904b473416786e72c7e805e2e8c8b557d377166` | The last head at which product/runtime behavior changed. Not an approval artifact. |
+| Independently reviewed promotion-candidate / HEDS head | `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a` | The head the independent A4/HEDS review actually examined. |
+| Independent A4/HEDS review artifact | PR review `5229345968` | Reviewer-issued. This is the approval event. |
+
+An earlier version of this ledger presented an executor-authored audit at `b904b473` as though it were the independent HEDS approval, and stated that the three source-accuracy corrections were applied *before* that head. Both statements were wrong and are corrected here. Git history is decisive: at `b904b473` the Work Order still read `PREBUILT / BACKEND GATE OPEN`, and the three prose corrections (two of them module banners) were introduced by the `b827cb2e` promotion-candidate commit.
+
+The executor may **propose and prepare** HEDS evidence. Only independent reviewer evidence **approves**. The audit recorded below is therefore a prepared proposal; the governing approval is PR review `5229345968` at `b827cb2e`.
+
+### Executor technical audit (prepared proposal, not an approval)
+Audit scope: the complete HCODER-WO-0023 technical delta, across scope/preservation, control plane, request binding, final authority ordering, object publication, index publication, failure and cancellation semantics, platform independence, backend provenance, TREE semantics, residual-race claims and evidence accuracy.
 
 | Severity | Count | Notes |
 |---|---|---|
 | CRITICAL | 0 | — |
 | HIGH | 0 | — |
 | MEDIUM | 0 | — |
-| LOW | 3 | All three were objective source-accuracy prose defects, corrected before the HEDS head |
+| LOW | 3 | Objective source-accuracy prose defects. Corrected in the `b827cb2e` promotion-candidate commit, i.e. **after** `b904b473`, and documentation-only: runtime semantics are unchanged from `b904b473`. |
 
-LOW findings, all corrected at this head:
+LOW findings. These corrections are part of the `b827cb2e` promotion-candidate commit, not of `b904b473`:
 
 1. `.engineering/work-orders/HCODER-WO-0023.md` still declared `PREBUILT / BACKEND GATE OPEN` and described backend selection as pending. Reconciled to the proven state; the historical backend-gate section is preserved and explicitly labelled historical with its resolution recorded.
 2. The module banner in `hive_runtime/git_stage.py` still stated the module was intentionally non-mutating, although the same module now contains the governed mutation capability. Corrected.
 3. The module banner in `hive_runtime/git_object_private_prep.py` still described object publication as "a later governed phase", which stopped being true once `LooseObjectPublisher` performed it. Corrected.
 
-All three corrections are **documentation-only**: the structural AST of both modules, with inert banner strings removed, is byte-identical before and after, so no logic, signature, ordering, authority or semantic was changed.
+All three corrections are **documentation-only**: the structural AST of both modules, with inert banner strings removed, is byte-identical between `b904b473` and `b827cb2e`, so no logic, signature, ordering, authority or semantic changed between the last behavior-changing head and the reviewed candidate head.
 
 One further item is recorded as an accepted, documented bound rather than a finding: during worktree content re-read, an intermediate directory component could in principle be swapped between revalidation and the read, but any redirection still has to serve bytes hashing to the approved content digest, so no different content can be staged.
 
@@ -105,14 +121,16 @@ One further item is recorded as an accepted, documented bound rather than a find
 | Desktop | security gate (CI precondition) PASS; typecheck PASS; Vitest 26/26; build:web PASS; npm audit 0 | 0 | PASS |
 | Rust | `cargo test --locked` 13/13; `cargo check --locked` PASS | 0 | PASS |
 
-### Exact-head hosted receipts at the technical head
-- Governance run `35159183327`: SUCCESS.
-- Desktop Shell run `35159183326`: SUCCESS.
+### Exact-head hosted receipts at the reviewed promotion-candidate head `b827cb2e`
+- Governance run `35161417857`: SUCCESS.
+- Desktop Shell run `35161417859`: SUCCESS.
+
+Historical receipts at the last behavior-changing head `b904b473` (not the reviewed head): Governance `35159183327` SUCCESS, Desktop Shell `35159183326` SUCCESS.
 - Native governed Git staging proof: Linux SUCCESS, Windows HIGH_ASSURANCE SUCCESS, macOS SUCCESS — each independent, none inferred from another.
 
 ### Carried and invalidated proofs
 - **Position:** the Prompt 05 CR-05-A and CR-05-B proofs are **not** carried forward as authoritative for the promotion-candidate head. They remain valid for the technical head they were produced at, and the runtime inputs they cover are unchanged since; but any commit creates a new head, so the promotion-candidate head requires its own fresh exact-head hosted receipts, and that is what the promotion candidate records.
-- **Invalidated:** none. No edit after the technical HEDS head changed `hive_runtime/git_stage.py` logic, `git_loose_object_transaction.py`, control-plane authority, index/object publication, the dependency lock or the security tests.
+- **Invalidated:** none. Between the last behavior-changing head `b904b473` and the reviewed candidate head `b827cb2e`, no edit changed `hive_runtime/git_stage.py` logic, `git_loose_object_transaction.py`, control-plane authority, index/object publication, the dependency lock or the security tests. The only Python changes in that interval were the two module banners, proven structurally inert.
 
 ## CR-05 correction candidate (Prompt 05)
 

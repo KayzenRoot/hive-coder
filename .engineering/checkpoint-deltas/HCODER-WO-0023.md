@@ -22,12 +22,16 @@ Commit, tag, ref, branch, remote, credential, reset, checkout, restore, clean, s
 `FILESYSTEM_WRITE` and `SHELL_EXECUTE` are not reused and cannot satisfy a `git.write` rule.
 
 ## Promotion evidence carried to the candidate
-- Technical head `b904b473416786e72c7e805e2e8c8b557d377166`.
-- Governance run `35159183327`: SUCCESS.
-- Desktop Shell run `35159183326`: SUCCESS.
+- Last behavior-changing implementation head `b904b473416786e72c7e805e2e8c8b557d377166`.
+- Independently reviewed promotion-candidate head `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a`, by PR review `5229345968`.
+- Governance run `35161417857` at `b827cb2e`: SUCCESS.
+- Desktop Shell run `35161417859` at `b827cb2e`: SUCCESS.
 - Native governed Git staging proof, independent per platform: Linux SUCCESS, Windows HIGH_ASSURANCE SUCCESS, macOS SUCCESS.
 - Local assurance: compileall PASS; authority lane 48 tests PASS; security lane 21 tests PASS with 13 platform/capability skips and no implementation skip; full Python suite 533 PASS; foundations lock/doctor and governed dependency verifier PASS.
-- Final technical HEDS: CRITICAL `0`, HIGH `0`, MEDIUM `0`, LOW `3` — all three LOW findings were source-accuracy prose corrections applied before the HEDS head, plus one accepted bounded-race statement.
+- Last behavior-changing implementation head: `b904b473416786e72c7e805e2e8c8b557d377166`.
+- Independent A4/HEDS review artifact: PR review `5229345968`, examining `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a`.
+- Independent review conclusion: CRITICAL `0`, HIGH `0`.
+- Executor technical audit (prepared proposal, not an approval): CRITICAL `0`, HIGH `0`, MEDIUM `0`, LOW `3`. The three LOW findings are source-accuracy prose corrections carried in the `b827cb2e` promotion-candidate commit — documentation-only, runtime semantics unchanged from `b904b473` — plus one accepted bounded-race statement.
 
 ## Residual bounded-race statement
 Publication is an atomic same-filesystem **publication**, not strict CAS. An uncooperative external process may act between the last successful revalidation and the atomic call. This is stated in the ADR, the Context Lock, the implementation docstrings and this delta, and must never be represented as strict CAS.

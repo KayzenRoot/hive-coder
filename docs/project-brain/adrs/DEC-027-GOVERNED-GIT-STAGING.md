@@ -5,10 +5,12 @@
 **Issue:** `#68`  
 **Original source main:** `22b56b0f3111158cbf50789b1647c5a578a171c1`  
 **Promotion-preflight canonical main:** `aaa75242826db33442cd96cdc1d550d69bd25faa`  
-**Technical HEDS head:** `b904b473416786e72c7e805e2e8c8b557d377166`  
+**Last behavior-changing implementation head:** `b904b473416786e72c7e805e2e8c8b557d377166`  
+**Independently reviewed promotion-candidate head:** `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a`  
+**Independent A4/HEDS review artifact:** PR review `5229345968`  
 **Promotion candidate:** `.engineering/checkpoint-deltas/HCODER-WO-0023.md`
 
-> **State transition record (explicit and evidence-bound).** This ADR remains **PROPOSED**. Its original source main is preserved above and is not backdated or erased. The promotion-candidate preparation records that every condition in the promotion gate below is now objectively satisfied at the technical HEDS head; the canonical status itself has **not** been declared, and cannot be until the governing review and promotion mutation occur. Nothing in this record may be read as a canonical decision.
+> **State transition record (explicit and evidence-bound).** This ADR remains **PROPOSED**. Its original source main is preserved above and is not backdated or erased. The promotion-candidate preparation records that every condition in the promotion gate below is now objectively satisfied at the independently reviewed head; the canonical status itself has **not** been declared, and cannot be until the governing review and promotion mutation occur. Nothing in this record may be read as a canonical decision.
 
 ## Context
 Hive Coder can safely create and replace trusted-workspace regular files under the Permission & Control Plane, but practical coding also requires converting an approved worktree state into repository index state. Granting generic Git or shell execution would be a much larger authority boundary than staging itself.
@@ -40,13 +42,13 @@ This ADR does not approve commit, ref/branch/tag mutation, checkout/reset/restor
 ## Promotion gate
 DEC-027 remains PROPOSED until the backend/dependency decision is proven, executable contract/security tests pass natively on all three target OSes, exact-head CI is green and HEDS reports HIGH/CRITICAL `0/0`.
 
-**Condition status at technical HEDS head `b904b473416786e72c7e805e2e8c8b557d377166` (evidence-bound):**
+**Condition status at the independently reviewed head `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a` (evidence-bound):**
 
 | Condition | Status | Evidence |
 |---|---|---|
 | Backend/dependency decision proven | MET | `foundations/python-dependencies.lock.json`, `foundations/python-dependencies.requirements.txt`, `tools/foundations/verify_python_dependencies.py`; pure-Python wheel hash-pinned; import isolation asserted |
 | Executable contract/security tests pass natively on all three target OSes | MET | Governance run `35159183327`: native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging lanes each SUCCESS |
 | Exact-head CI green | MET | Governance `35159183327` SUCCESS; Desktop Shell `35159183326` SUCCESS |
-| HEDS HIGH/CRITICAL `0/0` | MET | Final technical HEDS: CRITICAL `0`, HIGH `0`, MEDIUM `0`, LOW `3` (all three LOW were source-accuracy prose corrections applied before the HEDS head) |
+| HEDS HIGH/CRITICAL `0/0` | MET | Independent A4/HEDS review `5229345968` at `b827cb2e`: CRITICAL `0`, HIGH `0`. The executor's prepared audit additionally recorded MEDIUM `0`, LOW `3`; all three LOW were source-accuracy prose corrections carried in `b827cb2e` and documentation-only |
 
 The gate is therefore satisfied as a **promotion candidate**. Declaring DEC-027 canonical remains the governing review's decision and is explicitly **not** done here.

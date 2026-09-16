@@ -181,6 +181,31 @@ Authorize exactly the documentation/state files needed to (a) reconcile objectiv
 ### Explicit non-authorization
 No new capability, action, dependency, workflow behavior or test-semantics change. No commit/ref/branch/remote/credential authority. No merge, no PR readiness, no canonical checkpoint mutation, and no DEC-027 canonical declaration. `DEC-027` remains PROPOSED until its own governing gate occurs.
 
+## Context Lock Delta 008 — same-WO evidence/HEDS reconciliation correction
+Review verdict on Prompt 06 was CORRECTION_REQUIRED, **evidence and governance only**. The technical implementation is not reopened: the independent A4/HEDS review `5229345968` reported CRITICAL `0` / HIGH `0` at `b827cb2e`. This delta authorizes only the correction of evidence provenance, chronology and PR metadata. **It grants no authority, no capability, no dependency and no behavior change of any kind.**
+
+### Corrected defects
+**E-06-01 — HEDS provenance and chronology.** The Evidence Ledger presented an executor-authored audit at `b904b473` as though it were the independent HEDS approval event, and stated that the three source-accuracy prose corrections were applied *before* that head. Git history refutes this: at `b904b473` the Work Order still read `PREBUILT / BACKEND GATE OPEN`, and all three corrections were introduced by the `b827cb2e` promotion-candidate commit. Corrected by distinguishing three heads explicitly (last behavior-changing head, independently reviewed promotion-candidate head, reviewer artifact), by recording PR review `5229345968` as the actual approval event, and by stating that the executor may propose and prepare HEDS evidence while only independent reviewer evidence approves. Historical `b904b473` technical evidence is reclassified, not deleted.
+
+**E-06-02 — machine evidence proof scope.** The GEF candidate JSON used `headSha = b904b473` while describing a promotion candidate actually reviewed at `b827cb2e`, and its hosted-gate list pointed at the older `#402`/`#238` receipts. Corrected so `headSha` means the reviewed head the evidence describes, with `lastBehaviorChangingHead`, `independentHedsReviewId`, `independentHedsHead` and an explicit self-reference policy added, the `b827cb2e` receipts recorded, and native `b827cb2e` platform results bound as exact-head evidence.
+
+**Evidence-only commit self-reference.** A commit cannot contain its own SHA. The correction head is therefore recorded **externally**, by its own GitHub exact-head receipts and in the Prompt 07 return, and no self-referential or future SHA is fabricated inside the file.
+
+### Authorized files
+- `.engineering/evidence/HCODER-WO-0023.md`
+- `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json`
+- `.engineering/work-orders/HCODER-WO-0023.md` (HEDS provenance wording only)
+- `.engineering/checkpoint-deltas/HCODER-WO-0023.md` (HEDS chronology/evidence wording only)
+- `docs/project-brain/adrs/DEC-027-GOVERNED-GIT-STAGING.md` (provenance/chronology only; status stays PROPOSED)
+- this Context Lock (append-only)
+- PR #69 title/body metadata
+
+### Forbidden and unchanged
+Runtime logic, control plane, object/index publication logic, dependency locks, workflows, security tests, contract tests, desktop code, build scripts and release code are **not** authorized and are not touched. `DEC-027` remains PROPOSED, the canonical checkpoint is untouched, PR #69 remains Draft, and nothing is merged.
+
+### Proof carry-forward
+Technical HEDS review `5229345968` at `b827cb2e`, and the CR-05-A/CR-05-B proofs, are carried forward **only** because this correction is strictly evidence/metadata-only and no runtime, authority, dependency, workflow or test-semantics input changed. Any such change invalidates the carry-forward immediately and requires a new technical correction and HEDS cycle.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 
