@@ -98,7 +98,14 @@ def _resolve_git_dir(workspace_root: str | os.PathLike[str]) -> Path:
 
 
 def _owned_temp_dir(git_dir: Path) -> Path:
-    """Return the Hive-owned temporary directory, creating it if absent."""
+    """Return the Hive-owned temporary directory, creating it if absent.
+
+    The directory is created with mode 0700 where the platform honours POSIX
+    permission bits. On Windows the mode is advisory only and the effective
+    access control is the inherited ACL of the repository's `.git` directory, so
+    the ownership claim here is "Hive-created, Hive-named, and never inside
+    `.git/objects`" rather than "unreachable by other same-user processes".
+    """
     temp_dir = git_dir / PRIVATE_TEMP_DIRNAME
     try:
         st = temp_dir.lstat()
@@ -163,6 +170,7 @@ class PrivateObjectPreparer:
                 continue
             except OSError as exc:
                 raise GitStageUnsupportedRepositoryError("cannot create a private object temporary") from exc
+            identity: PrivateObjectIdentity | None = None
             try:
                 st = os.fstat(fd)
                 if not stat.S_ISREG(st.st_mode):
@@ -180,7 +188,7 @@ class PrivateObjectPreparer:
                 if hashlib.sha256(reread).hexdigest() != plan.compressed_sha256:
                     raise GitStageUnsupportedRepositoryError("private object temporary failed its own digest proof")
             except BaseException:
-                _close_and_remove(fd, path, None)
+                _close_and_discard_owned(fd, path, identity)
                 raise
             else:
                 os.close(fd)
@@ -195,7 +203,21 @@ class PrivateObjectPreparer:
         raise GitStageUnsupportedRepositoryError("could not allocate a unique private object temporary")
 
     def cleanup_private_temp(self, temp: PrivateObjectTemp) -> None:
-        """Remove the owned temporary, but only while its identity still matches."""
+        """Remove the owned temporary when its identity is provably unchanged.
+
+        **Bounded-race boundary, stated explicitly rather than implied.** The
+        identity check and the name-based unlink are two separate operations, and
+        none of the supported platforms exposes a portable delete-by-identity
+        primitive for this path. A concurrent same-user process that replaces this
+        pathname inside that window is outside the supported threat model of this
+        pre-authority temporary, in the same way that CP-0022 records its own
+        bounded-race replacement contract instead of claiming strict CAS.
+
+        What this method does guarantee, and what is tested: a temporary whose
+        identity has *already* changed, or whose ownership cannot be read, is never
+        deleted. Only a regular file whose device, inode and mode still match the
+        recorded identity is removed.
+        """
         path = Path(temp.identity.path)
         try:
             live = path.lstat()
@@ -228,18 +250,24 @@ def _read_exact(fd: int, expected: int) -> bytes:
     return b"".join(chunks)
 
 
-def _close_and_remove(fd: int, path: Path, identity: PrivateObjectIdentity | None) -> None:
+def _close_and_discard_owned(fd: int, path: Path, identity: PrivateObjectIdentity | None) -> None:
+    """Close the handle and remove the temporary only when ownership is provable.
+
+    Without a proven identity the file is deliberately left in place. An abandoned
+    temporary inside the Hive-owned directory is inert, and leaving it is safer
+    than deleting a pathname this capability cannot prove it owns.
+    """
     try:
         os.close(fd)
     except OSError:
         pass
+    if identity is None:
+        return
     try:
         live = path.lstat()
     except OSError:
         return
-    if identity is not None and not identity.matches(live):
-        return
-    if identity is None and not stat.S_ISREG(live.st_mode):
+    if not identity.matches(live):
         return
     try:
         os.unlink(path)

@@ -34,6 +34,7 @@ This delta authorizes exactly these additional files, and nothing else:
 - `tests/runtime/test_git_object_private_prep.py` (new focused lane)
 - `tests/runtime/test_git_binary_byte_fidelity.py` (new focused regression lane)
 - `tests/runtime/test_git_stage_observer_revalidation.py` (new focused regression lane)
+- `tests/runtime/test_git_stage_tree_cache_semantics.py` (new focused real-Git semantic lane)
 - `foundations/python-dependencies.requirements.txt` (new, hash-pinned, CI-consumed)
 
 ### Recorded resolution 001 — DEC-025 status disagreement
@@ -52,6 +53,24 @@ The rule that every completed review must deliver the next executable Codex prom
 
 ### Reviewed Python dependency mechanism
 The repository had no canonical Python third-party dependency mechanism. This delta authorizes exactly one minimal mechanism: a hash-pinned `foundations/python-dependencies.lock.json` with a verifier `tools/foundations/verify_python_dependencies.py`, consumed by CI. It introduces no packaging redesign and no new runtime authority. At the time of this delta the only admitted entry is `dulwich==1.2.15` as an index **parser/serializer primitive**, pinned to the pure-Python wheel, with `urllib3` deliberately not materialized so the client/network path is structurally unavailable.
+
+## Context Lock Delta 003 — same-WO correction: TREE cache-tree semantics
+Review verdict on the Prompt 01 slice was CORRECTION REQUIRED. This delta records the correction. **It does not grant runtime Git mutation authority, does not enable `stage_paths`, does not enable `git.write`, and does not enable object or index publication.** The authority posture is unchanged.
+
+### Corrected defect
+The data-only codec captured the validated source index's raw extension region and appended it verbatim to the candidate. That is wrong for a mutated index. The `TREE` extension is a cache-tree: each node records tree object ids that describe portions of the **previous** index. Replacing a staged path invalidates every node covering it, but the node structure and entry counts remain consistent, so Git's cache-tree verification does not detect the staleness.
+
+Reproduced objectively against a real repository: with the previous region carried forward, `git write-tree` on the candidate returned a tree whose `dir` subtree was byte-identical to `HEAD:dir`, silently committing the pre-change blob and discarding the staged modification, with **no error reported by Git**. Dropping the region made `write-tree` match the tree Git itself produces for the same change exactly.
+
+### Corrected law
+- A validated `TREE` extension is still **accepted when reading** a source index.
+- The candidate **never** carries a source extension. This slice produces an empty extension region, always.
+- Rebuilding a cache-tree is deliberately **not** implemented here; `TREE` is optional, so removal is the fail-safe rule.
+- The accepted extension set is not broadened by this delta.
+- `hive_runtime/git_index_envelope.py` no longer exposes the raw extension-region accessor. It existed only to enable the corrected behavior and would otherwise advertise extension passthrough as a supported pattern.
+
+### Cleanup-hardening review (Prompt 02 §8)
+`PrivateObjectPreparer.cleanup_private_temp` was re-audited. Outcome: the failure path no longer removes a pathname it cannot prove it owns, and the residual name-based deletion window is stated precisely in the docstring as a bounded race — the same posture CP-0022 records for its own replacement contract, rather than a race-free identity deletion claim. The Hive-owned temporary directory claim is also narrowed: mode 0700 applies only where the platform honours POSIX permission bits, and on Windows the effective control is the inherited ACL of `.git`.
 
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.

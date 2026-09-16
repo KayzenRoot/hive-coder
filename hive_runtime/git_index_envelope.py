@@ -108,23 +108,6 @@ def inspect_git_index_envelope(data: bytes) -> GitIndexEnvelope:
     return GitIndexEnvelope(version, entry_count, actual.hex(), len(payload), extensions)
 
 
-def git_index_extension_region(data: bytes) -> bytes:
-    """Return the raw extension region of a validated index, byte for byte.
-
-    The region is the exact bytes between the last entry and the SHA-1 trailer.
-    Returning it verbatim is what lets a Hive-owned writer preserve proven
-    optional extensions (for example ``TREE``) without reinterpreting them.
-    Validation is identical to :func:`inspect_git_index_envelope`; this function
-    only additionally reports where the entry area ends.
-    """
-    envelope = inspect_git_index_envelope(data)
-    payload = data[:-20]
-    offset = 12
-    for _ in range(envelope.entry_count):
-        offset = _entry_end(payload, offset, envelope.version)
-    return payload[offset:]
-
-
 __all__ = [
     "FORBIDDEN_EXTENSIONS",
     "GitIndexEnvelope",
@@ -133,6 +116,5 @@ __all__ = [
     "MAX_INDEX_ENTRIES",
     "MIN_INDEX_BYTES",
     "SUPPORTED_INDEX_VERSIONS",
-    "git_index_extension_region",
     "inspect_git_index_envelope",
 ]

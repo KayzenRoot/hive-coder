@@ -16,10 +16,20 @@ takes `.git/index.lock`, and never touches the object store. There is no
 porcelain, no ``GitFile.close()``, no subprocess, no hook, no filter, no remote,
 no credential and no network surface on this path.
 
+Extensions are accepted when reading a validated source index and are **never
+carried into a candidate that changes staged entries**. The ``TREE`` extension
+is a cache-tree: each node records tree object ids that describe portions of the
+*previous* index. Replacing a staged path invalidates every node covering it, so
+appending the previous region verbatim would hand Git a structurally consistent
+but semantically stale cache. Git does not detect that case, and a subsequent
+``write-tree`` silently reuses the old subtree, discarding the staged change
+without any error. ``TREE`` is optional, so the fail-safe rule for this slice is
+to drop it and let Git recompute. Rebuilding a cache-tree is deliberately out of
+scope; see the WO-0023 Context Lock.
+
 Dulwich does not preserve the ``TREE`` extension through its own serializer and
-does not write the index trailer; both are therefore Hive-owned here. That is
-why the extension region is captured byte-for-byte from the validated source
-index and appended verbatim before the trailer is computed.
+does not write the index trailer. Hive therefore owns the trailer, and owns the
+policy that no source extension survives into a mutated candidate.
 """
 
 import hashlib
@@ -29,7 +39,7 @@ from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, distribution
 from typing import Protocol, Sequence
 
-from .git_index_envelope import git_index_extension_region, inspect_git_index_envelope
+from .git_index_envelope import inspect_git_index_envelope
 from .git_stage import GitStageUnavailableError, GitStageUnsupportedRepositoryError
 from .git_stage_contract import ABSENT_INDEX_SHA256, GitStageObservedState
 from .git_stage_plan import GitStagePlan
@@ -39,6 +49,10 @@ INDEX_CODEC_CONTRACT = "hive-git-index-codec-v1"
 DULWICH_CODEC_ID = "dulwich-1.2.15-pure-python-index-codec-v1"
 ADMITTED_DULWICH_WHEEL_TAG = "py3-none-any"
 NEW_INDEX_VERSION = 2
+
+# This slice produces candidates with an empty extension region, always.
+CANDIDATE_EXTENSION_POLICY = "drop-source-extensions"
+SOURCE_EXTENSIONS_ACCEPTED_FOR_VALIDATION = frozenset({"TREE"})
 
 # Modules this path must never pull in. Import isolation is asserted, not assumed.
 _FORBIDDEN_MODULES = (
@@ -59,14 +73,20 @@ _FLAG_EXTENDED = 0x4000
 
 @dataclass(frozen=True)
 class GitIndexCandidate:
-    """Data-only candidate index. Digest and length are derived, never supplied."""
+    """Data-only candidate index. Digest and length are derived, never supplied.
+
+    ``source_extensions`` records what the validated source index carried, purely
+    as evidence. The candidate itself carries **no** extension region: this slice
+    never propagates a source extension into a mutated index.
+    """
 
     codec_id: str
     source_index_sha256: str
     paths: tuple[str, ...]
     serialized: bytes
     index_version: int = 0
-    preserved_extensions: tuple[str, ...] = ()
+    source_extensions: tuple[str, ...] = ()
+    candidate_extension_policy: str = CANDIDATE_EXTENSION_POLICY
     candidate_sha256: str = ""
     candidate_bytes: int = 0
 
@@ -222,8 +242,7 @@ class DulwichGitIndexCodec:
                 raise GitStageUnsupportedRepositoryError("an absent index must not carry source index bytes")
             base_entries: dict[bytes, object] = {}
             version = NEW_INDEX_VERSION
-            extension_region = b""
-            extension_names: tuple[str, ...] = ()
+            source_extensions: tuple[str, ...] = ()
         else:
             if not isinstance(source_index_bytes, bytes):
                 raise GitStageUnavailableError("source index bytes are required for a regular index")
@@ -231,14 +250,13 @@ class DulwichGitIndexCodec:
                 raise GitStageUnavailableError("source index bytes do not match the approved index digest")
             envelope = inspect_git_index_envelope(source_index_bytes)
             version = envelope.version
-            extension_names = envelope.extensions
+            source_extensions = envelope.extensions
             base_entries, parsed_version, _ = backend["read_index_dict_with_version"](io.BytesIO(source_index_bytes))
             if parsed_version != version:
                 raise GitStageUnsupportedRepositoryError("Git index version disagrees between envelope and codec")
             for name, entry in base_entries.items():
                 if isinstance(entry, backend["ConflictedIndexEntry"]):
                     raise GitStageUnsupportedRepositoryError("conflicted Git index entries are unsupported")
-            extension_region = git_index_extension_region(source_index_bytes)
 
         staged_names = {_entry_name_bytes(path) for path in requested}
 
@@ -308,8 +326,9 @@ class DulwichGitIndexCodec:
         backend["write_index"](buffer, serialized, version, [])
         core = buffer.getvalue()
 
-        payload = core + extension_region
-        candidate_bytes = payload + hashlib.sha1(payload).digest()
+        # No source extension is ever propagated: a mutated index cannot carry a
+        # cache-tree that still describes the pre-mutation entries.
+        candidate_bytes = core + hashlib.sha1(core).digest()
 
         self._verify_candidate(candidate_bytes, version, len(serialized), staged_names, blob_oids, requested)
 
@@ -319,7 +338,7 @@ class DulwichGitIndexCodec:
             paths=requested,
             serialized=candidate_bytes,
             index_version=version,
-            preserved_extensions=extension_names,
+            source_extensions=source_extensions,
         )
 
     @staticmethod
@@ -335,6 +354,8 @@ class DulwichGitIndexCodec:
         envelope = inspect_git_index_envelope(candidate_bytes)
         if envelope.version != version or envelope.entry_count != entry_count:
             raise GitStageUnavailableError("produced index candidate failed envelope self-verification")
+        if envelope.extensions:
+            raise GitStageUnavailableError("produced index candidate must not carry any index extension")
         backend = _load_backend()
         entries, parsed_version, _ = backend["read_index_dict_with_version"](io.BytesIO(candidate_bytes))
         if parsed_version != version or len(entries) != entry_count:

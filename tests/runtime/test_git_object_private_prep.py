@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -173,6 +174,54 @@ class PrivateObjectPreparationTests(unittest.TestCase):
         for forbidden in ("publish_final", "stage_paths", "commit", "add"):
             self.assertFalse(hasattr(preparer, forbidden))
         self.assertFalse(preparer.mutation_authority_enabled)
+
+    def test_cleanup_never_deletes_a_pathname_whose_identity_changed(self) -> None:
+        """Only a proven identity is removable; anything else is preserved."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo(root)
+            preparer = PrivateObjectPreparer(root)
+            prepared, compressed = prepare_loose_blob(root, b"payload\n")
+            plan = preparer.plan(prepared, compressed)
+
+            temp = preparer.materialize_private_temp(plan, compressed)
+            path = Path(temp.identity.path)
+            # Replace the owned regular file with a directory at the same pathname.
+            path.unlink()
+            path.mkdir()
+            preparer.cleanup_private_temp(temp)
+            self.assertTrue(path.is_dir(), "a non-matching identity must never be deleted")
+
+    def test_cleanup_of_an_already_removed_temporary_is_a_no_op(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo(root)
+            preparer = PrivateObjectPreparer(root)
+            prepared, compressed = prepare_loose_blob(root, b"payload\n")
+            temp = preparer.materialize_private_temp(preparer.plan(prepared, compressed), compressed)
+            Path(temp.identity.path).unlink()
+            preparer.cleanup_private_temp(temp)  # must not raise
+
+    def test_temp_directory_claim_matches_implementation(self) -> None:
+        """The Hive-owned directory is Hive-named and never inside the object store."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _repo(root)
+            preparer = PrivateObjectPreparer(root)
+            prepared, compressed = prepare_loose_blob(root, b"payload\n")
+            temp = preparer.materialize_private_temp(preparer.plan(prepared, compressed), compressed)
+            try:
+                temp_dir = Path(temp.identity.path).parent
+                self.assertEqual(temp_dir.name, PRIVATE_TEMP_DIRNAME)
+                self.assertEqual(temp_dir.parent, (root / ".git").resolve())
+                self.assertNotEqual(temp_dir.parent.name, "objects")
+                self.assertTrue(temp_dir.is_dir())
+                self.assertFalse(temp_dir.is_symlink())
+                if os.name != "nt":
+                    # Permission bits are only meaningful where the platform honours them.
+                    self.assertEqual(stat.S_IMODE(temp_dir.stat().st_mode), 0o700)
+            finally:
+                preparer.cleanup_private_temp(temp)
 
 
 if __name__ == "__main__":

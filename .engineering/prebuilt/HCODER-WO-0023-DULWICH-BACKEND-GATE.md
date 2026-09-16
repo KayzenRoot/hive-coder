@@ -23,7 +23,7 @@ Use Dulwich only as a bounded Git object/index parser-serializer behind a Hive-o
    - Reject sparse index / sparse-directory semantics.
    - Reject split index / link extension.
    - Reject unknown mandatory extensions or any extension whose preservation semantics are not proven.
-   - Preserve safe optional extensions only when byte/semantic round-trip is proven.
+   - Accept proven optional extensions when **reading and validating** a source index, but never carry one into a candidate that changes staged entries. A cache-tree extension describes the pre-mutation entries; propagating it verbatim lets Git reuse stale subtree object ids without detecting anything. `TREE` is optional, so the fail-safe rule for this slice is to drop it and let Git recompute. Byte-for-byte round-trip is only a preservation proof for an index that is **not** being mutated.
 
 3. Pure codec boundary
    - No `porcelain.add()`.

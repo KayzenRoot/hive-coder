@@ -121,7 +121,7 @@ class GitIndexCodecBoundaryTests(unittest.TestCase):
         self.assertEqual(DULWICH_CODEC_ID, "dulwich-1.2.15-pure-python-index-codec-v1")
         self.assertEqual(ADMITTED_DULWICH_WHEEL_TAG, "py3-none-any")
 
-    def test_modified_file_is_staged_and_unrelated_entries_and_tree_are_preserved(self) -> None:
+    def test_modified_file_is_staged_unrelated_entries_kept_and_source_tree_dropped(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             untouched = b"keep/me.txt"
@@ -147,11 +147,18 @@ class GitIndexCodecBoundaryTests(unittest.TestCase):
                 state, ("a.txt",), source_index_bytes=index, stage_plan=plan
             )
 
+            # The source TREE cache-tree is accepted for validation but must never
+            # reach a candidate that mutates entries: its nodes still describe the
+            # pre-mutation index and Git would silently reuse the stale subtree.
+            self.assertEqual(inspect_git_index_envelope(index).extensions, ("TREE",))
+            self.assertEqual(candidate.source_extensions, ("TREE",))
+            self.assertEqual(candidate.candidate_extension_policy, "drop-source-extensions")
+            self.assertNotIn(b"TREE", candidate.serialized)
+
             envelope = inspect_git_index_envelope(candidate.serialized)
             self.assertEqual(envelope.version, 2)
             self.assertEqual(envelope.entry_count, 2)
-            self.assertEqual(envelope.extensions, ("TREE",))
-            self.assertEqual(candidate.preserved_extensions, ("TREE",))
+            self.assertEqual(envelope.extensions, ())
 
             from dulwich.index import read_index_dict_with_version
 
@@ -166,8 +173,6 @@ class GitIndexCodecBoundaryTests(unittest.TestCase):
             self.assertEqual(
                 preserved.sha.decode("ascii") if isinstance(preserved.sha, bytes) else preserved.sha, untouched_oid
             )
-            # The TREE extension region is preserved verbatim, byte for byte.
-            self.assertIn(_tree(), candidate.serialized)
 
     def test_version_three_index_is_supported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -233,7 +238,7 @@ class GitIndexCodecBoundaryTests(unittest.TestCase):
             envelope = inspect_git_index_envelope(candidate.serialized)
             self.assertEqual(envelope.version, 2)
             self.assertEqual(envelope.entry_count, 1)
-            self.assertEqual(candidate.preserved_extensions, ())
+            self.assertEqual(candidate.source_extensions, ())
 
     def test_candidate_is_data_only_with_no_publication_surface(self) -> None:
         candidate = GitIndexCandidate("proof-codec", SHA_A, ("src/app.py",), b"DIRC-candidate")

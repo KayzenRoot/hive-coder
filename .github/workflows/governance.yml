@@ -82,7 +82,7 @@ jobs:
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: |
-          python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security
+          python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security tests.runtime.test_git_stage_tree_cache_semantics
 
   control-plane-windows:
     runs-on: windows-latest
@@ -110,7 +110,7 @@ jobs:
       - name: Native Windows HIGH_ASSURANCE governed Git index codec/object proof
         env:
           PYTHONWARNINGS: error::ResourceWarning
-        run: python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security
+        run: python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security tests.runtime.test_git_stage_tree_cache_semantics
 
   workspace-replace-macos:
     runs-on: macos-latest
@@ -142,4 +142,4 @@ jobs:
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: |
-          python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security
+          python -m unittest tests.runtime.test_git_index_envelope tests.runtime.test_git_stage_contract tests.runtime.test_git_object_candidate tests.runtime.test_git_object_store_inspector tests.runtime.test_git_loose_object_transaction tests.runtime.test_git_stage_index_codec tests.runtime.test_git_object_private_prep tests.runtime.test_git_stage_security tests.runtime.test_git_stage_tree_cache_semantics
