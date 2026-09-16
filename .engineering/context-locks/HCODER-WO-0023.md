@@ -52,6 +52,7 @@ Prebuilt phase may change only:
 - `.engineering/context-locks/HCODER-WO-0023.md`
 - `.engineering/prebuilt/HCODER-WO-0023-IMPLEMENTATION-PACK.md`
 - `.engineering/prebuilt/HCODER-WO-0023-EXECUTOR-BRIEF.md`
+- `.engineering/prebuilt/HCODER-HARNESS-FRONTIER-v1.md`
 - `.engineering/evidence/HCODER-WO-0023.md`
 - `.engineering/work-orders/HCODER-WO-0023.md`
 - `docs/project-brain/adrs/DEC-027-GOVERNED-GIT-STAGING.md`
@@ -64,6 +65,10 @@ Prebuilt phase may change only:
 - `.github/workflows/governance.yml` only to add exact native proof lanes/tests
 
 Any expansion requires an explicit Context Lock delta before code changes.
+
+## Harness frontier note
+
+A non-authority-expanding harness frontier specification may be developed in this WO because it constrains how this and later executors receive context, prove actions and stop. It must not activate new runtime permissions inside WO-0023. Any executable implementation of those frontier mechanisms belongs to explicit future Work Orders with their own evidence.
 
 ## STOP CONDITION
 
