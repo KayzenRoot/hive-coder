@@ -11,8 +11,8 @@ _OBJ_CASE_INSENSITIVE=0x40; _FILE_OPEN=1; _FILE_CREATE=2; _FILE_DIRECTORY_FILE=1
 _FILE_LIST_DIRECTORY=1; _FILE_READ_DATA=1; _FILE_WRITE_DATA=2; _FILE_DELETE_CHILD=0x40; _FILE_READ_ATTRIBUTES=0x80; _FILE_WRITE_ATTRIBUTES=0x100; _DELETE=0x10000; _SYNCHRONIZE=0x100000
 _FILE_SHARE_READ=1; _FILE_SHARE_WRITE=2; _FILE_SHARE_DELETE=4; _OPEN_EXISTING=3; _FILE_FLAG_OPEN_REPARSE_POINT=0x00200000; _FILE_FLAG_BACKUP_SEMANTICS=0x02000000
 _FILE_ATTRIBUTE_REPARSE_POINT=0x400; _FILE_ATTRIBUTE_DIRECTORY=0x10; _FILE_ATTRIBUTE_TEMPORARY=0x100; _INVALID_HANDLE_VALUE=ctypes.c_void_p(-1).value
-_STATUS_OBJECT_NAME_NOT_FOUND=0xC0000034; _STATUS_OBJECT_PATH_NOT_FOUND=0xC000003A; _STATUS_OBJECT_NAME_COLLISION=0xC0000035; _FILE_RENAME_INFORMATION_CLASS=10; _FILE_DISPOSITION_INFORMATION_CLASS=13
-_FILE_RENAME_REPLACE_IF_EXISTS=0x1; _FILE_RENAME_POSIX_SEMANTICS=0x2; _FILE_RENAME_INFO_EX_WIN32_CLASS=22
+_STATUS_OBJECT_NAME_NOT_FOUND=0xC0000034; _STATUS_OBJECT_PATH_NOT_FOUND=0xC000003A; _STATUS_OBJECT_NAME_COLLISION=0xC0000035; _FILE_RENAME_INFORMATION_CLASS=10; _FILE_RENAME_INFORMATION_EX_CLASS=65; _FILE_DISPOSITION_INFORMATION_CLASS=13
+_FILE_RENAME_REPLACE_IF_EXISTS=0x1; _FILE_RENAME_POSIX_SEMANTICS=0x2
 class _UNICODE_STRING(ctypes.Structure): _fields_=[("Length",wintypes.USHORT),("MaximumLength",wintypes.USHORT),("Buffer",wintypes.LPWSTR)]
 class _OBJECT_ATTRIBUTES(ctypes.Structure): _fields_=[("Length",wintypes.ULONG),("RootDirectory",wintypes.HANDLE),("ObjectName",ctypes.POINTER(_UNICODE_STRING)),("Attributes",wintypes.ULONG),("SecurityDescriptor",wintypes.LPVOID),("SecurityQualityOfService",wintypes.LPVOID)]
 class _IO_STATUS_UNION(ctypes.Union): _fields_=[("Status",_NTSTATUS),("Pointer",wintypes.LPVOID)]
@@ -28,7 +28,6 @@ _GetFileInformationByHandle=_kernel32.GetFileInformationByHandle; _GetFileInform
 _WriteFile=_kernel32.WriteFile; _WriteFile.argtypes=[wintypes.HANDLE,wintypes.LPCVOID,wintypes.DWORD,ctypes.POINTER(wintypes.DWORD),wintypes.LPVOID]; _WriteFile.restype=wintypes.BOOL
 _FlushFileBuffers=_kernel32.FlushFileBuffers; _FlushFileBuffers.argtypes=[wintypes.HANDLE]; _FlushFileBuffers.restype=wintypes.BOOL
 _GetFinalPathNameByHandleW=_kernel32.GetFinalPathNameByHandleW; _GetFinalPathNameByHandleW.argtypes=[wintypes.HANDLE,wintypes.LPWSTR,wintypes.DWORD,wintypes.DWORD]; _GetFinalPathNameByHandleW.restype=wintypes.DWORD
-_SetFileInformationByHandle=_kernel32.SetFileInformationByHandle; _SetFileInformationByHandle.argtypes=[wintypes.HANDLE,ctypes.c_int,wintypes.LPVOID,wintypes.DWORD]; _SetFileInformationByHandle.restype=wintypes.BOOL
 _NtCreateFile=_ntdll.NtCreateFile; _NtCreateFile.argtypes=[ctypes.POINTER(wintypes.HANDLE),wintypes.DWORD,ctypes.POINTER(_OBJECT_ATTRIBUTES),ctypes.POINTER(_IO_STATUS_BLOCK),wintypes.LPVOID,wintypes.ULONG,wintypes.ULONG,wintypes.ULONG,wintypes.ULONG,wintypes.LPVOID,wintypes.ULONG]; _NtCreateFile.restype=_NTSTATUS
 _NtSetInformationFile=_ntdll.NtSetInformationFile; _NtSetInformationFile.argtypes=[wintypes.HANDLE,ctypes.POINTER(_IO_STATUS_BLOCK),wintypes.LPVOID,wintypes.ULONG,wintypes.ULONG]; _NtSetInformationFile.restype=_NTSTATUS
 class _NtOpenError(WorkspaceBoundaryError):
@@ -65,10 +64,15 @@ def _nt_rename_relative(file_handle,parent_handle,leaf,*,replace_if_exists):
         raise WorkspaceMutationError(f"NtSetInformationFile rename failed (ntstatus=0x{unsigned:08x})")
 def _nt_rename_relative_no_clobber(file_handle,parent_handle,leaf): _nt_rename_relative(file_handle,parent_handle,leaf,replace_if_exists=False)
 def _nt_rename_relative_replace(file_handle,parent_handle,leaf):
-    """Use the documented Win32 FileRenameInfoEx class for atomic replacement."""
-    raw,size=_rename_buffer(parent_handle,leaf,_FILE_RENAME_REPLACE_IF_EXISTS|_FILE_RENAME_POSIX_SEMANTICS)
-    ctypes.set_last_error(0)
-    if not _SetFileInformationByHandle(wintypes.HANDLE(file_handle),_FILE_RENAME_INFO_EX_WIN32_CLASS,ctypes.byref(raw),size): raise _win_error("SetFileInformationByHandle FileRenameInfoEx failed")
+    """Atomic replacement via native FileRenameInformationEx (class 65).
+
+    Class 65 is the native FILE_INFORMATION_CLASS value for the extended
+    rename structure. Class 22 is FileStreamInformation and must never be used
+    with NtSetInformationFile for this operation. This remains name-based
+    bounded-race publication, not an expected-file-id CAS predicate.
+    """
+    raw,size=_rename_buffer(parent_handle,leaf,_FILE_RENAME_REPLACE_IF_EXISTS|_FILE_RENAME_POSIX_SEMANTICS); iosb=_IO_STATUS_BLOCK(); status=int(_NtSetInformationFile(wintypes.HANDLE(file_handle),ctypes.byref(iosb),ctypes.byref(raw),size,_FILE_RENAME_INFORMATION_EX_CLASS))
+    if status<0: raise WorkspaceMutationError(f"NtSetInformationFile FileRenameInformationEx failed (ntstatus=0x{status&0xffffffff:08x})")
 def _nt_mark_delete(file_handle):
     d=_FILE_DISPOSITION_INFORMATION(1); iosb=_IO_STATUS_BLOCK(); _NtSetInformationFile(wintypes.HANDLE(file_handle),ctypes.byref(iosb),ctypes.byref(d),ctypes.sizeof(d),_FILE_DISPOSITION_INFORMATION_CLASS)
 class WindowsWorkspaceBackend:
