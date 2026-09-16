@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "context-lock-v1",
+  "workOrder": "HCODER-GEF-ADOPT-0001",
+  "repository": "KayzenRoot/hive-coder",
+  "baseSha": "ccfed1f960c80dc58e4f45cb627451e77c7d5a79",
+  "taskClass": "T2",
+  "contextRadius": "C4",
+  "risk": "ELEVATED",
+  "goal": "adopt GEF V1 universal brownfield governance without product behavior change",
+  "allowedAreas": [
+    "AGENTS.md",
+    ".engineering/gef/",
+    ".engineering/templates/",
+    ".engineering/work-orders/HCODER-GEF-ADOPT-0001.md",
+    ".engineering/context-locks/HCODER-GEF-ADOPT-0001.json",
+    ".engineering/evidence/HCODER-GEF-ADOPT-0001.md",
+    ".engineering/checkpoint-deltas/HCODER-GEF-ADOPT-0001.md",
+    ".github/PULL_REQUEST_TEMPLATE.md"
+  ],
+  "forbidden": [
+    "product/runtime changes",
+    "test/workflow weakening",
+    "historical rewrite",
+    "authority expansion",
+    "active PR #69 implementation mutation"
+  ],
+  "stopCondition": "GEF_ADOPTION_EXACT_HEAD_EVIDENCE_REQUIRED"
+}
