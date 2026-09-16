@@ -12,16 +12,14 @@ from hive_runtime.git_stage_transaction import GitIndexLockBusyError, PosixGitIn
 
 def _ordinary_repo(root: Path) -> None:
     git = root / ".git"; (git / "refs" / "heads").mkdir(parents=True); oid = "1" * 40
-    (git / "HEAD").write_text("ref: refs/heads/main\n", encoding="ascii")
-    (git / "refs" / "heads" / "main").write_text(oid + "\n", encoding="ascii")
+    (git / "HEAD").write_text("ref: refs/heads/main\n", encoding="ascii"); (git / "refs" / "heads" / "main").write_text(oid + "\n", encoding="ascii")
 
 
 @unittest.skipIf(os.name == "nt", "POSIX observer proof")
 class PosixGitStageSecurityAcceptanceMap(unittest.TestCase):
     def test_rejects_symlink_directory_and_special_file_targets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp); _ordinary_repo(root); (root / "regular.txt").write_bytes(b"safe"); observer = PosixGitStageObserver(root)
-            (root / "dir").mkdir()
+            root = Path(tmp); _ordinary_repo(root); (root / "regular.txt").write_bytes(b"safe"); observer = PosixGitStageObserver(root); (root / "dir").mkdir()
             with self.assertRaises(GitStageUnsupportedRepositoryError): observer.observe(["dir"])
             (root / "link.txt").symlink_to(root / "regular.txt")
             with self.assertRaises(GitStageUnsupportedRepositoryError): observer.observe(["link.txt"])
@@ -37,25 +35,38 @@ class PosixGitStageSecurityAcceptanceMap(unittest.TestCase):
             with self.assertRaises(GitStageUnsupportedRepositoryError): PosixGitStageObserver(root)
         for feature in ("commondir", "modules", "shallow"):
             with self.subTest(feature=feature), tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp); _ordinary_repo(root); candidate = root / ".git" / feature
-                candidate.mkdir() if feature == "modules" else candidate.write_text("unsupported\n", encoding="ascii")
-                (root / "a.txt").write_bytes(b"a"); observer = PosixGitStageObserver(root)
+                root = Path(tmp); _ordinary_repo(root); candidate = root / ".git" / feature; candidate.mkdir() if feature == "modules" else candidate.write_text("unsupported\n", encoding="ascii"); (root / "a.txt").write_bytes(b"a"); observer = PosixGitStageObserver(root)
                 with self.assertRaises(GitStageUnsupportedRepositoryError): observer.observe(["a.txt"])
+
+    def test_only_true_absence_may_fall_back_from_loose_ref_to_packed_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); _ordinary_repo(root); git = root / ".git"; loose = git / "refs" / "heads" / "main"; loose.unlink(); (git / "packed-refs").write_text("2" * 40 + " refs/heads/main\n", encoding="ascii"); (root / "a.txt").write_bytes(b"a")
+            self.assertEqual(PosixGitStageObserver(root).observe(["a.txt"]).repository_head, "2" * 40)
+
+    def test_unsafe_loose_ref_never_falls_back_to_packed_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); _ordinary_repo(root); git = root / ".git"; loose = git / "refs" / "heads" / "main"; loose.unlink(); loose.symlink_to(git / "HEAD"); (git / "packed-refs").write_text("2" * 40 + " refs/heads/main\n", encoding="ascii"); (root / "a.txt").write_bytes(b"a")
+            with self.assertRaises(GitStageUnsupportedRepositoryError): PosixGitStageObserver(root).observe(["a.txt"])
+
+    def test_unsafe_packed_refs_never_looks_absent_or_unborn(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); _ordinary_repo(root); git = root / ".git"; (git / "refs" / "heads" / "main").unlink(); packed = git / "packed-refs"; packed.symlink_to(git / "HEAD"); (root / "a.txt").write_bytes(b"a")
+            with self.assertRaises(GitStageUnsupportedRepositoryError): PosixGitStageObserver(root).observe(["a.txt"])
+
+    def test_unsafe_index_never_looks_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); _ordinary_repo(root); git = root / ".git"; (root / "a.txt").write_bytes(b"a"); (git / "index-target").write_bytes(b"index"); (git / "index").symlink_to(git / "index-target")
+            with self.assertRaises(GitStageUnsupportedRepositoryError): PosixGitStageObserver(root).observe(["a.txt"])
 
     def test_observation_binds_head_index_and_worktree_without_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp); _ordinary_repo(root); (root / ".git" / "index").write_bytes(b"synthetic-index-for-observation-only"); (root / "a.txt").write_bytes(b"approved bytes")
-            before_index = (root / ".git" / "index").read_bytes(); before_file = (root / "a.txt").read_bytes(); observer = PosixGitStageObserver(root); state = observer.observe(["a.txt"])
-            self.assertEqual(state.repository_head, "1" * 40); self.assertEqual(state.index_state, "regular"); self.assertTrue(state.index_identity.startswith("posix:")); self.assertEqual(len(state.index_sha256), 64)
-            self.assertEqual(tuple(item.path for item in state.worktree_states), ("a.txt",)); self.assertEqual(state.worktree_states[0].content_bytes, len(before_file))
-            self.assertEqual((root / ".git" / "index").read_bytes(), before_index); self.assertEqual((root / "a.txt").read_bytes(), before_file)
+            root = Path(tmp); _ordinary_repo(root); (root / ".git" / "index").write_bytes(b"synthetic-index-for-observation-only"); (root / "a.txt").write_bytes(b"approved bytes"); before_index = (root / ".git" / "index").read_bytes(); before_file = (root / "a.txt").read_bytes(); observer = PosixGitStageObserver(root); state = observer.observe(["a.txt"])
+            self.assertEqual(state.repository_head, "1" * 40); self.assertEqual(state.index_state, "regular"); self.assertTrue(state.index_identity.startswith("posix:")); self.assertEqual(len(state.index_sha256), 64); self.assertEqual(tuple(item.path for item in state.worktree_states), ("a.txt",)); self.assertEqual(state.worktree_states[0].content_bytes, len(before_file)); self.assertEqual((root / ".git" / "index").read_bytes(), before_index); self.assertEqual((root / "a.txt").read_bytes(), before_file)
 
     def test_rejects_stale_head_index_or_worktree_after_approval(self) -> None:
-        mutations = ("head", "index", "worktree")
-        for mutation in mutations:
+        for mutation in ("head", "index", "worktree"):
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp); _ordinary_repo(root); git = root / ".git"; (git / "index").write_bytes(b"index-v1"); (root / "a.txt").write_bytes(b"worktree-v1")
-                observer = PosixGitStageObserver(root); approved = observer.observe(["a.txt"]); observer.revalidate(approved)
+                root = Path(tmp); _ordinary_repo(root); git = root / ".git"; (git / "index").write_bytes(b"index-v1"); (root / "a.txt").write_bytes(b"worktree-v1"); observer = PosixGitStageObserver(root); approved = observer.observe(["a.txt"]); observer.revalidate(approved)
                 if mutation == "head": (git / "refs" / "heads" / "main").write_text("2" * 40 + "\n", encoding="ascii")
                 elif mutation == "index": (git / "index").write_bytes(b"index-v2")
                 else: (root / "a.txt").write_bytes(b"worktree-v2")
@@ -69,8 +80,7 @@ class PosixGitStageSecurityAcceptanceMap(unittest.TestCase):
 
     def test_owned_index_lock_is_private_preparation_and_cleanup_is_identity_safe(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp); _ordinary_repo(root); git = root / ".git"; index = git / "index"; index.write_bytes(b"original-index"); tx = PosixGitIndexTransaction(git); identity = tx.acquire()
-            self.assertTrue(tx.owns_lock); self.assertEqual(tx.lock_identity, identity); tx.write_prepared_index(b"candidate-index"); self.assertEqual(index.read_bytes(), b"original-index"); self.assertEqual((git / "index.lock").read_bytes(), b"candidate-index")
+            root = Path(tmp); _ordinary_repo(root); git = root / ".git"; index = git / "index"; index.write_bytes(b"original-index"); tx = PosixGitIndexTransaction(git); identity = tx.acquire(); self.assertTrue(tx.owns_lock); self.assertEqual(tx.lock_identity, identity); tx.write_prepared_index(b"candidate-index"); self.assertEqual(index.read_bytes(), b"original-index"); self.assertEqual((git / "index.lock").read_bytes(), b"candidate-index")
             with self.assertRaises(GitStageUnavailableError): tx.publish()
             tx.close(); self.assertFalse((git / "index.lock").exists()); self.assertEqual(index.read_bytes(), b"original-index")
 
