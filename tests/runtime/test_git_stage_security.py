@@ -38,6 +38,21 @@ class PosixGitStageSecurityAcceptanceMap(unittest.TestCase):
                 root = Path(tmp); _ordinary_repo(root); candidate = root / ".git" / feature; candidate.mkdir() if feature == "modules" else candidate.write_text("unsupported\n", encoding="ascii"); (root / "a.txt").write_bytes(b"a"); observer = PosixGitStageObserver(root)
                 with self.assertRaises(GitStageUnsupportedRepositoryError): observer.observe(["a.txt"])
 
+    def test_rejects_nested_repository_and_gitdir_boundaries_on_approved_path(self) -> None:
+        for marker_kind in ("directory", "gitdir-file"):
+            with self.subTest(marker_kind=marker_kind), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp); _ordinary_repo(root); nested = root / "vendor"; nested.mkdir(); target = nested / "src"; target.mkdir(); (target / "a.py").write_bytes(b"a")
+                marker = nested / ".git"
+                if marker_kind == "directory": marker.mkdir()
+                else: marker.write_text("gitdir: ../../.git/modules/vendor\n", encoding="ascii")
+                with self.assertRaises(GitStageUnsupportedRepositoryError): PosixGitStageObserver(root).observe(["vendor/src/a.py"])
+
+    def test_unrelated_nested_repository_does_not_poison_safe_path_observation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); _ordinary_repo(root); safe = root / "src"; safe.mkdir(); (safe / "a.py").write_bytes(b"a"); unrelated = root / "vendor"; unrelated.mkdir(); (unrelated / ".git").mkdir()
+            state = PosixGitStageObserver(root).observe(["src/a.py"])
+            self.assertEqual(tuple(item.path for item in state.worktree_states), ("src/a.py",))
+
     def test_only_true_absence_may_fall_back_from_loose_ref_to_packed_ref(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); _ordinary_repo(root); git = root / ".git"; loose = git / "refs" / "heads" / "main"; loose.unlink(); (git / "packed-refs").write_text("2" * 40 + " refs/heads/main\n", encoding="ascii"); (root / "a.txt").write_bytes(b"a")
