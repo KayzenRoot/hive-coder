@@ -45,7 +45,7 @@ class PosixWorkspaceBackend:
         os.close(self._root_fd)
         self._closed = True
 
-    def prepare_create(self, relative_path: str) -> "PosixPreparedCreate":
+    def _open_parent(self, relative_path: str) -> tuple[int, tuple[str, ...], str]:
         if self._closed:
             raise WorkspaceBoundaryError("workspace backend is closed")
         self._revalidate_root_path()
@@ -66,10 +66,43 @@ class PosixWorkspaceBackend:
                 os.close(parent_fd)
                 parent_fd = next_fd
                 parent_parts.append(component)
-            return PosixPreparedCreate(self, parent_fd, tuple(parent_parts), parts[-1])
+            return parent_fd, tuple(parent_parts), parts[-1]
         except Exception:
             os.close(parent_fd)
             raise
+
+    def prepare_create(self, relative_path: str) -> "PosixPreparedCreate":
+        parent_fd, parent_parts, leaf = self._open_parent(relative_path)
+        try:
+            return PosixPreparedCreate(self, parent_fd, parent_parts, leaf)
+        except Exception:
+            os.close(parent_fd)
+            raise
+
+    def prepare_replace(self, relative_path: str):
+        """Read-only pinning of an existing regular target for WO-0022."""
+        from .workspace_replace_posix import PosixPreparedReplace
+
+        parent_fd, parent_parts, leaf = self._open_parent(relative_path)
+        target_fd: int | None = None
+        try:
+            flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+            try:
+                target_fd = os.open(leaf, flags, dir_fd=parent_fd)
+            except OSError as exc:
+                raise WorkspaceBoundaryError("replacement target could not be opened no-follow") from exc
+            info = os.fstat(target_fd)
+            if not stat.S_ISREG(info.st_mode):
+                raise WorkspaceBoundaryError("replacement target is not a regular file")
+            prepared = PosixPreparedReplace(self, parent_fd, parent_parts, leaf, target_fd)
+            parent_fd = -1
+            target_fd = None
+            return prepared
+        finally:
+            if target_fd is not None:
+                os.close(target_fd)
+            if parent_fd >= 0:
+                os.close(parent_fd)
 
     def current_parent_identity(self, parent_parts: tuple[str, ...]) -> str:
         fd = os.dup(self._root_fd)
