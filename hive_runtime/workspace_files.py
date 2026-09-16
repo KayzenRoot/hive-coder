@@ -8,8 +8,7 @@ import stat
 import threading
 import unicodedata
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Callable, Protocol
+from typing import Callable, Mapping, Protocol
 
 from .control_plane import PermissionControlPlane
 from .control_types import ActionRequest, ActionTarget, Capability, SessionState, normalize_workspace
@@ -21,7 +20,7 @@ DEFAULT_MAX_WRITE_BYTES = 1_048_576
 MAX_RELATIVE_PATH_BYTES = 1024
 MAX_COMPONENTS = 32
 MAX_COMPONENT_BYTES = 255
-_TEMP_PREFIX = ".hive-write-"
+_TEMP_PREFIX = ".hive-create-"
 _WINDOWS_RESERVED = {
     "con",
     "prn",
@@ -36,18 +35,18 @@ _WINDOWS_RESERVED = {
 class WorkspaceWriteReceipt:
     workspace: str
     relative_path: str
+    parent_identity: str
     content_sha256: str
     content_bytes: int
-    previous_state: str
     committed_state: str
 
 
-class _PreparedTarget(Protocol):
-    state: str
+class _PreparedCreate(Protocol):
+    parent_identity: str
 
-    def revalidate(self) -> None: ...
+    def revalidate_absent(self) -> None: ...
 
-    def commit(self, content: bytes, pre_commit_check: Callable[[], None]) -> str: ...
+    def publish(self, content: bytes, pre_publish_check: Callable[[], None]) -> str: ...
 
     def close(self) -> None: ...
 
@@ -55,7 +54,7 @@ class _PreparedTarget(Protocol):
 class _Backend(Protocol):
     canonical_root: str
 
-    def prepare(self, relative_path: str) -> _PreparedTarget: ...
+    def prepare_create(self, relative_path: str) -> _PreparedCreate: ...
 
     def close(self) -> None: ...
 
@@ -108,10 +107,11 @@ def _sha256(data: bytes) -> str:
 
 
 class WorkspaceFileCapability:
-    """Permit-gated, bounded workspace file mutation boundary.
+    """Permit-gated atomic create-only workspace mutation capability.
 
-    The capability owns path/OS safety mechanics only. Approval and permit minting
-    remain exclusively inside PermissionControlPlane/trusted UI authority.
+    WO-0021 deliberately does not overwrite, append, truncate, delete or rename
+    existing user files. Approval/permit authority remains exclusively inside
+    PermissionControlPlane and its trusted-UI boundary.
     """
 
     def __init__(
@@ -130,10 +130,7 @@ class WorkspaceFileCapability:
         self._max_write_bytes = ceiling
         self._lock = threading.RLock()
         self._closed = False
-        if os.name == "nt":
-            self._backend: _Backend = _WindowsBackend(workspace_root)
-        else:
-            self._backend = _PosixBackend(workspace_root)
+        self._backend: _Backend = _WindowsBackend(workspace_root) if os.name == "nt" else _PosixBackend(workspace_root)
         self.workspace = normalize_workspace(self._backend.canonical_root)
 
     def __enter__(self) -> "WorkspaceFileCapability":
@@ -160,10 +157,10 @@ class WorkspaceFileCapability:
         relative = normalize_relative_file_path(relative_path)
         with self._lock:
             self._require_open()
-            prepared = self._backend.prepare(relative)
+            prepared = self._backend.prepare_create(relative)
             try:
-                prepared.revalidate()
-                expected_state = prepared.state
+                prepared.revalidate_absent()
+                parent_identity = prepared.parent_identity
             finally:
                 prepared.close()
         return ActionRequest(
@@ -174,9 +171,10 @@ class WorkspaceFileCapability:
             arguments={
                 "contract": WRITE_CONTRACT,
                 "path": relative,
+                "parent_identity": parent_identity,
+                "target_state": "absent",
                 "content_sha256": _sha256(data),
                 "content_bytes": len(data),
-                "expected_state": expected_state,
             },
         )
 
@@ -189,67 +187,75 @@ class WorkspaceFileCapability:
     ) -> WorkspaceWriteReceipt:
         data = _content_bytes(content)
         self._validate_size(data)
-        relative, expected_state = self._validate_request(request, data)
+        relative, expected_parent = self._validate_request(request, data)
+
         with self._lock:
             self._require_open()
-            prepared = self._backend.prepare(relative)
+            prepared = self._backend.prepare_create(relative)
             try:
-                if prepared.state != expected_state:
-                    raise WorkspaceBoundaryError("target state changed after approval request")
-                prepared.revalidate()
+                if prepared.parent_identity != expected_parent:
+                    raise WorkspaceBoundaryError("parent identity changed after approval request")
+                prepared.revalidate_absent()
 
-                # Canonical CP permit is consumed only after all read-only target
-                # validation succeeds and immediately before the first mutation.
+                # All read-only validation is complete. Permit consumption is the
+                # final authorization operation immediately before the first OS
+                # mutation (creation of a private same-parent temporary file).
                 self._plane.consume_execution_permit(permit_token, request)
                 self._require_active(request.session_id)
 
-                def pre_commit_check() -> None:
+                def pre_publish_check() -> None:
                     self._require_active(request.session_id)
-                    prepared.revalidate()
+                    prepared.revalidate_absent()
 
-                committed_state = prepared.commit(data, pre_commit_check)
+                committed_state = prepared.publish(data, pre_publish_check)
             except WorkspaceBoundaryError:
+                raise
+            except (SessionStateErrorAlias,):  # pragma: no cover - alias replaced below.
                 raise
             except Exception as exc:
                 if isinstance(exc, WorkspaceMutationError):
                     raise
-                raise WorkspaceMutationError("workspace mutation failed closed") from exc
+                raise WorkspaceMutationError("workspace create failed closed") from exc
             finally:
                 prepared.close()
 
         return WorkspaceWriteReceipt(
             workspace=self.workspace,
             relative_path=relative,
+            parent_identity=expected_parent,
             content_sha256=_sha256(data),
             content_bytes=len(data),
-            previous_state=expected_state,
             committed_state=committed_state,
         )
 
     def _validate_request(self, request: ActionRequest, data: bytes) -> tuple[str, str]:
-        if request.capability is not Capability.FILESYSTEM_WRITE:
+        capability = request.capability
+        if capability is not Capability.FILESYSTEM_WRITE and str(capability) != Capability.FILESYSTEM_WRITE.value:
             raise WorkspaceBoundaryError("request capability is not filesystem.write")
         if str(request.action).strip() != WRITE_ACTION:
-            raise WorkspaceBoundaryError("request action is not the governed write contract")
+            raise WorkspaceBoundaryError("request action is not the governed create contract")
         canonical_target = request.target.canonical()
         if canonical_target.get("workspace") != self.workspace:
             raise WorkspaceBoundaryError("request workspace does not match capability workspace")
-        args = request.arguments
-        if not isinstance(args, dict):
-            raise WorkspaceBoundaryError("request arguments must be a dict")
-        if set(args) != {"contract", "path", "content_sha256", "content_bytes", "expected_state"}:
-            raise WorkspaceBoundaryError("request arguments do not match write contract")
+        args: Mapping[str, object] = request.arguments
+        if not isinstance(args, Mapping):
+            raise WorkspaceBoundaryError("request arguments must be a mapping")
+        required = {"contract", "path", "parent_identity", "target_state", "content_sha256", "content_bytes"}
+        if set(args) != required:
+            raise WorkspaceBoundaryError("request arguments do not match create contract")
         if args.get("contract") != WRITE_CONTRACT:
             raise WorkspaceBoundaryError("write contract mismatch")
-        relative = normalize_relative_file_path(args.get("path"))
+        relative = normalize_relative_file_path(args.get("path"))  # type: ignore[arg-type]
+        parent_identity = args.get("parent_identity")
+        if not isinstance(parent_identity, str) or not parent_identity:
+            raise WorkspaceBoundaryError("parent identity is missing")
+        if args.get("target_state") != "absent":
+            raise WorkspaceBoundaryError("WO-0021 only authorizes creation of an absent target")
         if args.get("content_bytes") != len(data):
             raise WorkspaceBoundaryError("content length does not match approved request")
         if args.get("content_sha256") != _sha256(data):
             raise WorkspaceBoundaryError("content digest does not match approved request")
-        expected_state = args.get("expected_state")
-        if not isinstance(expected_state, str) or not expected_state:
-            raise WorkspaceBoundaryError("expected target state is missing")
-        return relative, expected_state
+        return relative, parent_identity
 
     def _validate_size(self, data: bytes) -> None:
         if len(data) > self._max_write_bytes:
@@ -262,6 +268,13 @@ class WorkspaceFileCapability:
     def _require_open(self) -> None:
         if self._closed:
             raise WorkspaceBoundaryError("workspace capability is closed")
+
+
+# This alias exists only so the broad exception guard above never accidentally
+# captures SessionStateError without importing a second authority/error branch.
+# It is rebound to an impossible private type and therefore never matches.
+class SessionStateErrorAlias(Exception):
+    pass
 
 
 class _PosixBackend:
@@ -285,8 +298,12 @@ class _PosixBackend:
         if not stat.S_ISDIR(info.st_mode):
             os.close(self._root_fd)
             raise WorkspaceBoundaryError("workspace root handle is not a directory")
-        self._root_identity = (info.st_dev, info.st_ino)
+        self._root_identity = self._dir_identity(info)
         self._closed = False
+
+    @staticmethod
+    def _dir_identity(info: os.stat_result) -> str:
+        return f"posix-dir:{info.st_dev}:{info.st_ino}"
 
     def close(self) -> None:
         if self._closed:
@@ -294,12 +311,13 @@ class _PosixBackend:
         os.close(self._root_fd)
         self._closed = True
 
-    def prepare(self, relative_path: str) -> "_PosixPreparedTarget":
+    def prepare_create(self, relative_path: str) -> "_PosixPreparedCreate":
         if self._closed:
             raise WorkspaceBoundaryError("workspace backend is closed")
         self._revalidate_root_path()
         parts = relative_path.split("/")
         parent_fd = os.dup(self._root_fd)
+        parent_parts: list[str] = []
         try:
             flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
             for component in parts[:-1]:
@@ -310,10 +328,27 @@ class _PosixBackend:
                     raise WorkspaceBoundaryError("parent component is not a directory")
                 os.close(parent_fd)
                 parent_fd = next_fd
-            return _PosixPreparedTarget(self, parent_fd, parts[-1])
+                parent_parts.append(component)
+            return _PosixPreparedCreate(self, parent_fd, tuple(parent_parts), parts[-1])
         except Exception:
             os.close(parent_fd)
             raise
+
+    def current_parent_identity(self, parent_parts: tuple[str, ...]) -> str:
+        fd = os.dup(self._root_fd)
+        try:
+            flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+            for component in parent_parts:
+                next_fd = os.open(component, flags, dir_fd=fd)
+                info = os.fstat(next_fd)
+                if not stat.S_ISDIR(info.st_mode):
+                    os.close(next_fd)
+                    raise WorkspaceBoundaryError("current parent component is not a directory")
+                os.close(fd)
+                fd = next_fd
+            return self._dir_identity(os.fstat(fd))
+        finally:
+            os.close(fd)
 
     def _revalidate_root_path(self) -> None:
         try:
@@ -322,39 +357,56 @@ class _PosixBackend:
             raise WorkspaceBoundaryError("workspace root path is no longer available") from exc
         if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
             raise WorkspaceBoundaryError("workspace root path changed type")
-        if (info.st_dev, info.st_ino) != self._root_identity:
+        if self._dir_identity(info) != self._root_identity:
             raise WorkspaceBoundaryError("workspace root identity changed")
 
 
-class _PosixPreparedTarget:
-    def __init__(self, backend: _PosixBackend, parent_fd: int, leaf: str) -> None:
+class _PosixPreparedCreate:
+    def __init__(
+        self,
+        backend: _PosixBackend,
+        parent_fd: int,
+        parent_parts: tuple[str, ...],
+        leaf: str,
+    ) -> None:
         self._backend = backend
         self._parent_fd = parent_fd
+        self._parent_parts = parent_parts
         self._leaf = leaf
         self._closed = False
-        self.state = self._read_state()
+        self.parent_identity = backend._dir_identity(os.fstat(parent_fd))
+        self.revalidate_absent()
 
     def close(self) -> None:
         if not self._closed:
             os.close(self._parent_fd)
             self._closed = True
 
-    def revalidate(self) -> None:
+    def revalidate_absent(self) -> None:
         if self._closed:
             raise WorkspaceBoundaryError("prepared target is closed")
         self._backend._revalidate_root_path()
-        if self._read_state() != self.state:
-            raise WorkspaceBoundaryError("target identity/content metadata changed")
+        if self._backend.current_parent_identity(self._parent_parts) != self.parent_identity:
+            raise WorkspaceBoundaryError("parent path identity changed")
+        if self._backend._dir_identity(os.fstat(self._parent_fd)) != self.parent_identity:
+            raise WorkspaceBoundaryError("pinned parent identity changed")
+        try:
+            os.stat(self._leaf, dir_fd=self._parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return
+        except OSError as exc:
+            raise WorkspaceBoundaryError("target absence could not be proven") from exc
+        raise WorkspaceBoundaryError("WO-0021 create-only target already exists")
 
-    def commit(self, content: bytes, pre_commit_check: Callable[[], None]) -> str:
+    def publish(self, content: bytes, pre_publish_check: Callable[[], None]) -> str:
         temp_name = f"{_TEMP_PREFIX}{secrets.token_hex(16)}.tmp"
         fd: int | None = None
         temp_identity: tuple[int, int] | None = None
         created = False
+        published = False
         try:
-            mode = self._existing_mode_or_default()
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-            fd = os.open(temp_name, flags, mode, dir_fd=self._parent_fd)
+            fd = os.open(temp_name, flags, 0o600, dir_fd=self._parent_fd)
             created = True
             info = os.fstat(fd)
             if not stat.S_ISREG(info.st_mode):
@@ -369,50 +421,53 @@ class _PosixPreparedTarget:
                 offset += written
             os.fsync(fd)
 
-            pre_commit_check()
-            if self._read_state() != self.state:
-                raise WorkspaceBoundaryError("target changed before commit")
-            os.replace(temp_name, self._leaf, src_dir_fd=self._parent_fd, dst_dir_fd=self._parent_fd)
-            created = False
+            pre_publish_check()
+            try:
+                os.link(
+                    temp_name,
+                    self._leaf,
+                    src_dir_fd=self._parent_fd,
+                    dst_dir_fd=self._parent_fd,
+                    follow_symlinks=False,
+                )
+            except FileExistsError as exc:
+                raise WorkspaceBoundaryError("target appeared before atomic no-clobber publication") from exc
+            published = True
+            committed = self._read_committed_state()
+            try:
+                os.unlink(temp_name, dir_fd=self._parent_fd)
+                created = False
+            except OSError:
+                # Final file is already atomically published. A verified duplicate
+                # temp hardlink may remain as cleanup debt, but user data is not
+                # rolled back or deleted after successful publication.
+                pass
             try:
                 os.fsync(self._parent_fd)
             except OSError:
-                # Some filesystems do not permit directory fsync. The rename is
-                # still atomic; power-loss durability is not claimed here.
                 pass
-            return self._read_state()
+            return committed
         except WorkspaceBoundaryError:
             raise
         except OSError as exc:
-            raise WorkspaceMutationError("atomic workspace replace failed") from exc
+            raise WorkspaceMutationError("atomic create-only publication failed") from exc
         finally:
             if fd is not None:
                 os.close(fd)
-            if created and temp_identity is not None:
+            if created and not published and temp_identity is not None:
                 self._unlink_temp_if_same(temp_name, temp_identity)
 
-    def _existing_mode_or_default(self) -> int:
-        try:
-            info = os.stat(self._leaf, dir_fd=self._parent_fd, follow_symlinks=False)
-        except FileNotFoundError:
-            return 0o600
-        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
-            raise WorkspaceBoundaryError("target is not a regular no-follow file")
-        return stat.S_IMODE(info.st_mode) or 0o600
-
-    def _read_state(self) -> str:
+    def _read_committed_state(self) -> str:
         flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
         try:
             fd = os.open(self._leaf, flags, dir_fd=self._parent_fd)
-        except FileNotFoundError:
-            return "absent"
         except OSError as exc:
-            raise WorkspaceBoundaryError("target cannot be opened no-follow") from exc
+            raise WorkspaceMutationError("published target cannot be reopened no-follow") from exc
         try:
             info = os.fstat(fd)
             if not stat.S_ISREG(info.st_mode):
-                raise WorkspaceBoundaryError("target is not a regular file")
-            return f"posix:{info.st_dev}:{info.st_ino}:{info.st_size}:{info.st_mtime_ns}"
+                raise WorkspaceMutationError("published target is not a regular file")
+            return f"posix-file:{info.st_dev}:{info.st_ino}:{info.st_size}:{info.st_mtime_ns}"
         finally:
             os.close(fd)
 
@@ -455,6 +510,8 @@ if os.name == "nt":
     _FILE_RENAME_INFO_CLASS = 3
     _FILE_DISPOSITION_INFO_CLASS = 4
     _INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
+    _STATUS_OBJECT_NAME_NOT_FOUND = 0xC0000034
+    _STATUS_OBJECT_PATH_NOT_FOUND = 0xC000003A
 
     class _UNICODE_STRING(ctypes.Structure):
         _fields_ = [
@@ -602,8 +659,14 @@ if os.name == "nt":
             )
         )
         if status < 0:
-            raise WorkspaceBoundaryError(f"relative Windows handle open failed closed (ntstatus=0x{status & 0xffffffff:08x})")
+            unsigned_status = status & 0xFFFFFFFF
+            raise WorkspaceBoundaryError(f"relative Windows handle open failed closed (ntstatus=0x{unsigned_status:08x})")
         return int(out.value)
+
+
+    def _nt_missing(exc: WorkspaceBoundaryError) -> bool:
+        text = str(exc).casefold()
+        return f"{_STATUS_OBJECT_NAME_NOT_FOUND:08x}" in text or f"{_STATUS_OBJECT_PATH_NOT_FOUND:08x}" in text
 
 
     def _win_info(handle: int) -> _BY_HANDLE_FILE_INFORMATION:
@@ -613,11 +676,15 @@ if os.name == "nt":
         return info
 
 
-    def _win_identity_state(info: _BY_HANDLE_FILE_INFORMATION) -> str:
+    def _win_file_identity(info: _BY_HANDLE_FILE_INFORMATION) -> str:
         file_id = (int(info.nFileIndexHigh) << 32) | int(info.nFileIndexLow)
+        return f"win-id:{int(info.dwVolumeSerialNumber)}:{file_id}"
+
+
+    def _win_file_state(info: _BY_HANDLE_FILE_INFORMATION) -> str:
         size = (int(info.nFileSizeHigh) << 32) | int(info.nFileSizeLow)
         mtime = (int(info.ftLastWriteTime.dwHighDateTime) << 32) | int(info.ftLastWriteTime.dwLowDateTime)
-        return f"win:{int(info.dwVolumeSerialNumber)}:{file_id}:{size}:{mtime}"
+        return f"{_win_file_identity(info)}:{size}:{mtime}"
 
 
     def _win_final_path(handle: int) -> str:
@@ -657,7 +724,7 @@ if os.name == "nt":
                     raise WorkspaceBoundaryError("workspace root is a reparse point")
                 if not info.dwFileAttributes & _FILE_ATTRIBUTE_DIRECTORY:
                     raise WorkspaceBoundaryError("workspace root is not a directory")
-                self._root_identity = _win_identity_state(info)
+                self._root_identity = _win_file_identity(info)
                 self.canonical_root = _win_final_path(self._root_handle)
             except Exception:
                 _win_close(self._root_handle)
@@ -669,13 +736,14 @@ if os.name == "nt":
                 _win_close(self._root_handle)
                 self._closed = True
 
-        def prepare(self, relative_path: str) -> "_WindowsPreparedTarget":
+        def prepare_create(self, relative_path: str) -> "_WindowsPreparedCreate":
             if self._closed:
                 raise WorkspaceBoundaryError("workspace backend is closed")
             self._revalidate_root_path()
             parts = relative_path.split("/")
             chain: list[int] = []
             parent = self._root_handle
+            parent_parts: list[str] = []
             try:
                 for component in parts[:-1]:
                     child = _nt_open_relative(
@@ -695,17 +763,42 @@ if os.name == "nt":
                         raise WorkspaceBoundaryError("parent component is not a directory")
                     chain.append(child)
                     parent = child
-                return _WindowsPreparedTarget(self, chain, parent, parts[-1])
+                    parent_parts.append(component)
+                return _WindowsPreparedCreate(self, chain, parent, tuple(parent_parts), parts[-1])
             except Exception:
-                for handle in reversed(chain):
-                    _win_close(handle)
+                for item in reversed(chain):
+                    _win_close(item)
                 raise
+
+        def current_parent_identity(self, parent_parts: tuple[str, ...]) -> str:
+            parent = self._root_handle
+            chain: list[int] = []
+            try:
+                for component in parent_parts:
+                    child = _nt_open_relative(
+                        parent,
+                        component,
+                        desired_access=_FILE_LIST_DIRECTORY | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE,
+                        share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE,
+                        disposition=_FILE_OPEN,
+                        options=_FILE_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT,
+                    )
+                    info = _win_info(child)
+                    if info.dwFileAttributes & (_FILE_ATTRIBUTE_REPARSE_POINT):
+                        _win_close(child)
+                        raise WorkspaceBoundaryError("current parent component is a reparse point")
+                    chain.append(child)
+                    parent = child
+                return _win_file_identity(_win_info(parent))
+            finally:
+                for item in reversed(chain):
+                    _win_close(item)
 
         def _revalidate_root_path(self) -> None:
             handle = _CreateFileW(
                 self.canonical_root,
                 _FILE_READ_ATTRIBUTES | _SYNCHRONIZE,
-                _FILE_SHARE_READ | _FILE_SHARE_WRITE | 0x00000004,
+                _FILE_SHARE_READ | _FILE_SHARE_WRITE,
                 None,
                 _OPEN_EXISTING,
                 _FILE_FLAG_BACKUP_SEMANTICS | _FILE_FLAG_OPEN_REPARSE_POINT,
@@ -717,20 +810,29 @@ if os.name == "nt":
                 info = _win_info(int(handle))
                 if info.dwFileAttributes & _FILE_ATTRIBUTE_REPARSE_POINT:
                     raise WorkspaceBoundaryError("workspace root path became a reparse point")
-                if _win_identity_state(info) != self._root_identity:
+                if _win_file_identity(info) != self._root_identity:
                     raise WorkspaceBoundaryError("workspace root identity changed")
             finally:
                 _win_close(int(handle))
 
 
-    class _WindowsPreparedTarget:
-        def __init__(self, backend: _WindowsBackend, chain: list[int], parent_handle: int, leaf: str) -> None:
+    class _WindowsPreparedCreate:
+        def __init__(
+            self,
+            backend: _WindowsBackend,
+            chain: list[int],
+            parent_handle: int,
+            parent_parts: tuple[str, ...],
+            leaf: str,
+        ) -> None:
             self._backend = backend
             self._chain = chain
             self._parent_handle = parent_handle
+            self._parent_parts = parent_parts
             self._leaf = leaf
             self._closed = False
-            self.state = self._read_state()
+            self.parent_identity = _win_file_identity(_win_info(parent_handle))
+            self.revalidate_absent()
 
         def close(self) -> None:
             if self._closed:
@@ -739,14 +841,37 @@ if os.name == "nt":
                 _win_close(handle)
             self._closed = True
 
-        def revalidate(self) -> None:
+        def revalidate_absent(self) -> None:
             if self._closed:
                 raise WorkspaceBoundaryError("prepared target is closed")
             self._backend._revalidate_root_path()
-            if self._read_state() != self.state:
-                raise WorkspaceBoundaryError("target identity/content metadata changed")
+            if self._backend.current_parent_identity(self._parent_parts) != self.parent_identity:
+                raise WorkspaceBoundaryError("parent path identity changed")
+            if _win_file_identity(_win_info(self._parent_handle)) != self.parent_identity:
+                raise WorkspaceBoundaryError("pinned parent identity changed")
+            handle: int | None = None
+            try:
+                handle = _nt_open_relative(
+                    self._parent_handle,
+                    self._leaf,
+                    desired_access=_FILE_READ_ATTRIBUTES | _SYNCHRONIZE,
+                    share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE,
+                    disposition=_FILE_OPEN,
+                    options=_FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT,
+                )
+            except WorkspaceBoundaryError as exc:
+                if _nt_missing(exc):
+                    return
+                raise
+            else:
+                info = _win_info(handle)
+                if info.dwFileAttributes & _FILE_ATTRIBUTE_REPARSE_POINT:
+                    raise WorkspaceBoundaryError("WO-0021 target is an existing reparse point")
+                raise WorkspaceBoundaryError("WO-0021 create-only target already exists")
+            finally:
+                _win_close(handle)
 
-        def commit(self, content: bytes, pre_commit_check: Callable[[], None]) -> str:
+        def publish(self, content: bytes, pre_publish_check: Callable[[], None]) -> str:
             temp_name = f"{_TEMP_PREFIX}{secrets.token_hex(16)}.tmp"
             temp_handle: int | None = None
             renamed = False
@@ -760,9 +885,10 @@ if os.name == "nt":
                     options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT,
                     file_attributes=_FILE_ATTRIBUTE_TEMPORARY,
                 )
-                info = _win_info(temp_handle)
-                if info.dwFileAttributes & (_FILE_ATTRIBUTE_REPARSE_POINT | _FILE_ATTRIBUTE_DIRECTORY):
+                temp_info = _win_info(temp_handle)
+                if temp_info.dwFileAttributes & (_FILE_ATTRIBUTE_REPARSE_POINT | _FILE_ATTRIBUTE_DIRECTORY):
                     raise WorkspaceBoundaryError("temporary target is not a regular file")
+
                 if content:
                     buffer = ctypes.create_string_buffer(content)
                     offset = 0
@@ -778,56 +904,30 @@ if os.name == "nt":
                 if not _FlushFileBuffers(wintypes.HANDLE(temp_handle)):
                     raise _win_error("FlushFileBuffers failed")
 
-                pre_commit_check()
-                if self._read_state() != self.state:
-                    raise WorkspaceBoundaryError("target changed before commit")
-                self._rename_temp(temp_handle, replace=self.state != "absent")
+                pre_publish_check()
+                self._rename_temp_no_clobber(temp_handle)
                 renamed = True
-                return self._read_state()
+                info = _win_info(temp_handle)
+                if info.dwFileAttributes & (_FILE_ATTRIBUTE_REPARSE_POINT | _FILE_ATTRIBUTE_DIRECTORY):
+                    raise WorkspaceMutationError("published Windows target is not a regular file")
+                return _win_file_state(info)
             except WorkspaceBoundaryError:
                 raise
             except OSError as exc:
-                raise WorkspaceMutationError("Windows workspace replace failed") from exc
+                raise WorkspaceMutationError("Windows create-only publication failed") from exc
             finally:
                 if temp_handle is not None:
                     if not renamed:
                         self._mark_delete(temp_handle)
                     _win_close(temp_handle)
 
-        def _read_state(self) -> str:
-            handle: int | None = None
-            try:
-                handle = _nt_open_relative(
-                    self._parent_handle,
-                    self._leaf,
-                    desired_access=_FILE_READ_ATTRIBUTES | _SYNCHRONIZE,
-                    share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | 0x00000004,
-                    disposition=_FILE_OPEN,
-                    options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT,
-                )
-            except WorkspaceBoundaryError as exc:
-                text = str(exc)
-                # STATUS_OBJECT_NAME_NOT_FOUND / STATUS_OBJECT_PATH_NOT_FOUND.
-                if "c0000034" in text.casefold() or "c000003a" in text.casefold():
-                    return "absent"
-                raise
-            try:
-                info = _win_info(handle)
-                if info.dwFileAttributes & _FILE_ATTRIBUTE_REPARSE_POINT:
-                    raise WorkspaceBoundaryError("target is a reparse point")
-                if info.dwFileAttributes & _FILE_ATTRIBUTE_DIRECTORY:
-                    raise WorkspaceBoundaryError("target is a directory")
-                return _win_identity_state(info)
-            finally:
-                _win_close(handle)
-
-        def _rename_temp(self, temp_handle: int, *, replace: bool) -> None:
+        def _rename_temp_no_clobber(self, temp_handle: int) -> None:
             encoded = self._leaf.encode("utf-16-le")
             offset = _FILE_RENAME_INFO.FileName.offset
             size = offset + len(encoded)
             raw = ctypes.create_string_buffer(size)
             info = _FILE_RENAME_INFO.from_buffer(raw)
-            info.ReplaceIfExists = 1 if replace else 0
+            info.ReplaceIfExists = 0
             info.RootDirectory = wintypes.HANDLE(self._parent_handle)
             info.FileNameLength = len(encoded)
             ctypes.memmove(ctypes.addressof(raw) + offset, encoded, len(encoded))
@@ -837,7 +937,10 @@ if os.name == "nt":
                 ctypes.byref(raw),
                 size,
             ):
-                raise _win_error("handle-relative rename failed")
+                error = ctypes.get_last_error()
+                if error in {80, 183}:  # ERROR_FILE_EXISTS / ERROR_ALREADY_EXISTS
+                    raise WorkspaceBoundaryError("target appeared before atomic no-clobber publication")
+                raise _win_error("handle-relative no-clobber rename failed")
 
         def _mark_delete(self, handle: int) -> None:
             info = _FILE_DISPOSITION_INFO(True)
