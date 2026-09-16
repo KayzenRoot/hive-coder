@@ -11,10 +11,14 @@
   },
   "adoption": {
     "mode": "UNIVERSAL_BROWNFIELD_ADOPTION",
-    "status": "PROMOTION_CANDIDATE",
+    "status": "ADOPTED",
     "workOrder": "HCODER-GEF-ADOPT-0001",
     "technicalHead": "a62d7602be8a1ed23ca3fc4459aa40188205c860",
+    "finalPrHead": "f323e8f6337e5d7b323ff9d256fb197beca8e171",
+    "acceptedMergeSha": "6c9fbda50c0477ef353018df1e5aea6f738d3aa4",
     "technicalVerdict": "APPROVED",
+    "finalVerdict": "APPROVED",
+    "postMergeVerified": true,
     "preserveHistoricalGef": true,
     "retroactiveCompletionClaimsAllowed": false
   },
@@ -29,7 +33,7 @@
     "remaining supporting documentation"
   ],
   "currentKnownDrift": [
-    "main contains post-CP-0021 evidence while docs/project-brain/11-CHECKPOINT.md still declares CP-0021; do not fabricate reconciliation during adoption"
+    "main contains post-CP-0021 evidence while docs/project-brain/11-CHECKPOINT.md still declares CP-0021; do not fabricate reconciliation"
   ],
   "activeNonCanonicalIncrement": {
     "workOrder": "HCODER-WO-0023",

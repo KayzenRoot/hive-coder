@@ -1,14 +1,20 @@
 # GEF Bootstrap V1.0.0 — Universal Adoption Baseline for Hive Coder
 
+## Status
+`GEF_V1_ADOPTED_READY_FOR_GOVERNED_DEVELOPMENT` subject only to the documentation-only closeout record itself passing exact-head gates/audit and merge verification.
+
 ## Classification
 `BROWNFIELD`.
 
-Evidence: material Python runtime, React/Tauri desktop application, tests, workflows, Project Brain, ADR/decision ledger, many completed Work Orders/checkpoints, active PR history and an existing local GEF layer.
-
-## Pre-GEF-universal baseline
-Universal-adoption base main: `ccfed1f960c80dc58e4f45cb627451e77c7d5a79`.
-
-The repository already used a Hive-specific GEF/HEDS system. This adoption upgrades/reconciles that system to the universal brownfield rules. It does not claim that earlier work was executed under this universal adoption prompt.
+## Accepted adoption identity
+- Pre-adoption main: `ccfed1f960c80dc58e4f45cb627451e77c7d5a79`.
+- Technical adoption head: `a62d7602be8a1ed23ca3fc4459aa40188205c860`.
+- Final adoption PR head: `f323e8f6337e5d7b323ff9d256fb197beca8e171`.
+- Squash merge main: `6c9fbda50c0477ef353018df1e5aea6f738d3aa4`.
+- PR: `#73`.
+- Final PR gates: Governance #398 and Desktop Shell #234 SUCCESS.
+- Post-merge gates: Governance #399 and Desktop Shell #235 SUCCESS.
+- CRITICAL/HIGH: 0/0.
 
 ## Repository-native mapping
 - Project identity / purpose -> `docs/project-brain/01-PROJECT-OVERVIEW.md`.
@@ -28,16 +34,12 @@ The repository already used a Hive-specific GEF/HEDS system. This adoption upgra
 - Evidence -> `.engineering/evidence/`.
 - Checkpoint Deltas -> `.engineering/checkpoint-deltas/`.
 - Universal GEF policy/protocols -> `.engineering/gef/`.
-- PR governance -> `.github/PULL_REQUEST_TEMPLATE.md` + hosted workflows.
 
-## Existing user work preserved
-No product/runtime/source/test/workflow file is replaced by the adoption. Existing Project Brain is project authority and is mapped rather than duplicated. Existing CI remains in place. Historical Work Orders/checkpoints remain historical.
+## Preservation outcome
+No product/runtime/source/test/workflow/dependency behavior was changed by the adoption. Existing Project Brain is project authority and was mapped rather than duplicated. Historical Work Orders/checkpoints/evidence remain historical.
 
 ## Known drift recorded, not fabricated away
-`docs/project-brain/11-CHECKPOINT.md` still declares CP-0021 while main history includes later CP-0022 and PLATFORM-001 evidence. This is a source reconciliation debt, not permission to invent a new checkpoint. The next governed source reconciliation may fix it using evidence.
+`docs/project-brain/11-CHECKPOINT.md` still declares CP-0021 while main history includes later CP-0022 and PLATFORM-001 evidence. This remains a separate source reconciliation debt.
 
 ## Active increment preservation
-Draft PR #69 / `HCODER-WO-0023` remains the active non-canonical product increment. Universal adoption does not rewrite its implementation. After this adoption reaches main, that branch must merge/reconcile current main before continuing.
-
-## Adoption STOP condition
-Candidate state: `GEF_ADOPTION_EXACT_HEAD_EVIDENCE_REQUIRED` until hosted exact-head gates and technical review pass. After merge and a post-adoption resume receipt, state becomes `GEF_V1_ADOPTED_READY_FOR_GOVERNED_DEVELOPMENT`.
+Draft PR #69 / `HCODER-WO-0023` remains the active non-canonical product increment. It must merge/reconcile the adopted main before its next executor mutation, then continue with the rewritten GEF V1 Prompt 05.
