@@ -62,7 +62,18 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 
 **Implementation head:** `9ac5ad43742376245da09de48ce812a7f7678d2e`  
 **Verified head:** `19c8c1abdd960196b1e9b8bb52ebba90843a77a3` (adds the observation-idempotence fix below)  
-**Correction head:** Prompt 02 same-WO correction — TREE cache-tree semantics, main reconciliation and cleanup-hardening review (see below)
+**Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)
+
+### Exact-head CI at `ceb6cda42c3a6b3864b39a75afb27fb1982053ba`
+
+| Workflow | Run | Result |
+|---|---|---|
+| Governance | `35139273213` | **SUCCESS** |
+| Desktop Shell | `35139273260` | **SUCCESS** |
+
+Governance jobs: `source-pack` SUCCESS, `governed-runtime-linux` SUCCESS, `control-plane-windows` SUCCESS, `workspace-replace-macos` SUCCESS. The `Native <platform> governed Git index codec/object proof` step now includes the real-Git TREE cache-tree semantic lane on all three platforms.
+
+Desktop Shell jobs: `desktop-web`, `desktop-windows`, `desktop-linux`, `desktop-macos` — all SUCCESS.
 
 ### Exact-head CI at `19c8c1abdd960196b1e9b8bb52ebba90843a77a3`
 
