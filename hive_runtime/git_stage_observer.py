@@ -128,7 +128,27 @@ class PosixGitStageObserver:
             digest, _ = _sha256_file(fd); return "regular", _identity(st), digest
         finally: os.close(fd)
 
+    def _reject_nested_git_boundary(self, relative: str) -> None:
+        """Reject any `.git` marker below the trusted repository root.
+
+        A nested `.git` directory is a nested repository boundary. A nested
+        regular `.git` file is gitdir indirection, as used by submodules and
+        linked worktrees. Symlink/special `.git` markers are unsafe too. Only
+        true absence is allowed. This check is path-scoped and never traverses
+        unrelated workspace directories.
+        """
+        components = relative.split("/")
+        cursor = self.root
+        for component in components[:-1]:
+            cursor = cursor / component
+            marker = cursor / ".git"
+            try: marker.lstat()
+            except FileNotFoundError: continue
+            except OSError as exc: raise GitStageUnsupportedRepositoryError("cannot prove nested Git boundary absence") from exc
+            raise GitStageUnsupportedRepositoryError("approved path crosses a nested Git repository/submodule boundary")
+
     def _observe_worktree(self, relative: str) -> GitStageWorktreeState:
+        self._reject_nested_git_boundary(relative)
         path = self.root.joinpath(*relative.split("/")); cursor = self.root
         for component in relative.split("/"):
             cursor = cursor / component
