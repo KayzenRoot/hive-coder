@@ -24,7 +24,8 @@
     "governanceWorkflow": "0e14da49d41f4b22a8458e828f12244ce82a0e93"
   },
   "authorityBoundary": {
-    "filesystemWrite": "permit-gated-only",
+    "filesystemWrite": "permit-gated-create-only-no-clobber",
+    "existingFileMutation": false,
     "filesystemReadExpansion": false,
     "outsideWorkspacePaths": false,
     "symlinkOrReparseTraversal": false,
@@ -40,12 +41,14 @@
     "billingOrPurchases": false
   },
   "proofObligations": [
-    "handle/no-follow traversal and live identity revalidation",
-    "exact workspace/target/content request fingerprint binding",
+    "handle/no-follow traversal and live workspace/parent identity revalidation",
+    "exact workspace/parent/target/content request fingerprint binding",
+    "target must be absent at request and publication boundaries",
+    "atomic no-clobber publication; concurrently appearing target is preserved",
     "mandatory FILESYSTEM_WRITE trusted approval",
-    "short-lived single-use permit consumed immediately before commit",
-    "target/workspace swap resistance",
-    "rollback-aware failure behavior",
+    "short-lived single-use permit consumed immediately before first mutation",
+    "workspace/parent/target swap resistance within create-only authority",
+    "safe temporary cleanup and failure behavior",
     "cancellation/emergency/takeover blocks before commit",
     "Ubuntu and Windows HIGH_ASSURANCE adversarial evidence"
   ],
