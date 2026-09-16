@@ -1,95 +1,147 @@
 from __future__ import annotations
 
+import os
+import tempfile
 import unittest
+from pathlib import Path
 
 from hive_runtime.git_stage import (
     GitStageUnavailableError,
+    GitStageUnsupportedRepositoryError,
     GovernedGitStageAdapter,
     UnsupportedGitStageBackend,
 )
+from hive_runtime.git_stage_observer import PosixGitStageObserver
+
+
+def _ordinary_repo(root: Path) -> None:
+    git = root / ".git"
+    (git / "refs" / "heads").mkdir(parents=True)
+    oid = "1" * 40
+    (git / "HEAD").write_text("ref: refs/heads/main\n", encoding="ascii")
+    (git / "refs" / "heads" / "main").write_text(oid + "\n", encoding="ascii")
+
+
+@unittest.skipIf(os.name == "nt", "POSIX observer proof")
+class PosixGitStageSecurityAcceptanceMap(unittest.TestCase):
+    def test_rejects_symlink_directory_and_special_file_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _ordinary_repo(root)
+            (root / "regular.txt").write_bytes(b"safe")
+            observer = PosixGitStageObserver(root)
+
+            (root / "dir").mkdir()
+            with self.assertRaises(GitStageUnsupportedRepositoryError):
+                observer.observe(["dir"])
+
+            (root / "link.txt").symlink_to(root / "regular.txt")
+            with self.assertRaises(GitStageUnsupportedRepositoryError):
+                observer.observe(["link.txt"])
+
+            (root / "parent").mkdir()
+            (root / "parent" / "real.txt").write_bytes(b"safe")
+            (root / "parent-link").symlink_to(root / "parent", target_is_directory=True)
+            with self.assertRaises(GitStageUnsupportedRepositoryError):
+                observer.observe(["parent-link/real.txt"])
+
+            if hasattr(os, "mkfifo"):
+                os.mkfifo(root / "pipe")
+                with self.assertRaises(GitStageUnsupportedRepositoryError):
+                    observer.observe(["pipe"])
+
+    def test_rejects_gitdir_indirection_and_unsupported_repository_features(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".git").write_text("gitdir: elsewhere\n", encoding="ascii")
+            with self.assertRaises(GitStageUnsupportedRepositoryError):
+                PosixGitStageObserver(root)
+
+        for feature in ("commondir", "modules", "shallow"):
+            with self.subTest(feature=feature), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                _ordinary_repo(root)
+                candidate = root / ".git" / feature
+                if feature == "modules":
+                    candidate.mkdir()
+                else:
+                    candidate.write_text("unsupported\n", encoding="ascii")
+                (root / "a.txt").write_bytes(b"a")
+                observer = PosixGitStageObserver(root)
+                with self.assertRaises(GitStageUnsupportedRepositoryError):
+                    observer.observe(["a.txt"])
+
+    def test_observation_binds_head_index_and_worktree_without_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _ordinary_repo(root)
+            (root / ".git" / "index").write_bytes(b"synthetic-index-for-observation-only")
+            (root / "a.txt").write_bytes(b"approved bytes")
+            before_index = (root / ".git" / "index").read_bytes()
+            before_file = (root / "a.txt").read_bytes()
+
+            observer = PosixGitStageObserver(root)
+            state = observer.observe(["a.txt"])
+
+            self.assertEqual(state.repository_head, "1" * 40)
+            self.assertEqual(state.index_state, "regular")
+            self.assertTrue(state.index_identity.startswith("posix:"))
+            self.assertEqual(len(state.index_sha256), 64)
+            self.assertEqual(tuple(item.path for item in state.worktree_states), ("a.txt",))
+            self.assertEqual(state.worktree_states[0].content_bytes, len(before_file))
+            self.assertEqual((root / ".git" / "index").read_bytes(), before_index)
+            self.assertEqual((root / "a.txt").read_bytes(), before_file)
+            with self.assertRaises(GitStageUnsupportedRepositoryError):
+                observer.mutation_ready(None)
 
 
 class GitStageSecurityAcceptanceMap(unittest.TestCase):
-    """Security acceptance map for the governed Git staging boundary.
-
-    Only properties objectively implemented by the pre-authority adapter are active. The
-    remaining skips are hard promotion gates and must become native/backend evidence before
-    WO-0023 can be promoted.
-    """
+    """Security acceptance map for the governed Git staging boundary."""
 
     def test_rejects_traversal_dot_git_pathspec_magic_and_duplicate_aliases(self) -> None:
         adapter = GovernedGitStageAdapter()
         invalid = (
-            ["../escape.py"],
-            ["a/../b.py"],
-            ["./a.py"],
-            ["/absolute.py"],
-            [".git/index"],
-            [".GIT/config"],
-            ["*.py"],
-            ["src/?.py"],
-            ["src/[ab].py"],
-            [":(top)src/a.py"],
-            ["src/a.py", "src/a.py"],
-            ["src\\a.py", "src/a.py"],
-            ["src//a.py"],
-            ["src/./a.py"],
-            ["src/../a.py"],
-            ["bad\x00name.py"],
+            ["../escape.py"], ["a/../b.py"], ["./a.py"], ["/absolute.py"],
+            [".git/index"], [".GIT/config"], ["*.py"], ["src/?.py"],
+            ["src/[ab].py"], [":(top)src/a.py"], ["src/a.py", "src/a.py"],
+            ["src\\a.py", "src/a.py"], ["src//a.py"], ["src/./a.py"],
+            ["src/../a.py"], ["bad\x00name.py"],
         )
         for paths in invalid:
             with self.subTest(paths=paths):
-                with self.assertRaises(ValueError):
-                    adapter.prepare(paths)
+                with self.assertRaises(ValueError): adapter.prepare(paths)
 
     def test_default_adapter_is_non_mutating_and_fails_closed(self) -> None:
         adapter = GovernedGitStageAdapter()
         self.assertEqual(adapter.backend_id, "unsupported-git-stage-v1")
         self.assertFalse(adapter.mutation_authority_enabled)
-        with self.assertRaises(GitStageUnavailableError):
-            adapter.prepare(["src/a.py"])
+        with self.assertRaises(GitStageUnavailableError): adapter.prepare(["src/a.py"])
 
     def test_pre_authority_adapter_exposes_no_public_stage_operation(self) -> None:
         adapter = GovernedGitStageAdapter(UnsupportedGitStageBackend())
         self.assertFalse(hasattr(adapter, "stage_paths"))
         self.assertFalse(adapter.mutation_authority_enabled)
 
-    @unittest.skip("PREBUILT: implement no-follow worktree observation")
-    def test_rejects_symlink_reparse_directory_and_special_file_targets(self) -> None:
-        self.fail("executor must prove native path safety")
-
-    @unittest.skip("PREBUILT: implement supported repository envelope")
-    def test_rejects_linked_worktree_nested_repo_submodule_and_bare_repo(self) -> None:
-        self.fail("executor must prove repository-boundary checks")
-
     @unittest.skip("PREBUILT: implement exact approval observation")
-    def test_rejects_stale_head_index_or_worktree_after_approval(self) -> None:
-        self.fail("executor must prove stale-state rejection")
+    def test_rejects_stale_head_index_or_worktree_after_approval(self) -> None: self.fail("executor must prove stale-state rejection")
 
     @unittest.skip("PREBUILT: implement ownership-safe index transaction")
-    def test_foreign_index_lock_fails_closed_and_is_never_removed(self) -> None:
-        self.fail("executor must prove lock ownership")
+    def test_foreign_index_lock_fails_closed_and_is_never_removed(self) -> None: self.fail("executor must prove lock ownership")
 
     @unittest.skip("PREBUILT: integrate dedicated git.write control-plane action")
-    def test_permit_is_request_bound_single_use_and_consumed_at_final_safe_boundary(self) -> None:
-        self.fail("executor must prove permit ordering")
+    def test_permit_is_request_bound_single_use_and_consumed_at_final_safe_boundary(self) -> None: self.fail("executor must prove permit ordering")
 
     @unittest.skip("PREBUILT: integrate session state with staging executor")
-    def test_cancel_takeover_expiry_and_emergency_stop_prevent_publication(self) -> None:
-        self.fail("executor must prove session safety")
+    def test_cancel_takeover_expiry_and_emergency_stop_prevent_publication(self) -> None: self.fail("executor must prove session safety")
 
     @unittest.skip("PREBUILT: implement Git adapter without executable extension points")
-    def test_staging_executes_no_shell_process_hook_external_filter_network_or_credentials(self) -> None:
-        self.fail("executor must prove authority isolation")
+    def test_staging_executes_no_shell_process_hook_external_filter_network_or_credentials(self) -> None: self.fail("executor must prove authority isolation")
 
     @unittest.skip("PREBUILT: implement redacted request/audit/receipt")
-    def test_raw_worktree_and_index_bytes_never_enter_approval_audit_or_receipt(self) -> None:
-        self.fail("executor must prove redaction")
+    def test_raw_worktree_and_index_bytes_never_enter_approval_audit_or_receipt(self) -> None: self.fail("executor must prove redaction")
 
     @unittest.skip("PREBUILT: add native CI proof on all target platforms")
-    def test_windows_linux_and_macos_require_independent_non_skipped_native_proof(self) -> None:
-        self.fail("promotion gate")
+    def test_windows_linux_and_macos_require_independent_non_skipped_native_proof(self) -> None: self.fail("promotion gate")
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()
