@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-"""Read-only Git repository observation for HCODER-WO-0023.
-
-Special files are opened non-blocking before fstat so a hostile FIFO/device can
-never stall Governance while being rejected. This module never parses/writes
-the Git index and grants no mutation authority.
-"""
+"""Read-only Git repository observation and exact stale-state revalidation."""
 
 import hashlib
 import os
@@ -13,7 +8,7 @@ import stat
 from pathlib import Path
 from typing import Sequence
 
-from .git_stage import GitStageUnsupportedRepositoryError
+from .git_stage import GitStagePreparation, GitStageUnavailableError, GitStageUnsupportedRepositoryError
 from .git_stage_contract import ABSENT_INDEX_IDENTITY, ABSENT_INDEX_SHA256, GitStageObservedState, GitStageWorktreeState, UNBORN_HEAD
 from .workspace_files import normalize_relative_file_path
 
@@ -38,8 +33,7 @@ def _identity(st: os.stat_result) -> str:
 
 
 def _open_regular_nofollow(path: Path) -> tuple[int, os.stat_result]:
-    # O_NONBLOCK is essential here. We do not yet know the object is regular;
-    # opening a FIFO read-only without it can block forever before fstat rejects it.
+    # O_NONBLOCK prevents hostile FIFOs/devices from stalling before fstat rejects them.
     flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     try: fd = os.open(path, flags)
     except OSError as exc: raise GitStageUnsupportedRepositoryError("required Git/worktree object is not safely readable") from exc
@@ -81,6 +75,13 @@ class PosixGitStageObserver:
         self._reject_unsupported_repository_features(); head = self._observe_head(); index_state, index_identity, index_sha = self._observe_index()
         worktree = tuple(self._observe_worktree(path) for path in normalized)
         return GitStageObservedState(repository_identity=self.repository_identity, repository_head=head, index_state=index_state, index_identity=index_identity, index_sha256=index_sha, worktree_states=worktree)
+
+    def revalidate(self, expected: GitStageObservedState) -> None:
+        """Require exact equality with the approved repository/index/worktree observation."""
+        paths = tuple(item.path for item in expected.worktree_states)
+        current = self.observe(paths)
+        if current != expected:
+            raise GitStageUnavailableError("approved Git repository state is stale")
 
     def _reject_unsupported_repository_features(self) -> None:
         for name in ("commondir", "modules", "shallow"):
@@ -137,10 +138,11 @@ class PosixGitStageObserver:
             digest, size = _sha256_file(fd); return GitStageWorktreeState(relative, _identity(st), digest, size)
         finally: os.close(fd)
 
-    def mutation_ready(self, prepared) -> None:
-        del prepared; raise GitStageUnsupportedRepositoryError("observer has no mutation authority")
+    def mutation_ready(self, prepared: GitStagePreparation) -> None:
+        self.revalidate(prepared.observed)
+        raise GitStageUnavailableError("repository state is current but Git mutation authority is unavailable")
 
     def publish(self, prepared):
-        del prepared; raise GitStageUnsupportedRepositoryError("observer has no mutation authority")
+        del prepared; raise GitStageUnavailableError("observer has no mutation authority")
 
     def close(self) -> None: return None
