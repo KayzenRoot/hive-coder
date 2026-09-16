@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "hive-context-lock-v1",
+  "workOrder": "HCODER-WO-0021",
+  "status": "LOCKED_FOR_EXECUTION_HIGH_ASSURANCE",
+  "repository": "KayzenRoot/hive-coder",
+  "issue": 56,
+  "base": {
+    "type": "canonical-main",
+    "checkpoint": "HCODER-CP-0020",
+    "sha": "c1f4166497d07eea6758e00f8a6d201e2b9acc02"
+  },
+  "sourceBlobs": {
+    "checkpoint": "360943987a511d67281eed7aeda501145a28934f",
+    "architecture": "446a0c47f9ac1be4ce4817c97cd258e7b749129e",
+    "security": "1cede4091b2f27523eccca4e3febe1eb3c1bc248",
+    "controlTypes": "5d301556681a85728f7e936ad462fab49937a350",
+    "controlPlane": "eb8db877e12758a4c448f24012e774bc500cb034",
+    "cuaExecutor": "a5ebeab5b177ebf87f0299f71ff738ef77ece1f1"
+  },
+  "authorityBoundary": {
+    "capability": "filesystem.write",
+    "action": "file.replace_text",
+    "productionBackend": false,
+    "desktopWriteSurface": false,
+    "shellExecute": false,
+    "gitMutation": false,
+    "computerUseMutation": false,
+    "providerExecution": false,
+    "approvalAuthorityInExecutor": false
+  },
+  "promotionBlockedUntil": [
+    "exact-head Governance success",
+    "exact-head Desktop Shell success",
+    "HEDS unresolved HIGH/CRITICAL = 0"
+  ]
+}
