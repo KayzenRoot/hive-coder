@@ -45,7 +45,19 @@ Dulwich is a parser/serializer primitive only. Hive owns index version policy, c
 
 ## Implementation slice 01 — exact head
 
-**Exact head:** `9ac5ad43742376245da09de48ce812a7f7678d2e`
+**Implementation head:** `9ac5ad43742376245da09de48ce812a7f7678d2e`  
+**Verified head:** `19c8c1abdd960196b1e9b8bb52ebba90843a77a3` (adds the observation-idempotence fix below)
+
+### Exact-head CI at `19c8c1abdd960196b1e9b8bb52ebba90843a77a3`
+
+| Workflow | Run | Result |
+|---|---|---|
+| Governance | `35136454078` | **SUCCESS** |
+| Desktop Shell | `35136454102` | **SUCCESS** |
+
+Governance jobs: `source-pack` SUCCESS, `governed-runtime-linux` SUCCESS, `control-plane-windows` SUCCESS, `workspace-replace-macos` SUCCESS — including the new `Install governed Python dependencies` and `Verify governed Python dependency lock` steps, and the new native Git index codec/object lanes on all three platforms.
+
+Desktop Shell jobs: `desktop-web`, `desktop-windows`, `desktop-linux`, `desktop-macos` — all SUCCESS.
 
 Delivered in this head:
 
@@ -55,6 +67,14 @@ Delivered in this head:
 4. **Envelope helper** (`hive_runtime/git_index_envelope.py`) — `git_index_extension_region` exposes the raw extension region after full envelope validation so proven optional extensions can be preserved verbatim.
 5. **Exact stat binding** (`hive_runtime/git_stage_contract.py`, `git_stage_observer.py`) — `GitStageWorktreeStat` carries the numeric stat record a Git index entry requires, so the codec never has to guess it. The codec fails closed when it is absent.
 6. **Private object preparation** (`hive_runtime/git_object_private_prep.py`) — owned, bounded, no-follow temporary materialization inside `.git/hive-object-tmp`, with identity-verified cleanup. Publication still raises.
+
+## Observation-idempotence defect found and fixed
+
+An earlier revision of this head captured file **access time** into the approved worktree state. Observing a file reads it, which updates access time, so `revalidate()` reported an unchanged repository as stale — the exact check that exists to prove nothing changed. Linux and macOS failed `observe -> revalidate` immediately; Windows still passed, because its access-time handling hid the defect.
+
+Git index entries record ctime, mtime, dev, ino, mode, uid, gid and size but never access time, so the field was removed from `GitStageWorktreeStat` rather than merely excluded from comparison. Regression lane: `tests/runtime/test_git_stage_observer_revalidation.py`, which runs on all three platforms and includes a positive control proving real HEAD, index, worktree and same-size content changes are still detected.
+
+Local Windows verification could not reproduce this defect, which is why the regression lane is explicitly cross-platform.
 
 ## Windows binary-fidelity defect found and fixed
 
@@ -72,13 +92,13 @@ Fixed in `git_stage_observer.py`, `git_loose_object_transaction.py`, `git_object
 | `doctor.py --inventory-only` | PASS (`LOCKED`, side effects NONE) |
 | `verify_python_dependencies.py` | PASS (`LOCKED`, wheel tag `py3-none-any`) |
 | `compileall hive_runtime tools` | PASS |
-| Full Python suite | PASS — **455 tests**, `OK`, 57 skipped |
+| Full Python suite | PASS — **461 tests**, `OK`, 57 skipped |
 | `tools/desktop/security_gate.py` | PASS (run under the CI precondition; see note) |
 | Desktop `npm ci` / typecheck / vitest / build:web / audit | PASS / PASS / **26/26** / PASS / **0 vulnerabilities** |
 | `cargo test --locked` | PASS — **13/13** |
 | `cargo check --locked` | PASS |
 
-Focused WO-0023 lanes at this head: codec 19 tests; private object preparation 10 tests (1 capability skip); binary byte fidelity 5 tests. All non-skipped.
+Focused WO-0023 lanes at this head: codec 19 tests; private object preparation 10 tests (1 capability skip); binary byte fidelity 5 tests; observer revalidation 6 tests. All non-skipped.
 
 Note on the desktop security gate: CI runs it **before** `npm ci`, so it never sees `node_modules`. Running it locally after `npm ci` makes it scan dependency sources and fail on third-party `invoke()`/`-apple-system`/`dangerouslySetInnerHTML` occurrences. Under the CI precondition it reports `DESKTOP_SECURITY_GATE=PASS` with `FRONTEND_INVOKES=3` and the expected capability surface. This is a pre-existing gate/ordering property, not a regression from this head.
 
