@@ -66,9 +66,41 @@ def _read_config_bytes(config_path: Path) -> bytes:
         data = os.read(fd, 1024 * 1024 + 1)
         if len(data) > 1024 * 1024:
             raise GitStageUnsupportedRepositoryError("Git config exceeds governed ceiling")
-        return data.lower()
+        return data
     finally:
         os.close(fd)
+
+
+def _guarded_config_pairs(config: bytes) -> set[tuple[str, str, str]]:
+    """Parse only the bounded subset needed for fail-closed feature detection.
+
+    This is deliberately not a general Git config implementation. Includes,
+    continuation lines and malformed non-comment records are rejected because
+    their semantics could hide an unsupported authority-affecting feature.
+    """
+    try:
+        text = config.decode("utf-8", "strict")
+    except UnicodeError as exc:
+        raise GitStageUnsupportedRepositoryError("Git config is not bounded UTF-8") from exc
+    section = ""
+    pairs: set[tuple[str, str, str]] = set()
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith(("#", ";")):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1].strip().lower()
+            if not section or section.startswith(("include", "includeif")):
+                raise GitStageUnsupportedRepositoryError("Git config includes are outside the proven envelope")
+            continue
+        if not section or "=" not in line:
+            raise GitStageUnsupportedRepositoryError("Git config syntax is outside the proven envelope")
+        key, value = line.split("=", 1)
+        key = key.strip().lower(); value = value.strip().lower()
+        if not key:
+            raise GitStageUnsupportedRepositoryError("Git config key is invalid")
+        pairs.add((section, key, value))
+    return pairs
 
 
 def inspect_local_object_store(workspace_root: str | os.PathLike[str]) -> GitObjectStoreEnvelope:
@@ -85,18 +117,18 @@ def inspect_local_object_store(workspace_root: str | os.PathLike[str]) -> GitObj
     objects = git_dir / "objects"
     objects_st = _lstat_directory(objects, "Git object store")
 
-    # External/shared object databases are outside the first governed slice.
     _reject_if_present(objects / "info" / "alternates", "object alternates")
-    _reject_if_present(git_dir / "objects" / "info" / "http-alternates", "HTTP object alternates")
+    _reject_if_present(objects / "info" / "http-alternates", "HTTP object alternates")
 
-    config = _read_config_bytes(git_dir / "config")
-    compact = b"".join(config.split())
-    if b"extensions.objectformat=sha256" in compact:
-        raise GitStageUnsupportedRepositoryError("SHA-256 Git repositories are not yet proven")
-    if b"extensions.partialclone=" in compact or b"promisor=true" in compact:
-        raise GitStageUnsupportedRepositoryError("partial/promisor repositories are not yet proven")
-    if b"extensions.worktreeconfig=true" in compact:
-        raise GitStageUnsupportedRepositoryError("worktree config is outside the first object-store envelope")
+    pairs = _guarded_config_pairs(_read_config_bytes(git_dir / "config"))
+    for section, key, value in pairs:
+        base_section = section.split(None, 1)[0]
+        if base_section == "extensions" and key == "objectformat" and value != "sha1":
+            raise GitStageUnsupportedRepositoryError("non-SHA-1 Git repositories are not yet proven")
+        if base_section == "extensions" and key in {"partialclone", "worktreeconfig"}:
+            raise GitStageUnsupportedRepositoryError("Git extension is outside the first object-store envelope")
+        if base_section == "remote" and key == "promisor" and value in {"true", "yes", "on", "1"}:
+            raise GitStageUnsupportedRepositoryError("partial/promisor repositories are not yet proven")
 
     return GitObjectStoreEnvelope(
         contract=OBJECT_STORE_INSPECTOR_CONTRACT,
