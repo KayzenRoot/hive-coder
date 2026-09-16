@@ -9,7 +9,7 @@ from unittest import mock
 from hive_runtime.control_plane import PermissionControlPlane
 from hive_runtime.control_policy import CapabilityRule, ControlPolicy
 from hive_runtime.control_types import ActionRequest, ActionTarget, Capability, DecisionKind, RiskClass
-from hive_runtime.errors import AuthorizationDenied, PermitError, SessionStateError, WorkspaceBoundaryError, WorkspaceMutationError
+from hive_runtime.errors import AuthorizationDenied, WorkspaceBoundaryError, WorkspaceMutationError
 from hive_runtime.workspace_files import (
     DEFAULT_MAX_WRITE_BYTES,
     WRITE_ACTION,
@@ -131,14 +131,15 @@ class WorkspaceCapabilityTests(unittest.TestCase):
         self.assertEqual(Path(self.root, "src", "new.txt").read_bytes(), content)
         self.assertEqual(receipt.relative_path, "src/new.txt")
         self.assertEqual(receipt.content_bytes, len(content))
-        self.assertNotEqual(receipt.committed_state, "absent")
+        self.assertTrue(receipt.parent_identity)
+        self.assertTrue(receipt.committed_state)
 
-    def test_replace_existing_regular_file(self) -> None:
+    def test_existing_target_is_never_an_authorizable_create(self) -> None:
         path = Path(self.root, "src", "existing.txt")
         path.write_bytes(b"old")
-        request, token = authorize_write(self.plane, self.capability, self.session, "src/existing.txt", b"new")
-        self.capability.write_bytes(request, b"new", permit_token=token)
-        self.assertEqual(path.read_bytes(), b"new")
+        with self.assertRaises(WorkspaceBoundaryError):
+            self.capability.prepare_write_request(self.session, "src/existing.txt", b"new")
+        self.assertEqual(path.read_bytes(), b"old")
 
     def test_raw_content_is_not_in_request_or_audit(self) -> None:
         secret = b"NEVER-LOG-THIS-CONTENT"
@@ -164,7 +165,7 @@ class WorkspaceCapabilityTests(unittest.TestCase):
             target=request.target,
             arguments={**request.arguments, "path": "src/b.txt"},
         )
-        with self.assertRaises(PermitError):
+        with self.assertRaises(WorkspaceMutationError):
             self.capability.write_bytes(changed, b"same", permit_token=token)
         self.assertFalse(Path(self.root, "src", "a.txt").exists())
         self.assertFalse(Path(self.root, "src", "b.txt").exists())
@@ -182,15 +183,24 @@ class WorkspaceCapabilityTests(unittest.TestCase):
             self.capability.write_bytes(changed, b"same", permit_token=token)
         self.assertFalse(Path(self.root, "src", "a.txt").exists())
 
-    def test_target_swap_after_approval_fails_closed(self) -> None:
+    def test_target_appearing_after_approval_is_preserved(self) -> None:
         target = Path(self.root, "src", "swap.txt")
-        target.write_bytes(b"approved-state")
-        request, token = authorize_write(self.plane, self.capability, self.session, "src/swap.txt", b"new")
-        target.unlink()
-        target.write_bytes(b"attacker-state")
+        request, token = authorize_write(self.plane, self.capability, self.session, "src/swap.txt", b"approved")
+        target.write_bytes(b"concurrent-owner")
         with self.assertRaises(WorkspaceBoundaryError):
-            self.capability.write_bytes(request, b"new", permit_token=token)
-        self.assertEqual(target.read_bytes(), b"attacker-state")
+            self.capability.write_bytes(request, b"approved", permit_token=token)
+        self.assertEqual(target.read_bytes(), b"concurrent-owner")
+
+    def test_parent_identity_swap_after_approval_fails_closed(self) -> None:
+        request, token = authorize_write(self.plane, self.capability, self.session, "src/parent.txt", b"approved")
+        original = Path(self.root, "src")
+        moved = Path(self.root, "src-old")
+        original.rename(moved)
+        original.mkdir()
+        with self.assertRaises(WorkspaceBoundaryError):
+            self.capability.write_bytes(request, b"approved", permit_token=token)
+        self.assertFalse((original / "parent.txt").exists())
+        self.assertFalse((moved / "parent.txt").exists())
 
     def test_symlink_target_fails_closed(self) -> None:
         outside = Path(self.root).parent / f"{Path(self.root).name}-outside-target.txt"
@@ -238,41 +248,40 @@ class WorkspaceCapabilityTests(unittest.TestCase):
     def test_consumed_permit_cannot_be_replayed(self) -> None:
         request, token = authorize_write(self.plane, self.capability, self.session, "src/replay.txt", b"data")
         self.plane.consume_execution_permit(token, request)
-        with self.assertRaises(PermitError):
+        with self.assertRaises(WorkspaceMutationError):
             self.capability.write_bytes(request, b"data", permit_token=token)
         self.assertFalse(Path(self.root, "src", "replay.txt").exists())
 
     def test_cancelled_session_blocks_before_mutation(self) -> None:
         request, token = authorize_write(self.plane, self.capability, self.session, "src/cancel.txt", b"data")
         self.plane.cancel_session(self.session)
-        with self.assertRaises(SessionStateError):
+        with self.assertRaises(WorkspaceMutationError):
             self.capability.write_bytes(request, b"data", permit_token=token)
         self.assertFalse(Path(self.root, "src", "cancel.txt").exists())
 
     def test_takeover_blocks_before_mutation(self) -> None:
         request, token = authorize_write(self.plane, self.capability, self.session, "src/takeover.txt", b"data")
         self.plane.user_takeover(self.session)
-        with self.assertRaises(SessionStateError):
+        with self.assertRaises(WorkspaceMutationError):
             self.capability.write_bytes(request, b"data", permit_token=token)
         self.assertFalse(Path(self.root, "src", "takeover.txt").exists())
 
     def test_emergency_stop_blocks_before_mutation(self) -> None:
         request, token = authorize_write(self.plane, self.capability, self.session, "src/stop.txt", b"data")
         self.plane.emergency_stop(session_id=self.session)
-        with self.assertRaises(SessionStateError):
+        with self.assertRaises(WorkspaceMutationError):
             self.capability.write_bytes(request, b"data", permit_token=token)
         self.assertFalse(Path(self.root, "src", "stop.txt").exists())
 
-    @unittest.skipIf(os.name == "nt", "POSIX atomic-replace fault injection")
-    def test_failed_atomic_replace_preserves_old_target_and_cleans_temp(self) -> None:
+    @unittest.skipIf(os.name == "nt", "POSIX hard-link publication fault injection")
+    def test_failed_atomic_publication_leaves_no_final_and_cleans_temp(self) -> None:
         target = Path(self.root, "src", "rollback.txt")
-        target.write_bytes(b"old")
         request, token = authorize_write(self.plane, self.capability, self.session, "src/rollback.txt", b"new")
-        with mock.patch("hive_runtime.workspace_files.os.replace", side_effect=OSError("injected")):
+        with mock.patch("hive_runtime.workspace_files.os.link", side_effect=OSError("injected")):
             with self.assertRaises(WorkspaceMutationError):
                 self.capability.write_bytes(request, b"new", permit_token=token)
-        self.assertEqual(target.read_bytes(), b"old")
-        self.assertEqual(list(Path(self.root, "src").glob(".hive-write-*.tmp")), [])
+        self.assertFalse(target.exists())
+        self.assertEqual(list(Path(self.root, "src").glob(".hive-create-*.tmp")), [])
 
 
 class PermitExpiryTests(unittest.TestCase):
@@ -285,7 +294,7 @@ class PermitExpiryTests(unittest.TestCase):
                 session = plane.create_session(write_policy(root), duration_seconds=60)
                 request, token = authorize_write(plane, capability, session, "src/stale.txt", b"data")
                 clock.advance(3)
-                with self.assertRaises(PermitError):
+                with self.assertRaises(WorkspaceMutationError):
                     capability.write_bytes(request, b"data", permit_token=token)
                 self.assertFalse(Path(root, "src", "stale.txt").exists())
 
