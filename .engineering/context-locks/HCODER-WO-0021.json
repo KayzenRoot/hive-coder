@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "hive-context-lock-v1",
+  "workOrder": "HCODER-WO-0021",
+  "status": "LOCKED_FOR_EXECUTION",
+  "repository": "KayzenRoot/hive-coder",
+  "base": {
+    "type": "canonical-main",
+    "checkpoint": "HCODER-CP-0020",
+    "sha": "c1f4166497d07eea6758e00f8a6d201e2b9acc02"
+  },
+  "expectedBranch": "feat/HCODER-WO-0021-workspace-file-capability",
+  "sourceBlobs": {
+    "checkpoint": "360943987a511d67281eed7aeda501145a28934f",
+    "decisions": "edf92e4d44bdd42a0056fca2cfd407a74e3ccdd6",
+    "requirements": "35cb36929580e215a8fa3cc04b199f5e20b76dce",
+    "scope": "330ce490cc29fc5f3ba4e612db8935dd982d745c",
+    "architecture": "446a0c47f9ac1be4ce4817c97cd258e7b749129e",
+    "security": "1cede4091b2f27523eccca4e3febe1eb3c1bc248",
+    "definitionOfDone": "9770301f87703ec9a24b6c17525c6b55a23da317",
+    "controlTypes": "5d301556681a85728f7e936ad462fab49937a350",
+    "controlPolicy": "10413c7c9909ce3bdd2516335b2e45d255e29bd4",
+    "controlPlane": "eb8db877e12758a4c448f24012e774bc500cb034",
+    "runtimeErrors": "028b6b3ea606f47629e4fab40055c80df0446b2f",
+    "governanceWorkflow": "0e14da49d41f4b22a8458e828f12244ce82a0e93"
+  },
+  "authorityBoundary": {
+    "filesystemWrite": "permit-gated-create-only-no-clobber",
+    "existingFileMutation": false,
+    "filesystemReadExpansion": false,
+    "outsideWorkspacePaths": false,
+    "symlinkOrReparseTraversal": false,
+    "gitMutation": false,
+    "shellOrTerminalExecution": false,
+    "desktopWriteAuthority": false,
+    "providerCalls": false,
+    "modelExecution": false,
+    "credentialAccess": false,
+    "computerUseMutation": false,
+    "remoteControl": false,
+    "automaticSkillActivation": false,
+    "billingOrPurchases": false
+  },
+  "proofObligations": [
+    "handle/no-follow traversal and live workspace/parent identity revalidation",
+    "exact workspace/parent/target/content request fingerprint binding",
+    "target must be absent at request and publication boundaries",
+    "atomic no-clobber publication; concurrently appearing target is preserved",
+    "mandatory FILESYSTEM_WRITE trusted approval",
+    "short-lived single-use permit consumed immediately before first mutation",
+    "workspace/parent/target swap resistance within create-only authority",
+    "safe temporary cleanup and failure behavior",
+    "cancellation/emergency/takeover blocks before commit",
+    "Ubuntu and Windows HIGH_ASSURANCE adversarial evidence"
+  ],
+  "promotionBlockedUntil": [
+    "exact-head Governance success",
+    "exact-head required Desktop Shell success",
+    "HEDS no unresolved HIGH/CRITICAL",
+    "approved Decision/Checkpoint Delta",
+    "squash merge with expected-head protection",
+    "post-merge required validation before canonical closeout"
+  ]
+}

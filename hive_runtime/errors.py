@@ -52,3 +52,15 @@ class PermitError(ControlPlaneError):
 
 class SessionStateError(ControlPlaneError):
     pass
+
+
+class WorkspaceFileError(HiveRuntimeError):
+    """Base error for the governed workspace-file capability boundary."""
+
+
+class WorkspaceBoundaryError(WorkspaceFileError):
+    """Target/path/identity validation failed closed before safe mutation."""
+
+
+class WorkspaceMutationError(WorkspaceFileError):
+    """A permit-gated OS mutation primitive failed closed."""
