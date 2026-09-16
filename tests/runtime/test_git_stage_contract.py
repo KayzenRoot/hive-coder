@@ -26,10 +26,15 @@ class GitStageContractTests(unittest.TestCase):
         self.assertNotIn("bytes", canonical)
         # The stat record is bounded numeric metadata only: no raw file bytes.
         self.assertIsNone(canonical["stat"])
-        stats = {"dev":1,"ino":2,"mode":0o100644,"uid":0,"gid":0,"size":3,"atime_s":1,"atime_ns":0,"mtime_s":1,"mtime_ns":0,"ctime_s":1,"ctime_ns":0}
+        stats = {"dev":1,"ino":2,"mode":0o100644,"uid":0,"gid":0,"size":3,"mtime_s":1,"mtime_ns":0,"ctime_s":1,"ctime_ns":0}
         with_stat = GitStageWorktreeState("src/app.py", "file:1", DIGEST_A, 3, stat=GitStageWorktreeStat(**stats))
         self.assertEqual(with_stat.canonical()["stat"], stats)
         self.assertTrue(all(isinstance(value, int) for value in with_stat.canonical()["stat"].values()))
+        # Access time is deliberately absent: Git does not store it in an index
+        # entry and observing a file updates it, which would make an unchanged
+        # repository report as stale.
+        self.assertNotIn("atime_s", stats)
+        self.assertNotIn("atime_ns", stats)
 
     def test_rejects_non_regular_state(self) -> None:
         with self.assertRaises(ValueError): GitStageWorktreeState("src/link", "file:1", DIGEST_A, 3, "symlink")

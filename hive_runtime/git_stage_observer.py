@@ -43,7 +43,7 @@ def _bounded_stat(st: os.stat_result) -> GitStageWorktreeStat:
     """Capture the exact numeric stat values a Git index entry needs.
 
     ``st_*time_ns`` is authoritative; the integer seconds are derived from it so
-    the two can never disagree.
+    the two can never disagree. Access time is intentionally not captured.
     """
     return GitStageWorktreeStat(
         dev=int(st.st_dev),
@@ -52,8 +52,6 @@ def _bounded_stat(st: os.stat_result) -> GitStageWorktreeStat:
         uid=int(st.st_uid),
         gid=int(st.st_gid),
         size=int(st.st_size),
-        atime_s=int(st.st_atime_ns // 1_000_000_000),
-        atime_ns=int(st.st_atime_ns % 1_000_000_000),
         mtime_s=int(st.st_mtime_ns // 1_000_000_000),
         mtime_ns=int(st.st_mtime_ns % 1_000_000_000),
         ctime_s=int(st.st_ctime_ns // 1_000_000_000),

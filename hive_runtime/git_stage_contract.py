@@ -34,6 +34,11 @@ class GitStageWorktreeStat:
     worktree still matches the index. Without the exact observed values the
     codec would have to guess, so the values are captured here and bound into
     the same observation the approval is taken over.
+
+    This mirrors exactly what a Git index entry stores. Access time is
+    deliberately excluded: Git does not record it, and observing a file updates
+    it, so including it would make an unchanged repository report as stale on
+    the very revalidation that is meant to prove it is unchanged.
     """
 
     dev: int
@@ -42,8 +47,6 @@ class GitStageWorktreeStat:
     uid: int
     gid: int
     size: int
-    atime_s: int
-    atime_ns: int
     mtime_s: int
     mtime_ns: int
     ctime_s: int
@@ -62,18 +65,10 @@ class GitStageWorktreeStat:
                 raise ValueError(f"worktree stat {label} must be a non-negative integer")
         if not 0 <= self.mode <= 0xFFFF:
             raise ValueError("worktree stat mode is outside the bounded range")
-        for label, value in (
-            ("atime_s", self.atime_s),
-            ("mtime_s", self.mtime_s),
-            ("ctime_s", self.ctime_s),
-        ):
+        for label, value in (("mtime_s", self.mtime_s), ("ctime_s", self.ctime_s)):
             if not isinstance(value, int):
                 raise ValueError(f"worktree stat {label} must be an integer")
-        for label, value in (
-            ("atime_ns", self.atime_ns),
-            ("mtime_ns", self.mtime_ns),
-            ("ctime_ns", self.ctime_ns),
-        ):
+        for label, value in (("mtime_ns", self.mtime_ns), ("ctime_ns", self.ctime_ns)):
             if not isinstance(value, int) or not 0 <= value < 1_000_000_000:
                 raise ValueError(f"worktree stat {label} must be sub-second nanoseconds")
 
@@ -90,8 +85,6 @@ class GitStageWorktreeStat:
             "uid": self.uid,
             "gid": self.gid,
             "size": self.size,
-            "atime_s": self.atime_s,
-            "atime_ns": self.atime_ns,
             "mtime_s": self.mtime_s,
             "mtime_ns": self.mtime_ns,
             "ctime_s": self.ctime_s,

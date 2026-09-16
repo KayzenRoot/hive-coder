@@ -33,6 +33,7 @@ This delta authorizes exactly these additional files, and nothing else:
 - `tests/runtime/test_git_stage_contract.py`
 - `tests/runtime/test_git_object_private_prep.py` (new focused lane)
 - `tests/runtime/test_git_binary_byte_fidelity.py` (new focused regression lane)
+- `tests/runtime/test_git_stage_observer_revalidation.py` (new focused regression lane)
 - `foundations/python-dependencies.requirements.txt` (new, hash-pinned, CI-consumed)
 
 ### Recorded resolution 001 — DEC-025 status disagreement
