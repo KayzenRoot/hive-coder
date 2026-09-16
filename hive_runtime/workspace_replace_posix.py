@@ -37,11 +37,7 @@ def _file_identity(info: os.stat_result) -> str:
 class PosixPreparedReplace:
     def __init__(self, backend, parent_fd: int, parent_parts: tuple[str, ...], leaf: str, target_fd: int) -> None:
         self._backend, self._parent_fd, self._parent_parts, self._leaf, self._target_fd = backend, parent_fd, parent_parts, leaf, target_fd
-        self._closed = False
-        self._stage_fd: int | None = None
-        self._stage_name: str | None = None
-        self._stage_identity: str | None = None
-        self._published = False
+        self._closed = False; self._stage_fd: int | None = None; self._stage_name: str | None = None; self._stage_identity: str | None = None; self._published = False
         parent_info, target_info = os.fstat(parent_fd), os.fstat(target_fd)
         if not stat.S_ISDIR(parent_info.st_mode): raise WorkspaceBoundaryError("replacement parent is not a directory")
         if not stat.S_ISREG(target_info.st_mode): raise WorkspaceBoundaryError("replacement target is not a regular file")
@@ -74,19 +70,16 @@ class PosixPreparedReplace:
     def stage_replace(self, content: bytes, expected: WorkspaceReplaceObservedState) -> None:
         if self._stage_fd is not None or self._stage_name is not None: raise WorkspaceBoundaryError("replacement content is already staged")
         self.revalidate_expected(expected)
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        # Read-write is intentional: the capability verifies staged bytes through
+        # the same pinned descriptor before that object can become mutation-ready.
+        flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
         for _ in range(32):
             name = f"{_TEMP_PREFIX}{secrets.token_hex(16)}"
-            try:
-                fd = os.open(name, flags, 0o600, dir_fd=self._parent_fd)
-            except FileExistsError:
-                continue
-            except OSError as exc:
-                raise WorkspaceMutationError("replacement staging object cannot be created") from exc
-            self._stage_fd, self._stage_name = fd, name
-            break
-        else:
-            raise WorkspaceMutationError("replacement staging namespace exhausted")
+            try: fd = os.open(name, flags, 0o600, dir_fd=self._parent_fd)
+            except FileExistsError: continue
+            except OSError as exc: raise WorkspaceMutationError("replacement staging object cannot be created") from exc
+            self._stage_fd, self._stage_name = fd, name; break
+        else: raise WorkspaceMutationError("replacement staging namespace exhausted")
         try:
             view = memoryview(content); offset = 0
             while offset < len(view):
@@ -97,8 +90,7 @@ class PosixPreparedReplace:
             info = os.fstat(self._stage_fd)
             if not stat.S_ISREG(info.st_mode): raise WorkspaceBoundaryError("replacement staging object is not regular")
             self._stage_identity = _file_identity(info)
-            digest, length = _digest_fd(self._stage_fd)
-            wanted_digest = hashlib.sha256(content).hexdigest()
+            digest, length = _digest_fd(self._stage_fd); wanted_digest = hashlib.sha256(content).hexdigest()
             if digest != wanted_digest or length != len(content): raise WorkspaceMutationError("replacement staging bytes failed verification")
             if info.st_dev != os.fstat(self._target_fd).st_dev: raise WorkspaceBoundaryError("replacement staging object is not on target filesystem")
         except Exception:
@@ -112,23 +104,17 @@ class PosixPreparedReplace:
 
     def publish_replace(self, expected: WorkspaceReplaceObservedState, pre_publish_check: Callable[[], None]) -> str:
         if self._stage_fd is None or self._stage_name is None or self._stage_identity is None: raise WorkspaceBoundaryError("replacement staging object is not mutation-ready")
-        pre_publish_check()
-        stage_info = os.fstat(self._stage_fd)
+        pre_publish_check(); stage_info = os.fstat(self._stage_fd)
         if _file_identity(stage_info) != self._stage_identity or not stat.S_ISREG(stage_info.st_mode): raise WorkspaceBoundaryError("replacement staging identity changed before publication")
-        try:
-            os.rename(self._stage_name, self._leaf, src_dir_fd=self._parent_fd, dst_dir_fd=self._parent_fd)
-        except OSError as exc:
-            raise WorkspaceMutationError("POSIX atomic replacement publication failed") from exc
-        self._published = True
-        self._stage_name = None
+        try: os.rename(self._stage_name, self._leaf, src_dir_fd=self._parent_fd, dst_dir_fd=self._parent_fd)
+        except OSError as exc: raise WorkspaceMutationError("POSIX atomic replacement publication failed") from exc
+        self._published = True; self._stage_name = None
         live_fd: int | None = None
         try:
-            flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-            live_fd = os.open(self._leaf, flags, dir_fd=self._parent_fd)
+            flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0); live_fd = os.open(self._leaf, flags, dir_fd=self._parent_fd)
             info = os.fstat(live_fd)
             if not stat.S_ISREG(info.st_mode) or _file_identity(info) != self._stage_identity: raise WorkspaceMutationError("published replacement identity verification failed")
-            digest, length = _digest_fd(live_fd)
-            stage_digest, stage_length = _digest_fd(self._stage_fd)
+            digest, length = _digest_fd(live_fd); stage_digest, stage_length = _digest_fd(self._stage_fd)
             if digest != stage_digest or length != stage_length: raise WorkspaceMutationError("published replacement bytes verification failed")
             return "replaced"
         finally:
@@ -136,17 +122,11 @@ class PosixPreparedReplace:
 
     def _cleanup_stage(self) -> None:
         if self._stage_name is None: return
-        try:
-            live_fd = os.open(self._stage_name, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0), dir_fd=self._parent_fd)
-        except OSError:
-            self._stage_name = None; return
-        try:
-            live_identity = _file_identity(os.fstat(live_fd))
-        finally:
-            os.close(live_fd)
-        if self._stage_identity is not None and live_identity != self._stage_identity:
-            self._stage_name = None
-            return
+        try: live_fd = os.open(self._stage_name, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0), dir_fd=self._parent_fd)
+        except OSError: self._stage_name = None; return
+        try: live_identity = _file_identity(os.fstat(live_fd))
+        finally: os.close(live_fd)
+        if self._stage_identity is not None and live_identity != self._stage_identity: self._stage_name = None; return
         try: os.unlink(self._stage_name, dir_fd=self._parent_fd)
         except FileNotFoundError: pass
         finally: self._stage_name = None
