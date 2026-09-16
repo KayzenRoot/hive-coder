@@ -1,5 +1,6 @@
 # <WORK_ORDER_ID> — <TITLE>
 
+**STATUS:** PLANNED | IN_PROGRESS | CORRECTION_REQUIRED | BLOCKED | COMPLETE_CANDIDATE | COMPLETE  
 **TASK CLASS:** T0|T1|T2|T3  
 **CONTEXT RADIUS:** C0|C1|C2|C3|C4  
 **RISK:** LOW|STANDARD|ELEVATED|HIGH_ASSURANCE  
@@ -8,28 +9,50 @@
 
 ## OBJECTIVE
 
-## CONTEXT
+## CONTEXT / SOURCE INPUTS
 
-## SCOPE
+## IN SCOPE
 
 ## OUT OF SCOPE
 
-## FILES / SOURCES TO READ
+## ALLOWED FILES / AREAS
+
+## PRESERVATION CONSTRAINTS
 
 ## REQUIREMENTS
 
-## ARCHITECTURE RULES
+## ARCHITECTURE CONSTRAINTS
 
-## CONSTRAINTS
+## SECURITY CONSTRAINTS
 
 ## ACCEPTANCE CRITERIA
 
-## TESTS
+## REQUIRED TESTS / ASSURANCE LADDER
+A0 -> A1 -> A2 -> A3 -> A4 as applicable. Record only real commands/workflows.
 
-## DELIVERABLES
+## EVIDENCE REQUIREMENTS
+Bind evidence to this Work Order and exact candidate SHA. UNKNOWN remains UNKNOWN.
 
-## REVIEW FORMAT
-Evidence Bundle + Brazilian-Portuguese final summary + exact-head HEDS Delta verdict.
+## EXECUTOR ACCELERATION PACK
+### Implementation Seed Tree
+### File Intent Capsule
+### Brownfield Patch Intent Capsule
+### Executor Navigation Map
+### Decision Closure Capsule
+### Execution Waves
+### Validation Reuse Plan
+### Critical Path
+### Marathon Execution Pack
+
+## REVIEW REQUIREMENTS
+Exact-head semantic review with CRITICAL/HIGH counts and source/preservation audit.
+
+## ROLLBACK / RECOVERY
+
+## EXPECTED DELIVERABLES
+
+## REVIEW OUTPUT
+Evidence Bundle + concise pt-BR summary + verdict `APPROVED | CORRECTION_REQUIRED | BLOCKED` + next executable Codex prompt PDF.
 
 ## STOP CONDITION
-Stop at `COMPLETE_CANDIDATE`, `SOURCE_CONFLICT`, `SCOPE_EXPANSION_REQUIRED`, `BLOCKED_EVIDENCE`, `NEEDS_ARCHITECTURE`, or `BLOCKED_SECURITY`. Do not begin the next increment.
+Stop at the Work Order's explicit completion/correction/blocker boundary. Do not begin the next increment.

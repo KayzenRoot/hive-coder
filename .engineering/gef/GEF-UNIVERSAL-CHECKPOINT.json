@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "gef-universal-checkpoint-v1",
+  "project": "Hive Coder",
+  "repository": "KayzenRoot/hive-coder",
+  "projectState": "BROWNFIELD",
+  "gefVersion": "1.0.0",
+  "adoptionWorkOrder": "HCODER-GEF-ADOPT-0001",
+  "adoptionStatus": "GEF_ADOPTION_EXACT_HEAD_EVIDENCE_REQUIRED",
+  "preAdoptionMainSha": "ccfed1f960c80dc58e4f45cb627451e77c7d5a79",
+  "technicalAdoptionHead": "a62d7602be8a1ed23ca3fc4459aa40188205c860",
+  "technicalEvidence": {
+    "governanceRun": 35150628413,
+    "governanceRunNumber": 397,
+    "desktopShellRun": 35150628435,
+    "desktopShellRunNumber": 233,
+    "verdict": "APPROVED",
+    "critical": 0,
+    "high": 0
+  },
+  "acceptedMergeSha": null,
+  "canonicalHumanCheckpoint": "docs/project-brain/11-CHECKPOINT.md",
+  "knownSourceDrift": [
+    "human checkpoint still declares CP-0021 while later main history proves additional completed work"
+  ],
+  "completedGovernedIncrements": "legacy history preserved by reference; not retroactively reclassified",
+  "activeIncrement": {
+    "workOrder": "HCODER-WO-0023",
+    "pullRequest": 69,
+    "branch": "feat/HCODER-WO-0023-git-stage-capability",
+    "state": "DRAFT_CORRECTION_IN_PROGRESS"
+  },
+  "blockedItems": [],
+  "unresolvedRisks": [
+    "final adoption evidence-only PR head exact-head CI/audit pending",
+    "active WO-0023 must reconcile adopted main before next execution"
+  ],
+  "nextLegalAction": "verify the final adoption PR head with Governance + Desktop Shell, audit exact head, squash merge with expected-head protection, verify main, then seal post-adoption resume state",
+  "stopCondition": "GEF_ADOPTION_EXACT_HEAD_EVIDENCE_REQUIRED"
+}
