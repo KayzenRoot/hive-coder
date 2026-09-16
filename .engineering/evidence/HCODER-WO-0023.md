@@ -1,44 +1,112 @@
 # HCODER-WO-0023 — Evidence Ledger
 
-**Status:** PREBUILT / MUTATION UNPROVEN  
+**Status:** SLICE 01 IMPLEMENTED / MUTATION STILL UNPROVEN  
 **Canonical base:** `22b56b0f3111158cbf50789b1647c5a578a171c1`  
-**Issue:** #68
+**Canonical main at execution:** `ccfed1f960c80dc58e4f45cb627451e77c7d5a79`  
+**Issue:** `#68`  
+**Draft PR:** `#69`
 
 ## Claims allowed now
 
 - Current desktop Git observation is read-only and does not execute Git.
 - Canonical workspace create/replace capabilities provide the control-plane pattern this WO must preserve.
 - `git_stage_paths_v1` product contract, request fields and redaction model are prebuilt.
-- Contract-level datatypes/tests may execute before a backend exists.
+- The reviewed codec backend provenance gate is **closed for the data-only slice**: `dulwich==1.2.15` is pinned to the exact pure-Python wheel by hash, and the resolver/verifier are committed and consumed by CI.
+- A data-only index candidate can be built from an approved observation plus an authority-free stage plan, and the produced bytes are accepted by Git as a correct index.
 
 ## Claims explicitly NOT allowed yet
 
-- Git staging is implemented.
+- Git staging is implemented end-to-end.
 - Any Git mutation is safe or production-ready.
 - `git.write` is canonical.
-- Windows, Linux or macOS Git staging is proven.
-- A backend/library dependency has been approved.
+- Windows, Linux or macOS Git staging is proven end-to-end.
 - Strict CAS of index/worktree state exists.
+- Object publication or index publication is enabled.
 
-## Backend-selection checkpoint
+## Backend provenance record
 
-Repository source inspection found no root Python dependency manifest and no existing Git library dependency. Therefore a third-party Git library cannot be silently introduced in this WO. The implementation must either:
-1. add a separately reviewed provenance/dependency decision and Context Lock delta for a maintained library with safe index transaction APIs; or
-2. prove a Hive-owned index backend sufficiently to satisfy cross-platform format, locking, atomic publication and adversarial tests.
+| Field | Value |
+|---|---|
+| Backend | `dulwich` `1.2.15` |
+| License | `Apache-2.0 OR GPL-2.0-or-later` (Apache-2.0 selected) |
+| Admitted artifact | `dulwich-1.2.15-py3-none-any.whl` |
+| Artifact sha256 | `5c863992962bab0fc5f75be132399a16f670f2a9283faf9aaeb953fd8891db83` |
+| Excluded artifacts | all platform wheels; sdist (may compile optional extensions) |
+| Native extension needed | **no** — verified: `dulwich._objects` is absent under the admitted wheel |
+| Declared transitives | `urllib3>=2.2.2` (not materialized by design); `typing_extensions` only for Python < 3.12 |
+| Lock | `foundations/python-dependencies.lock.json` |
+| Pin file | `foundations/python-dependencies.requirements.txt` |
+| Verifier | `tools/foundations/verify_python_dependencies.py` (non-installing, fails closed) |
+| CI consumption | `governance.yml` source-pack + all three native lanes install the pin file with `--no-deps --require-hashes`, then run the verifier |
 
-A `git add` subprocess remains blocked because generic process/Git executable configuration behavior is outside this WO.
+Import isolation is asserted by test, not assumed: importing and using `dulwich.index` introduces 83 modules including stdlib `urllib.parse`, but **no** `urllib3`, `socket` or `ssl`. The codec module is additionally AST-checked so it cannot reach `subprocess`, `socket`, `ssl`, `urllib`, `urllib3`, `requests`, porcelain, `GitFile` or a generic `Repo`.
 
-## Prebuilt acceptance state
+Dulwich is a parser/serializer primitive only. Hive owns index version policy, conflict and extension policy, entry ordering, verbatim extension-region preservation and the SHA-1 trailer, because Dulwich neither preserves the `TREE` extension through its serializer nor writes the index trailer.
 
-- Contract constants/types: MATERIALIZED.
-- Contract unit tests: MATERIALIZED.
-- Security/adversarial test map: MATERIALIZED AS SKIPPED GATES.
-- Control-plane `git.write`: NOT YET MATERIALIZED.
-- Backend: NOT YET SELECTED/PROVEN.
-- Native Windows proof: UNPROVEN.
-- Native Linux proof: UNPROVEN.
-- Native macOS proof: UNPROVEN.
-- HEDS: NOT YET RUN.
+## Implementation slice 01 — exact head
+
+**Exact head:** `9ac5ad43742376245da09de48ce812a7f7678d2e`
+
+Delivered in this head:
+
+1. **Governance reconciliation** (WO-0023 Context Lock Delta 002) — checkpoint, AGENTS.md and Decisions Ledger reconciled to the Git-proven CP-0022 state; DEC-025 ADR status disagreement recorded as drift; CODEX-100 handoff module reference corrected; review-deliverable law canonicalized.
+2. **Governed dependency mechanism** — see the provenance table above.
+3. **Data-only index codec** (`hive_runtime/git_stage_index_codec.py`) — `DulwichGitIndexCodec` returns candidate bytes plus derived digest/length only. No `.git/index` write, no `.git/index.lock`, no object-store access, no permit, no publication.
+4. **Envelope helper** (`hive_runtime/git_index_envelope.py`) — `git_index_extension_region` exposes the raw extension region after full envelope validation so proven optional extensions can be preserved verbatim.
+5. **Exact stat binding** (`hive_runtime/git_stage_contract.py`, `git_stage_observer.py`) — `GitStageWorktreeStat` carries the numeric stat record a Git index entry requires, so the codec never has to guess it. The codec fails closed when it is absent.
+6. **Private object preparation** (`hive_runtime/git_object_private_prep.py`) — owned, bounded, no-follow temporary materialization inside `.git/hive-object-tmp`, with identity-verified cleanup. Publication still raises.
+
+## Windows binary-fidelity defect found and fixed
+
+The WO-0023 Git modules opened files with `os.open` **without** `O_BINARY`. On Windows the CRT then uses text mode, where `os.read` stops at the first `0x1A` (Ctrl-Z) byte and `os.write` translates every `LF` to `CRLF`. A real Git index contains `0x1A` routinely, because entry and extension data include binary SHA-1 bytes.
+
+Observed impact before the fix: the index digest was computed over 209 of 237 bytes, so the approved index digest could not match the approved bytes and the codec correctly failed closed; worktree digests and prepared index bytes were exposed to the same class of defect.
+
+Fixed in `git_stage_observer.py`, `git_loose_object_transaction.py`, `git_object_store_inspector.py` and `git_stage_transaction.py`, matching the pattern already present in `repository_intelligence.py`. Regression lane: `tests/runtime/test_git_binary_byte_fidelity.py`.
+
+## Local verification at the exact head
+
+| Check | Result |
+|---|---|
+| `verify_lock.py` | PASS (`FOUNDATIONS_LOCK_OK`) |
+| `doctor.py --inventory-only` | PASS (`LOCKED`, side effects NONE) |
+| `verify_python_dependencies.py` | PASS (`LOCKED`, wheel tag `py3-none-any`) |
+| `compileall hive_runtime tools` | PASS |
+| Full Python suite | PASS — **455 tests**, `OK`, 57 skipped |
+| `tools/desktop/security_gate.py` | PASS (run under the CI precondition; see note) |
+| Desktop `npm ci` / typecheck / vitest / build:web / audit | PASS / PASS / **26/26** / PASS / **0 vulnerabilities** |
+| `cargo test --locked` | PASS — **13/13** |
+| `cargo check --locked` | PASS |
+
+Focused WO-0023 lanes at this head: codec 19 tests; private object preparation 10 tests (1 capability skip); binary byte fidelity 5 tests. All non-skipped.
+
+Note on the desktop security gate: CI runs it **before** `npm ci`, so it never sees `node_modules`. Running it locally after `npm ci` makes it scan dependency sources and fail on third-party `invoke()`/`-apple-system`/`dangerouslySetInnerHTML` occurrences. Under the CI precondition it reports `DESKTOP_SECURITY_GATE=PASS` with `FRONTEND_INVOKES=3` and the expected capability surface. This is a pre-existing gate/ordering property, not a regression from this head.
+
+## Prebuilt gates implemented
+
+Removed from the prebuilt-skip set by this head:
+- `test_real_codec_round_trip_preserves_supported_index_semantics`
+- `test_real_codec_rejects_sparse_split_conflicted_and_unknown_required_extensions`
+- `test_real_codec_cannot_invoke_porcelain_shell_hooks_filters_network_or_credentials`
+
+## Skips remaining and why
+
+| Skip | Reason it is still legitimate |
+|---|---|
+| `PREBUILT: integrate dedicated git.write control-plane action` | Control-plane authority delta — later phase |
+| `PREBUILT: integrate session state with staging executor` | Requires the executor — later phase |
+| `PREBUILT: implement Git adapter without executable extension points` | Staging executor seam — later phase |
+| `PREBUILT: implement redacted request/audit/receipt` | Publication-phase receipt — later phase |
+| `PREBUILT: add native CI proof on all target platforms` | End-to-end staging proof — later phase |
+| `symlink fixture unavailable on this platform/privilege level` | Capability-based; a cross-platform non-directory variant runs instead |
+| `POSIX ...` variants | Pre-existing Windows platform skips, unchanged |
+
+No new blanket skip was introduced. Skipped security acceptance tests remain a hard non-promotion state for the publication phase.
+
+## Known blockers
+
+- The `DEC-025` ADR header still reads `APPROVED / FINAL CANDIDATE — NOT CANONICAL` while `HCODER-CP-0021` records it canonical. Recorded as `KNOWN_DOC_DRIFT` in the ledger and in Context Lock Delta 002; the historical ADR was deliberately not rewritten.
+- `HCODER-PLATFORM-001` Linux/macOS native desktop evidence remains open. It gates the platform matrix, not this slice.
 
 ## Promotion evidence template
 
@@ -58,4 +126,4 @@ For each exact technical head record:
 
 ## STOP
 
-Skipped security acceptance tests are a hard non-promotion state. No merge/promotion of mutation authority until backend selection is governed, all required tests are executable, all three native target lanes are green at exact head, and HEDS reports H/C `0/0`.
+This head delivers the data-only slice only. `git.write`, permit consumption, blob publication to final object paths and atomic `.git/index` publication are the next reviewed phase and remain unavailable. No merge/promotion of mutation authority until backend selection is governed, all required tests are executable, all three native target lanes are green at exact head, and HEDS reports H/C `0/0`.
