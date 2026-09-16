@@ -78,7 +78,11 @@ class WindowsReplaceWorkspaceBackend(WindowsWorkspaceBackend):
                 if info.dwFileAttributes & _FILE_ATTRIBUTE_REPARSE_POINT: _win_close(child); raise WorkspaceBoundaryError("replacement parent component is a reparse point")
                 if not info.dwFileAttributes & _FILE_ATTRIBUTE_DIRECTORY: _win_close(child); raise WorkspaceBoundaryError("replacement parent component is not a directory")
                 chain.append(child); parent = child; parent_parts.append(component)
-            target = _nt_open_relative(parent, parts[-1], desired_access=_FILE_READ_DATA | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE, disposition=_FILE_OPEN, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
+            # DELETE is required on the pinned destination handle for NTFS replacement
+            # semantics. FILE_SHARE_DELETE keeps external/cooperative handles from
+            # turning that requirement into a sharing violation. This grants no new
+            # path authority: the handle is still opened relative to the pinned parent.
+            target = _nt_open_relative(parent, parts[-1], desired_access=_FILE_READ_DATA | _FILE_READ_ATTRIBUTES | _DELETE | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE, disposition=_FILE_OPEN, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
             try: return WindowsPreparedReplace(self, chain, parent, tuple(parent_parts), parts[-1], target, _observed(parent, target))
             except Exception: _win_close(target); raise
         except Exception:
@@ -101,7 +105,9 @@ class WindowsPreparedReplace:
         if pinned.target_identity != expected.target_identity or pinned.content_sha256 != expected.content_sha256 or pinned.content_bytes != expected.content_bytes: raise WorkspaceBoundaryError("pinned Windows replacement target changed")
         live: int | None = None
         try:
-            live = _nt_open_relative(self._parent_handle, self._leaf, desired_access=_FILE_READ_DATA | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE, disposition=_FILE_OPEN, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
+            # The live-path proof also requests DELETE so it proves the currently
+            # named destination is replaceable under the same access contract.
+            live = _nt_open_relative(self._parent_handle, self._leaf, desired_access=_FILE_READ_DATA | _FILE_READ_ATTRIBUTES | _DELETE | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE, disposition=_FILE_OPEN, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
             current = _observed(self._parent_handle, live)
             if current.target_identity != expected.target_identity or current.content_sha256 != expected.content_sha256 or current.content_bytes != expected.content_bytes: raise WorkspaceBoundaryError("live Windows replacement target changed")
         finally: _win_close(live)
@@ -140,9 +146,6 @@ class WindowsPreparedReplace:
 
     def publish_replace(self, expected: WorkspaceReplaceObservedState, pre_publish_check: Callable[[], None]) -> str:
         if self._closed or self._stage_handle is None or self._stage_identity is None or self._stage_digest is None or self._stage_bytes is None: raise WorkspaceBoundaryError("Windows replacement is not staged")
-        # Caller invokes this only after permit consumption. Perform its final session
-        # check, then repeat every observable identity/content check immediately before
-        # the single native namespace mutation.
         pre_publish_check(); self.revalidate_expected(expected); self._revalidate_stage()
         _nt_rename_relative_replace(self._stage_handle, self._parent_handle, self._leaf); self._published = True
         final_info = _win_info(self._stage_handle)
