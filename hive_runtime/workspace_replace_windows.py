@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-"""Windows replacement backend for HCODER-WO-0022 / CR-001.
+"""Windows bounded-race atomic replacement backend for HCODER-WO-0022 / CR-001.
 
-The adapter binds approved old bytes to pinned NT handles and stages the exact
-approved replacement bytes in an exclusive, same-volume, capability-owned file.
-Atomic destination publication remains fail-closed until its native primitive is
-proven on Windows CI. No strict expected-file-id CAS claim is made.
+Approval binds the observed destination identity/content and exact new bytes. The
+backend revalidates both destination and owned staging as late as safely possible,
+then performs a name-based NT atomic replacement. This is deliberately NOT called
+strict expected-file-id CAS: an uncooperative external process can still race after
+the final validation and before NtSetInformationFile publishes the staged object.
 """
 
 import ctypes
@@ -20,20 +21,18 @@ from .workspace_files_windows import (
     WindowsWorkspaceBackend, _FILE_ATTRIBUTE_DIRECTORY, _FILE_ATTRIBUTE_REPARSE_POINT,
     _FILE_ATTRIBUTE_TEMPORARY, _FILE_CREATE, _FILE_NON_DIRECTORY_FILE, _FILE_OPEN,
     _FILE_OPEN_REPARSE_POINT, _FILE_READ_ATTRIBUTES, _FILE_READ_DATA, _FILE_SHARE_READ,
-    _FILE_SHARE_WRITE, _FILE_SYNCHRONOUS_IO_NONALERT, _FILE_WRITE_ATTRIBUTES,
-    _FILE_WRITE_DATA, _SYNCHRONIZE, _DELETE, _FlushFileBuffers, _WriteFile,
-    _nt_mark_delete, _nt_open_relative, _win_close, _win_file_identity, _win_info,
+    _FILE_SHARE_WRITE, _FILE_SHARE_DELETE, _FILE_SYNCHRONOUS_IO_NONALERT,
+    _FILE_WRITE_ATTRIBUTES, _FILE_WRITE_DATA, _SYNCHRONIZE, _DELETE, _FlushFileBuffers,
+    _WriteFile, _nt_mark_delete, _nt_open_relative, _nt_rename_relative_replace,
+    _win_close, _win_file_identity, _win_info,
 )
 
 _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 _ReadFile = _kernel32.ReadFile
-_ReadFile.argtypes = [wintypes.HANDLE, wintypes.LPVOID, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID]
-_ReadFile.restype = wintypes.BOOL
+_ReadFile.argtypes = [wintypes.HANDLE, wintypes.LPVOID, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID]; _ReadFile.restype = wintypes.BOOL
 _SetFilePointerEx = _kernel32.SetFilePointerEx
-_SetFilePointerEx.argtypes = [wintypes.HANDLE, ctypes.c_longlong, ctypes.POINTER(ctypes.c_longlong), wintypes.DWORD]
-_SetFilePointerEx.restype = wintypes.BOOL
+_SetFilePointerEx.argtypes = [wintypes.HANDLE, ctypes.c_longlong, ctypes.POINTER(ctypes.c_longlong), wintypes.DWORD]; _SetFilePointerEx.restype = wintypes.BOOL
 _FILE_BEGIN = 0
-_FILE_SHARE_DELETE = 0x00000004
 _TEMP_PREFIX = ".hive-replace-"
 
 
@@ -74,12 +73,12 @@ class WindowsReplaceWorkspaceBackend(WindowsWorkspaceBackend):
         self._revalidate_root_path(); parts = relative_path.split("/"); chain: list[int] = []; parent = self._root_handle; parent_parts: list[str] = []
         try:
             for component in parts[:-1]:
-                child = _nt_open_relative(parent, component, desired_access=0x00000001 | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE, disposition=_FILE_OPEN, options=0x00000001 | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
+                child = _nt_open_relative(parent, component, desired_access=0x00000001 | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE, disposition=_FILE_OPEN, options=0x00000001 | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
                 info = _win_info(child)
                 if info.dwFileAttributes & _FILE_ATTRIBUTE_REPARSE_POINT: _win_close(child); raise WorkspaceBoundaryError("replacement parent component is a reparse point")
                 if not info.dwFileAttributes & _FILE_ATTRIBUTE_DIRECTORY: _win_close(child); raise WorkspaceBoundaryError("replacement parent component is not a directory")
                 chain.append(child); parent = child; parent_parts.append(component)
-            target = _nt_open_relative(parent, parts[-1], desired_access=_FILE_READ_DATA | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE, disposition=_FILE_OPEN, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
+            target = _nt_open_relative(parent, parts[-1], desired_access=_FILE_READ_DATA | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE, disposition=_FILE_OPEN, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
             try: return WindowsPreparedReplace(self, chain, parent, tuple(parent_parts), parts[-1], target, _observed(parent, target))
             except Exception: _win_close(target); raise
         except Exception:
@@ -102,7 +101,7 @@ class WindowsPreparedReplace:
         if pinned.target_identity != expected.target_identity or pinned.content_sha256 != expected.content_sha256 or pinned.content_bytes != expected.content_bytes: raise WorkspaceBoundaryError("pinned Windows replacement target changed")
         live: int | None = None
         try:
-            live = _nt_open_relative(self._parent_handle, self._leaf, desired_access=_FILE_READ_DATA | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE, disposition=_FILE_OPEN, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
+            live = _nt_open_relative(self._parent_handle, self._leaf, desired_access=_FILE_READ_DATA | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE, disposition=_FILE_OPEN, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
             current = _observed(self._parent_handle, live)
             if current.target_identity != expected.target_identity or current.content_sha256 != expected.content_sha256 or current.content_bytes != expected.content_bytes: raise WorkspaceBoundaryError("live Windows replacement target changed")
         finally: _win_close(live)
@@ -125,14 +124,11 @@ class WindowsPreparedReplace:
     def stage_replace(self, content: bytes, expected: WorkspaceReplaceObservedState) -> None:
         if self._stage_handle is not None: raise WorkspaceBoundaryError("Windows replacement staging already exists")
         self.revalidate_expected(expected); name = f"{_TEMP_PREFIX}{secrets.token_hex(16)}.tmp"
-        # DELETE access is needed for later atomic publication and identity-owned
-        # cleanup, so every concurrent reopen must also share DELETE.
         handle = _nt_open_relative(self._parent_handle, name, desired_access=_FILE_READ_DATA | _FILE_WRITE_DATA | _FILE_READ_ATTRIBUTES | _FILE_WRITE_ATTRIBUTES | _DELETE | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE, disposition=_FILE_CREATE, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT, file_attributes=_FILE_ATTRIBUTE_TEMPORARY)
         try:
             info = _win_info(handle)
             if info.dwFileAttributes & (_FILE_ATTRIBUTE_REPARSE_POINT | _FILE_ATTRIBUTE_DIRECTORY): raise WorkspaceBoundaryError("Windows replacement staging object is not a regular file")
-            self._stage_handle, self._stage_name, self._stage_identity = handle, name, _win_file_identity(info)
-            _write_handle_bytes(handle, content); data = _read_handle_bytes(handle); digest = hashlib.sha256(data).hexdigest()
+            self._stage_handle, self._stage_name, self._stage_identity = handle, name, _win_file_identity(info); _write_handle_bytes(handle, content); data = _read_handle_bytes(handle); digest = hashlib.sha256(data).hexdigest()
             if data != content: raise WorkspaceMutationError("Windows replacement staging verification mismatch")
             self._stage_digest, self._stage_bytes = digest, len(data); self._revalidate_stage(); self.revalidate_expected(expected)
         except Exception:
@@ -141,10 +137,19 @@ class WindowsPreparedReplace:
 
     def mutation_ready(self, expected: WorkspaceReplaceObservedState) -> None:
         self.revalidate_expected(expected); self._revalidate_stage()
-        raise NotImplementedError("HCODER-WO-0022 Windows atomic publication is the remaining native proof")
 
     def publish_replace(self, expected: WorkspaceReplaceObservedState, pre_publish_check: Callable[[], None]) -> str:
-        raise NotImplementedError("HCODER-WO-0022 Windows replacement remains fail-closed pending atomic publication proof")
+        if self._closed or self._stage_handle is None or self._stage_identity is None or self._stage_digest is None or self._stage_bytes is None: raise WorkspaceBoundaryError("Windows replacement is not staged")
+        # Caller invokes this only after permit consumption. Perform its final session
+        # check, then repeat every observable identity/content check immediately before
+        # the single native namespace mutation.
+        pre_publish_check(); self.revalidate_expected(expected); self._revalidate_stage()
+        _nt_rename_relative_replace(self._stage_handle, self._parent_handle, self._leaf); self._published = True
+        final_info = _win_info(self._stage_handle)
+        if final_info.dwFileAttributes & (_FILE_ATTRIBUTE_REPARSE_POINT | _FILE_ATTRIBUTE_DIRECTORY) or _win_file_identity(final_info) != self._stage_identity: raise WorkspaceMutationError("published Windows replacement identity differs from verified stage")
+        final_data = _read_handle_bytes(self._stage_handle)
+        if hashlib.sha256(final_data).hexdigest() != self._stage_digest or len(final_data) != self._stage_bytes: raise WorkspaceMutationError("published Windows replacement bytes differ from verified stage")
+        return self._stage_identity
 
     def close(self) -> None:
         if self._closed: return
