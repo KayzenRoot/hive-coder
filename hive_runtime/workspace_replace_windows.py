@@ -21,7 +21,7 @@ def _read_handle_bytes(handle):
     if not _SetFilePointerEx(wintypes.HANDLE(handle),0,None,_FILE_BEGIN):raise WorkspaceMutationError(f"SetFilePointerEx failed (winerror={ctypes.get_last_error()})")
     chunks=[]
     while True:
-        buffer=ctypes.create_string_buffer(128*1024); read=wintypes.DWORD()
+        buffer=ctypes.create_string_buffer(128*1024);read=wintypes.DWORD()
         if not _ReadFile(wintypes.HANDLE(handle),buffer,len(buffer),ctypes.byref(read),None):raise WorkspaceMutationError(f"ReadFile failed (winerror={ctypes.get_last_error()})")
         if read.value==0:break
         chunks.append(buffer.raw[:read.value])
@@ -117,16 +117,18 @@ class WindowsPreparedReplace:
         pre_publish_check();self.revalidate_expected(expected);self._revalidate_stage();publish_parent,opened=self._open_publish_parent(expected)
         try:
             self.revalidate_expected(expected);self._revalidate_stage();_nt_rename_relative_replace(self._stage_handle,publish_parent,self._leaf);self._published=True
-            # POSIX rename semantics intentionally leave existing handles attached to
-            # the replaced object. Our pinned old-target handle has served its proof
-            # purpose, so release it immediately after successful namespace publication
-            # before consumers open the newly published pathname.
-            _win_close(self._target_handle);self._target_handle=None
         finally:
             for item in reversed(opened):_win_close(item)
+        # Verify the exact published object while its staging handle is still pinned.
         fi=_win_info(self._stage_handle);data=_read_handle_bytes(self._stage_handle)
         if _win_file_identity(fi)!=self._stage_identity or hashlib.sha256(data).hexdigest()!=self._stage_digest or len(data)!=self._stage_bytes:raise WorkspaceMutationError("published Windows replacement differs from verified stage")
-        return self._stage_identity
+        published_identity=self._stage_identity
+        # All handles whose only purpose was pre/post-publication proof are released
+        # before returning. This leaves the ordinary destination pathname immediately
+        # consumable while preserving verification-before-release semantics.
+        _win_close(self._target_handle);self._target_handle=None
+        _win_close(self._stage_handle);self._stage_handle=None
+        return published_identity
     def close(self):
         if self._closed:return
         if self._stage_handle is not None:
