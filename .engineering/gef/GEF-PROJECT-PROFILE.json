@@ -1,27 +1,47 @@
 {
   "schemaVersion": "gef-project-profile-v1",
-  "gefVersion": "1.0",
+  "gefVersion": "1.0.0",
   "project": {
+    "name": "Hive Coder",
     "repository": "KayzenRoot/hive-coder",
     "repositoryId": 1370644068,
     "defaultBranch": "main",
-    "mode": "NEW_PROJECT"
+    "classification": "BROWNFIELD",
+    "preAdoptionMainSha": "ccfed1f960c80dc58e4f45cb627451e77c7d5a79"
+  },
+  "adoption": {
+    "mode": "UNIVERSAL_BROWNFIELD_ADOPTION",
+    "status": "ADOPTION_CANDIDATE",
+    "workOrder": "HCODER-GEF-ADOPT-0001",
+    "preserveHistoricalGef": true,
+    "retroactiveCompletionClaimsAllowed": false
   },
   "sourceHierarchy": [
     "docs/project-brain/11-CHECKPOINT.md",
-    "docs/project-brain/10-DECISIONS-LEDGER.md",
-    "docs/project-brain/03-SCOPE.md",
+    "docs/project-brain/10-DECISIONS-LEDGER.md + approved ADRs",
+    "docs/project-brain/03-SCOPE.md + docs/project-brain/02-REQUIREMENTS.md",
     "docs/project-brain/09-DEFINITION-OF-DONE.md",
     "docs/project-brain/04-ARCHITECTURE.md",
-    "docs/project-brain/02-REQUIREMENTS.md"
+    "docs/project-brain/05-SECURITY.md",
+    "active Work Order / Context Lock",
+    "remaining supporting documentation"
   ],
-  "promptMode": "GEF_V1",
-  "reviewMode": "HEDS_DELTA",
+  "currentKnownDrift": [
+    "main contains post-CP-0021 evidence while docs/project-brain/11-CHECKPOINT.md still declares CP-0021; do not fabricate reconciliation during adoption"
+  ],
+  "activeNonCanonicalIncrement": {
+    "workOrder": "HCODER-WO-0023",
+    "pullRequest": 69,
+    "branch": "feat/HCODER-WO-0023-git-stage-capability",
+    "status": "DRAFT_CORRECTION_IN_PROGRESS"
+  },
+  "promptMode": "GEF_V1_UNIVERSAL",
+  "reviewMode": "HEDS_DELTA_EXACT_HEAD",
+  "reviewNextPromptPdfRequired": true,
   "taskClasses": ["T0", "T1", "T2", "T3"],
   "contextRadii": ["C0", "C1", "C2", "C3", "C4"],
   "riskLevels": ["LOW", "STANDARD", "ELEVATED", "HIGH_ASSURANCE"],
-  "currentHostedGates": ["Governance"],
-  "plannedHostedGates": ["Validate", "Integration health", "Review Evidence"],
+  "hostedGates": ["Governance", "Desktop Shell"],
   "proofCarryForwardAuthority": false,
   "shadowAssurance": true
 }

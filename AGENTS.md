@@ -2,53 +2,53 @@
 
 ## Source hierarchy
 Read canonical truth in this order before implementation or review:
-1. `docs/project-brain/11-CHECKPOINT.md`
-2. `docs/project-brain/10-DECISIONS-LEDGER.md` plus approved ADRs under `docs/project-brain/adrs/`
-3. `docs/project-brain/03-SCOPE.md`
-4. `docs/project-brain/09-DEFINITION-OF-DONE.md`
-5. `docs/project-brain/04-ARCHITECTURE.md`
-6. `docs/project-brain/02-REQUIREMENTS.md`
-7. remaining Project Brain / `.engineering` sources.
+1. current accepted `docs/project-brain/11-CHECKPOINT.md` / proven production state;
+2. `docs/project-brain/10-DECISIONS-LEDGER.md` plus approved ADRs under `docs/project-brain/adrs/`;
+3. `docs/project-brain/03-SCOPE.md` and `docs/project-brain/02-REQUIREMENTS.md`;
+4. `docs/project-brain/09-DEFINITION-OF-DONE.md`;
+5. `docs/project-brain/04-ARCHITECTURE.md`;
+6. `docs/project-brain/05-SECURITY.md`;
+7. active Work Order / Context Lock;
+8. remaining Project Brain / `.engineering` sources.
 
-## Engineering flow
-Use stable Work Order IDs and follow:
-`ANALYZE -> SOURCE CHECK -> NEXT NECESSARY INCREMENT -> WORK ORDER -> CONTEXT LOCK -> PREFLIGHT -> EXECUTOR -> TESTS/EVIDENCE -> PR -> AUDIT -> APPROVED/CORRECTION REQUIRED/BLOCKED -> CHECKPOINT DELTA -> MERGE -> NEXT`.
+Material contradictions are recorded, not silently resolved. Git/code/tests/evidence beat conversation memory.
 
-Do not advance while the active increment has an unresolved HIGH/CRITICAL finding.
+## GEF V1 Universal mode
+Hive Coder is adopted as a BROWNFIELD repository under GEF Bootstrap V1.0.0. GEF wraps the existing project additively and must not rewrite historical work into fake GEF Work Orders/checkpoints/evidence.
+
+Canonical lifecycle:
+`ANALYZE -> SOURCE CHECK -> NEXT NECESSARY INCREMENT -> WORK ORDER -> CONTEXT LOCK -> PREFLIGHT -> EXECUTOR -> TESTS/EVIDENCE -> PR -> EXACT-HEAD AUDIT -> CHECKPOINT DELTA -> MERGE -> NEXT`.
+
+For substantial work use stable Work Order IDs. Prefer the smallest sufficient context radius and compile executor acceleration capsules rather than forcing repeated whole-repository rediscovery.
+
+## Review law
+Verdicts are `APPROVED | CORRECTION_REQUIRED | BLOCKED`. APPROVED requires exact candidate SHA, required gates complete, CRITICAL=0, HIGH=0, no unresolved scope/preservation/evidence mismatch and no stale-head mismatch.
+
+Every review response must also deliver the next executable Codex prompt as a generated PDF. `CORRECTION_REQUIRED` stays in the same Work Order. No new increment begins before the reviewed predecessor is objectively accepted.
 
 ## Authority rules
-- Git/code/tests/evidence beat conversation memory.
 - Models/tools cannot mint approvals, permissions, trusted evidence or competence.
-- Computer-use mutation must remain behind the approved Permission & Control Plane.
+- Computer-use mutation remains behind the approved Permission & Control Plane.
 - New architecture/toolchain authority requires a governed decision/checkpoint.
 - Never silently rewrite historical Decisions or Context Locks.
+- Never weaken tests/security/governance to obtain green CI.
+- Never expose secrets discovered during repository inspection.
+
+## Brownfield preservation rules
+Preserve existing architecture, history, tests, CI, release semantics and naming unless a governed migration explicitly changes them. No mass-formatting or module renaming for GEF aesthetics. Legacy facts may be mapped, never retroactively certified.
 
 ## Cross-chat continuation
 If the user says `continue`, `continue do chat anterior`, or equivalent for Hive Coder:
 1. Open GitHub Issue `#30` first.
-2. Reconcile Issue #30 against canonical Checkpoint, Decisions Ledger/approved ADRs, active Work Order/PR and exact-head CI/HEDS.
-3. GitHub/canonical truth wins if Issue #30 is stale.
-4. Continue autonomously from its `NEXT EXACT ACTIONS`; do not ask the user to restate recoverable context.
+2. Reconcile it against canonical Checkpoint, Decisions/ADRs, active Work Order/PR and exact-head CI/HEDS.
+3. Canonical Git evidence wins if Issue #30 is stale.
+4. Continue autonomously from its NEXT EXACT ACTIONS.
 
-## Current execution state
-`HCODER-CP-0020 — Desktop Runtime Status Supervisor & System Truth Surface` is **APPROVED / CANONICAL subject only to the documentation-only closeout seal**.
+## Current execution state at universal-adoption baseline
+Main baseline at adoption start: `ccfed1f960c80dc58e4f45cb627451e77c7d5a79`.
 
-Product receipts:
-- Issue #51 CLOSED / COMPLETED.
-- Product PR #54 SQUASH MERGED with expected-head protection.
-- Final reviewed head `344130199536e33a656d49a365e746610f89e245` passed Governance #265 (**288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #101 (security gate, frontend **26/26**, npm audit 0, Rust **13/13**, locked RustSec/check, Windows release build and launch smoke).
-- Final HEDS `5217039528`: APPROVED FOR SQUASH MERGE, unresolved HIGH/CRITICAL 0.
-- GitHub-signed product merge `621732c00ba1f3325272dfa1631fddbbabf3dfc4` passed post-merge Governance #266 (**288/288 + 61/61**) and Desktop Shell #102, including release build and launch smoke.
-- `DEC-024 — Desktop Runtime Status Supervisor Boundary` is APPROVED / CANONICAL subject only to closeout seal.
-- `HCODER-WO-0020-CR-001` MEDIUM and `HCODER-WO-0020-CR-002` MEDIUM are RESOLVED.
+Known source drift: the canonical checkpoint document still declares `HCODER-CP-0021`, while Git history/main contains later proven CP-0022/PLATFORM-001 evidence. Universal adoption records this drift and does not fabricate a checkpoint promotion.
 
-CP-0020 authority remains presentation-only: exactly one fixed child-process site, fixed sibling basename, fixed `--stdio-status-v1`, cleared child environment, canonical request/33,024-byte response ceiling, strict raw decoder, argument-free main-window Tauri command and read-only Runtime/Provider/Task/Permission System Truth. No generic process/shell capability, caller-controlled process input, provider/model execution, credential authority, task/permission/filesystem/Git/terminal/computer-use mutation, remote control, skill activation or billing/purchase authority exists.
+Active non-canonical implementation increment: `HCODER-WO-0023 — governed Git staging boundary`, Draft PR `#69`, branch `feat/HCODER-WO-0023-git-stage-capability`. It must reconcile the adopted main before further Codex execution.
 
-### NEXT EXACT ACTIONS
-1. Complete the documentation-only CP-0020 closeout from product merge `621732c00ba1f3325272dfa1631fddbbabf3dfc4`.
-2. Require exact-head Governance + Desktop Shell on the closeout head.
-3. Perform closeout HEDS; stop on unresolved HIGH/CRITICAL.
-4. Squash merge closeout with expected-head protection.
-5. Require push-triggered Governance + Desktop Shell on the resulting `main` SHA.
-6. Refresh Issue #30 with the fully sealed CP-0020 receipts.
-7. Only then run a fresh canonical source-check and select the next NECESSARY increment. Do not infer it from historical branches.
+Read `.engineering/gef/GEF-PROJECT-MASTER.md`, `.engineering/gef/GEF-UNIVERSAL-ADOPTION.md` and `.engineering/gef/GEF-UNIVERSAL-CHECKPOINT.json` for the GEF adoption map.

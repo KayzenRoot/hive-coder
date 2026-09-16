@@ -1,29 +1,40 @@
 ## Work Order
-`HCODER-WO-____`
+`<stable-id>`
 
 ## Summary
 <!-- What changed and why? -->
 
+## Source / preservation check
+- [ ] Canonical source hierarchy checked
+- [ ] Brownfield user work preserved
+- [ ] No fabricated historical GEF state
+
 ## Scope
 - [ ] Inside approved Work Order
 - [ ] No silent scope expansion
-- [ ] Canonical sources checked
+- [ ] Optional adapters did not become blockers without justification
 
 ## Context Lock
 - Base SHA:
-- Head SHA:
-- Source fingerprints:
+- Candidate head SHA:
+- Allowed areas:
+- Frozen decisions:
 
-## Validation
-<!-- Commands, exit codes, tests, lint/typecheck/build/security/integration as applicable -->
+## Validation / evidence
+<!-- Real commands/workflows, results, failures/corrections, security findings. UNKNOWN remains UNKNOWN. -->
 
-## Evidence Bundle
-<!-- Link/attach exact-head evidence. UNKNOWN must remain UNKNOWN. -->
+## Exact-head gates
+- Governance:
+- Desktop Shell:
+- Other required platform/security gates:
 
-## Risks / rollback
+## Risks / rollback / recovery
 
 ## Proposed Checkpoint Delta
-<!-- Proposal only. Promotion requires objective audit. -->
+<!-- Proposal only. Promotion requires objective exact-head audit. -->
 
 ## Review verdict
-`PENDING | APPROVED | CORRECTION REQUIRED | BLOCKED`
+`PENDING | APPROVED | CORRECTION_REQUIRED | BLOCKED`
+
+## Next legal action
+<!-- No next increment until predecessor acceptance. -->
