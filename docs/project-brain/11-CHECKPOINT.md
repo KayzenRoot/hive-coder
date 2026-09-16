@@ -1,82 +1,66 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** `HCODER-CP-0020`  
-**Status:** APPROVED / CANONICAL — CLOSEOUT SEAL PENDING  
+**Checkpoint:** `HCODER-CP-0021`  
+**Status:** APPROVED / CANONICAL  
 **Date:** 2026-09-15  
 **Repository:** `KayzenRoot/hive-coder`  
-**Work Order:** `HCODER-WO-0020 — Desktop Runtime Status Supervisor & System Truth Surface` — COMPLETE / CANONICAL  
-**Issue:** `#51` — CLOSED / COMPLETED  
-**Product PR:** `#54` — SQUASH MERGED  
-**Base checkpoint:** `HCODER-CP-0019` — APPROVED / CANONICAL  
-**Canonical base main SHA:** `e4bc74d1ae6c4054cd98cd34b16e6357f911224c`  
-**Technical head:** `86c6e956985e0b51e0f56b3568a3fe9db61fef90`  
-**Technical HEDS:** `5216871217`  
-**Promotion head:** `bf76c2a451763d7bc361437028e819d2df5f97ba`  
-**Promotion HEDS:** `5216925860`  
-**Final reviewed product head:** `344130199536e33a656d49a365e746610f89e245`  
-**Final product HEDS:** `5217039528`  
-**Canonical product merge SHA:** `621732c00ba1f3325272dfa1631fddbbabf3dfc4`
+**Work Order:** `HCODER-WO-0021 — Trusted Workspace File Capability & Permit-Gated Mutation Boundary` — COMPLETE / CANONICAL  
+**Issue:** `#57` — CLOSED / COMPLETED  
+**Product PR:** `#58` — SQUASH MERGED  
+**Closeout PR:** `#59` — SQUASH MERGED  
+**Base checkpoint:** `HCODER-CP-0020` — APPROVED / CANONICAL  
+**Canonical base main SHA:** `c1f4166497d07eea6758e00f8a6d201e2b9acc02`  
+**Technical head:** `12d86579335c8f553bf77457739a6f2a7d287f10`  
+**Technical HEDS:** `5217411336`  
+**Promotion head:** `9f82d7211aa7ae304d4045623ab1c27911c12a14`  
+**Promotion HEDS:** `5217449846`  
+**Final reviewed product head:** `347dc69ab97e48d75f72d16df3bb34347da09c69`  
+**Final product HEDS:** `5217471428`  
+**Canonical product merge SHA:** `ee2e01e99aaea89deb2754ba8295fe34d7744541`  
+**Canonical closeout HEDS:** `5217531877`  
+**Canonical closeout main SHA:** `200540c2605ff4e5c32f54cd1c3be40dbd167520`
 
 ## Canonical product state
-- All CP-0005 through CP-0019 permission/security/status boundaries remain authoritative and unchanged.
-- Hive desktop has exactly one fixed Rust runtime-status supervisor process site.
-- Helper identity is derived from `current_exe()` sibling plus a fixed platform basename; symlink/reparse/non-file targets fail closed.
-- Sole helper mode is `--stdio-status-v1`; frontend/model/task text supplies no process identity, path, args or environment.
-- Child environment is cleared. stdin/stdout are bounded, stderr discarded, timeout hard-bounded and post-spawn failure paths terminate/wait the child.
-- Request is exact canonical CP-0018 `status.snapshot` for request id `desktop-runtime`; response ceiling is exactly `33,024` bytes.
-- The only new Tauri command is argument-free `get_runtime_status_envelope`, restricted to the existing `main` window.
-- Frontend admits raw status only through canonical `decodeRuntimeStatusEnvelope(raw)`.
-- Runtime/Provider/Task/Permission System Truth is presentation-only. It does not mint permissions, approvals, permits or action authority.
-- Run/Pause/Emergency Stop/Take Control remain unavailable unless a separately governed actionable session exists.
-- Desktop baseline checkpoint presentation is reconciled to `HCODER-CP-0019` at this product boundary.
+- All CP-0005 through CP-0020 permission/security/status boundaries remain authoritative and unchanged except where CP-0021 deliberately adds the bounded mutation authority below.
+- Hive runtime has exactly one privileged workspace file mutation adapter admitted by CP-0021.
+- The admitted operation is fixed `write_file_v1` under `Capability.FILESYSTEM_WRITE` and is create-only/no-clobber for a previously absent regular file.
+- Permission & Control Plane remains the sole authorization choke point. Trusted approval is mandatory; model/tool/task/file content cannot mint permits.
+- Approval binds canonical workspace identity, normalized target, live parent identity, target-absent state, content SHA-256 and byte length. Raw content is excluded from approval/audit metadata.
+- Executor revalidates live session/workspace/parent/target state and consumes the short-lived request-bound single-use permit immediately before mutation.
+- Traversal, `.git`, symlink/reparse, non-portable/confusing path forms, identity drift, target races, stale/replayed/wrong permits and payloads above 1 MiB fail closed.
+- POSIX and Windows use platform-specific handle/no-follow/no-clobber publication paths; a concurrent target owner is preserved.
 
-## Security-gate truth
-Canonical product evidence reports:
-- `TAURI_COMMANDS=choose_workspace,get_desktop_snapshot,get_runtime_status_envelope`
-- `FRONTEND_INVOKES=3`
-- `CAPABILITY_PERMISSIONS=0`
-- `WORKSPACE_SELECTION_ARGS=0`
-- `RUNTIME_STATUS_ARGS=0`
-- `RUNTIME_STATUS_RAW_DECODER=STRICT`
-- `FILESYSTEM_MUTATION_PRIMITIVES=0`
-- `GENERIC_PROCESS_EXECUTION=0`
-- `FIXED_RUNTIME_SIDECAR_PROCESS=1`
+## Explicitly unapproved authority
+Existing-file overwrite/edit/append/truncate, delete/rename-existing, generic filesystem mutation, Git mutation, shell/terminal/process execution, Tauri/desktop write commands, provider/model execution or credentials, Cua/computer-use mutation beyond prior governed boundaries, remote control, automatic skill activation and billing/purchase authority remain outside CP-0021.
 
-## Corrections
-- `HCODER-WO-0020-CR-001` MEDIUM — **RESOLVED**: unknown permission counters are not rendered as observed zeroes; canonical subsystem provenance is preserved.
-- `HCODER-WO-0020-CR-002` MEDIUM — **RESOLVED**: the fixed process boundary and strict raw decoder invariants are statically enforced.
+## Correction closure
+- Hosted Windows rejected the initial root-relative publication primitive. The same Work Order moved to native NT handle-relative no-clobber rename without weakening the contract.
+- Real NTFS junction/reparse and publication-race tests were added.
+- Independent audit closed `.git` mutation and Unicode/control path-confusion gaps.
+- Unresolved HIGH/CRITICAL findings: **0**.
 
-## Pre-merge proof
-Technical head `86c6e956985e0b51e0f56b3568a3fe9db61fef90` passed Governance #263, Desktop Shell #99 and HEDS `5216871217`.
+## Evidence chain
+Technical head `12d86579335c8f553bf77457739a6f2a7d287f10` passed Governance #278 and Desktop Shell #114; HEDS `5217411336` approved promotion.
 
-Promotion head `bf76c2a451763d7bc361437028e819d2df5f97ba` passed Governance #264, Desktop Shell #100 and HEDS `5216925860`.
+Promotion head `9f82d7211aa7ae304d4045623ab1c27911c12a14` passed Governance #281 and Desktop Shell #117; HEDS `5217449846` approved final approval mutation.
 
-Final reviewed product head `344130199536e33a656d49a365e746610f89e245`:
-- Governance #265 (`35036246330`): **SUCCESS** — Ubuntu **288/288 PASS**, Windows HIGH_ASSURANCE **61/61 PASS**.
-- Desktop Shell #101 (`35036246358`): **SUCCESS** — security gate PASS, frontend **26/26 PASS**, npm audit 0, RustSec over 432 locked dependencies with 7 warning-class residuals, Rust **13/13 PASS**, locked cargo check PASS, Windows release build PASS and `DESKTOP_LAUNCH_SMOKE=PASS`.
-- HEDS final `5217039528`: **APPROVED FOR SQUASH MERGE**, unresolved HIGH/CRITICAL **0**.
+Final product head `347dc69ab97e48d75f72d16df3bb34347da09c69` passed Governance #282 and Desktop Shell #118; HEDS `5217471428` approved squash merge.
 
-## Merge and post-merge proof
-PR #54 was squash-merged with expected-head protection as GitHub-signed commit `621732c00ba1f3325272dfa1631fddbbabf3dfc4`, whose parent is canonical CP-0019 SHA `e4bc74d1ae6c4054cd98cd34b16e6357f911224c`.
+PR #58 squash-merged as `ee2e01e99aaea89deb2754ba8295fe34d7744541`. Exact product merge SHA passed Governance #283 and Desktop Shell #119.
 
-On exact product merge SHA `621732c00ba1f3325272dfa1631fddbbabf3dfc4`:
-- Governance #266 (`35037526420`): **SUCCESS** — Ubuntu **288/288 PASS**, Windows HIGH_ASSURANCE **61/61 PASS**.
-- Desktop Shell #102 (`35037526361`): **SUCCESS** — desktop-web and desktop-windows passed, including strict security gate, frontend **26/26 PASS**, npm audit 0, RustSec, Rust **13/13 PASS**, locked cargo check, Tauri Windows release build and launch smoke.
+Documentation-only closeout head `eec525cbf48439c5722cef624b25e8ff9203d9e0` passed Governance #284 and Desktop Shell #120; HEDS `5217531877` approved canonical closeout merge.
+
+PR #59 squash-merged as `200540c2605ff4e5c32f54cd1c3be40dbd167520`. That exact `main` SHA passed Governance #285 and Desktop Shell #121, including Windows HIGH_ASSURANCE, locked Rust/Tauri build, launch smoke, frontend contracts and dependency/security audits.
 
 ## Canonical decision
-`DEC-024 — Desktop Runtime Status Supervisor Boundary` is **APPROVED / CANONICAL**, subject only to sealing this documentation-only closeout. The decision canonicalizes the fixed read-only observation process boundary, not generic execution or mutation authority.
+`DEC-025 — Trusted Workspace File Capability & Permit-Gated Mutation Boundary` is **APPROVED / CANONICAL**. It canonicalizes only atomic create-only/no-clobber workspace file creation behind the Permission & Control Plane.
 
-## Explicit residual boundaries
-- Sidecar packaging/signing/binary attestation/update provenance remains unproven.
-- Hosted launch smoke proves desktop startup/fail-closed behavior, not a packaged live sidecar session.
-- No automatic polling daemon, restart/health manager or generic process supervisor is approved.
-- Provider reachability/authentication and VERIFIED model capability remain separate evidence domains.
-- No new Permission & Control Plane, task mutation, filesystem/Git/terminal/computer-use, remote-control, skill-activation or billing/purchase authority exists.
-- Seven RustSec warning-class dependency advisories remain explicit debt.
-- Existing CSP, native/full E2E, visual/accessibility, installer/signing/updater and final-license residuals remain unchanged.
-
-## Closeout gate
-This documentation-only closeout must pass exact-head Governance + Desktop Shell and HEDS with unresolved HIGH/CRITICAL findings 0, then be squash-merged and pass push validation on the resulting `main` SHA. Product state is already supported by the signed product merge and post-merge evidence; closeout introduces no runtime or authority change.
+## Residual boundaries
+- Existing-file replacement/edit remains unapproved.
+- Git mutation and terminal/shell execution remain unapproved.
+- Installer/signing/updater/release packaging and rollback/roll-forward proof remain open.
+- Runtime-status sidecar packaging/signing/attestation and packaged live E2E remain open.
+- RustSec warning-class dependency debt, stricter CSP, native/full desktop E2E, visual/accessibility automation and final license remain open.
 
 ## Next NECESSARY governed increment
-Do not infer the next Work Order from historical branches. After the closeout seal, run a fresh source-check against the full canonical Project Brain and select only the next objectively NECESSARY increment.
+Run a fresh source-check from this canonical checkpoint and select only the next objectively necessary product increment. Future implementation work should be prebuilt with contracts, skeletons, tests, fixtures, acceptance criteria and bounded context before execution-heavy coding.
