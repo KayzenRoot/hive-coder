@@ -1,11 +1,22 @@
 from __future__ import annotations
 
-"""Governed Git staging adapter boundary for HCODER-WO-0023.
+"""Governed Git staging boundary for HCODER-WO-0023.
 
-This module is intentionally non-mutating until a backend is proven and the
-Permission & Control Plane receives an explicit Context Lock delta.  Keeping
-this adapter importable now lets contract/security tests target stable symbols
-without accidentally granting repository mutation authority.
+This module holds two distinct layers, and the difference between them is the
+whole point of the Work Order:
+
+* ``GovernedGitStageAdapter`` is the pre-authority seam. It normalizes explicit
+  paths and exposes no staging operation, so contract/security tests can target
+  stable symbols without granting repository mutation authority.
+* ``GovernedGitStageCapability`` is the governed mutation capability. Its only
+  product effect is to publish approved content-addressed blobs and then
+  atomically publish the approved candidate index, under `Capability.GIT_WRITE`
+  with mandatory trusted approval and a request-bound single-use permit consumed
+  at the final safe boundary.
+
+Neither layer executes Git, a shell or any process. There is no generic Git
+argv, no `git add`, no hook, no filter, no network and no credential path, and
+the capability mints neither approval nor permit.
 """
 
 import hashlib

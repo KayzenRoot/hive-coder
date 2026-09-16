@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-"""Private loose-object preparation with zero publication authority.
+"""Private loose-object preparation for HCODER-WO-0023.
 
-This module may materialise an owned, bounded, no-follow temporary file inside a
-Hive-owned directory under the repository's `.git`. It **never** writes to
-`.git/objects` and it never publishes a final object path: object publication is
-a later governed phase and `publish()` still fails closed.
+This module owns the private half of object publication: it materialises an
+owned, bounded, no-follow temporary file inside a Hive-owned directory under the
+repository's `.git`, verifies it, and removes it under identity-safe cleanup. It
+**never** writes to `.git/objects` and never promotes a final object pathname.
+
+The canonical promotion itself lives in `LooseObjectPublisher`, which links the
+verified temporary into place with an atomic create-if-absent primitive. What
+remains here is deliberately inert: `publish()` on the preparer is the
+pre-authority placeholder and still fails closed, so the preparer can never be
+mistaken for the publication authority.
 
 The temporary directory is deliberately *not* inside `.git/objects` so that an
 abandoned temporary can never be mistaken for a reachable or unreachable Git

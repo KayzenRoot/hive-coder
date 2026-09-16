@@ -162,6 +162,25 @@ Corrected proof: the contradictory request is constructed before any challenge, 
 
 `tests/runtime/test_git_stage_security.py` was inspected and required no change: its acceptance lane already covers the properties, and the new proof lives in the authority lane without duplication.
 
+## Context Lock Delta 007 — promotion-preflight source accuracy and promotion-candidate state files
+This delta is created for the FINAL TECHNICAL HEDS preflight. **It grants no product, runtime or authority change.** The only capability and action remain `git.write` / `git_stage_paths_v1` in the same envelope, with the same mandatory-approval and single-use-permit law, and no product behavior may change after the technical HEDS head.
+
+### Purpose
+Authorize exactly the documentation/state files needed to (a) reconcile objectively stale source-of-truth prose that still describes this Work Order as pre-implementation, and (b) record a promotion **candidate** state once an independent technical HEDS reports CRITICAL/HIGH `0/0`. No behavior change is permitted by this delta, and none is made.
+
+### Authorized files
+- `.engineering/work-orders/HCODER-WO-0023.md` — reconcile the status line and label the historical backend-gate section as historical, recording its resolution without erasing it.
+- `hive_runtime/git_stage.py` — **module docstring only**. The module now carries the governed mutation capability, so its pre-authority prose is stale. No logic, signature, ordering, authority or semantic change.
+- `hive_runtime/git_object_private_prep.py` — **module docstring only**. It still described object publication as "a later governed phase", which is no longer true now that `LooseObjectPublisher` performs it. No logic, signature, ordering, authority or semantic change.
+- `.engineering/context-locks/HCODER-WO-0023.md` (this file, append-only)
+- `.engineering/evidence/HCODER-WO-0023.md`
+- `docs/project-brain/adrs/DEC-027-GOVERNED-GIT-STAGING.md` — promotion **candidate** state only, explicit and evidence-bound, preserving the original source main and never claiming canonical status before the governing gate occurs.
+- `.engineering/checkpoint-deltas/HCODER-WO-0023.md` (new) — same-WO checkpoint delta for the promotion candidate. The canonical checkpoint document is **not** mutated.
+- `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json` (new) — GEF V1 machine-readable candidate evidence per `GEF-EVIDENCE-SPEC.md`.
+
+### Explicit non-authorization
+No new capability, action, dependency, workflow behavior or test-semantics change. No commit/ref/branch/remote/credential authority. No merge, no PR readiness, no canonical checkpoint mutation, and no DEC-027 canonical declaration. `DEC-027` remains PROPOSED until its own governing gate occurs.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 

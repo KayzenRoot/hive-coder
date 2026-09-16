@@ -1,0 +1,190 @@
+{
+  "schemaVersion": "gef-v1-evidence-1",
+  "workOrder": "HCODER-WO-0023",
+  "repository": "KayzenRoot/hive-coder",
+  "branch": "feat/HCODER-WO-0023-git-stage-capability",
+  "baseSha": "aaa75242826db33442cd96cdc1d550d69bd25faa",
+  "headSha": "b904b473416786e72c7e805e2e8c8b557d377166",
+  "technicalHedsHead": "b904b473416786e72c7e805e2e8c8b557d377166",
+  "promotionCandidateHead": "SELF_REFERENTIAL_SEE_NOTE",
+  "taskClass": "T3",
+  "contextRadius": "C4",
+  "risk": "HIGH_ASSURANCE",
+  "changedFiles": [
+    "hive_runtime/control_types.py",
+    "hive_runtime/git_stage.py",
+    "hive_runtime/git_stage_contract.py",
+    "hive_runtime/git_stage_observer.py",
+    "hive_runtime/git_stage_transaction.py",
+    "hive_runtime/git_stage_index_codec.py",
+    "hive_runtime/git_index_envelope.py",
+    "hive_runtime/git_loose_object_transaction.py",
+    "hive_runtime/git_object_private_prep.py",
+    "hive_runtime/git_object_store_inspector.py",
+    "hive_runtime/git_stage_plan.py",
+    "hive_runtime/git_stage_codex_frontier.py",
+    "hive_runtime/git_object_candidate.py",
+    "foundations/python-dependencies.lock.json",
+    "foundations/python-dependencies.requirements.txt",
+    "tools/foundations/verify_python_dependencies.py",
+    ".github/workflows/governance.yml",
+    "tests/control_plane/test_control_plane.py",
+    "tests/runtime/test_git_stage_authority.py",
+    "tests/runtime/test_git_stage_security.py",
+    "tests/runtime/test_git_stage_index_codec.py",
+    "tests/runtime/test_git_stage_contract.py",
+    "tests/runtime/test_git_stage_tree_cache_semantics.py",
+    "tests/runtime/test_git_stage_observer_revalidation.py",
+    "tests/runtime/test_git_binary_byte_fidelity.py",
+    "tests/runtime/test_git_object_private_prep.py",
+    ".engineering/work-orders/HCODER-WO-0023.md",
+    ".engineering/context-locks/HCODER-WO-0023.md",
+    ".engineering/evidence/HCODER-WO-0023.md",
+    ".engineering/checkpoint-deltas/HCODER-WO-0023.md",
+    "docs/project-brain/adrs/DEC-027-GOVERNED-GIT-STAGING.md"
+  ],
+  "decisions": [
+    {
+      "id": "DEC-027",
+      "status": "PROMOTION_CANDIDATE",
+      "canonical": false
+    }
+  ],
+  "tests": [
+    {
+      "name": "authority lane",
+      "command": "python -m unittest discover -s tests/runtime -p test_git_stage_authority.py",
+      "tests": 48,
+      "exitCode": 0,
+      "proofState": "PROVEN"
+    },
+    {
+      "name": "security acceptance lane",
+      "command": "python -m unittest discover -s tests/runtime -p test_git_stage_security.py",
+      "tests": 21,
+      "skipped": 13,
+      "exitCode": 0,
+      "proofState": "PROVEN"
+    },
+    {
+      "name": "full suite",
+      "command": "python -m unittest discover -s tests -p test_*.py",
+      "tests": 533,
+      "skipped": 53,
+      "exitCode": 0,
+      "proofState": "PROVEN"
+    },
+    {
+      "name": "compileall",
+      "command": "python -m compileall -q hive_runtime tests/runtime",
+      "exitCode": 0,
+      "proofState": "PROVEN"
+    },
+    {
+      "name": "foundation lock",
+      "command": "python tools/foundations/verify_lock.py",
+      "exitCode": 0,
+      "proofState": "PROVEN"
+    },
+    {
+      "name": "governed dependency verifier",
+      "command": "python tools/foundations/verify_python_dependencies.py",
+      "exitCode": 0,
+      "proofState": "PROVEN"
+    },
+    {
+      "name": "rust locked tests",
+      "command": "cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml",
+      "tests": 13,
+      "exitCode": 0,
+      "proofState": "PROVEN"
+    },
+    {
+      "name": "rust locked check",
+      "command": "cargo check --locked --manifest-path apps/desktop/src-tauri/Cargo.toml",
+      "exitCode": 0,
+      "proofState": "PROVEN"
+    }
+  ],
+  "lint": {
+    "state": "NOT_REQUIRED"
+  },
+  "typecheck": {
+    "command": "npm run typecheck",
+    "exitCode": 0,
+    "proofState": "PROVEN"
+  },
+  "build": {
+    "command": "npm run build:web",
+    "exitCode": 0,
+    "proofState": "PROVEN"
+  },
+  "security": {
+    "desktopSecurityGate": {
+      "command": "python tools/desktop/security_gate.py",
+      "result": "PASS",
+      "proofState": "PROVEN"
+    },
+    "npmAuditHigh": {
+      "command": "npm audit --audit-level=high",
+      "vulnerabilities": 0,
+      "proofState": "PROVEN"
+    },
+    "shellProcessGitReachable": false,
+    "hooksFiltersReachable": false,
+    "networkCredentialsReachable": false,
+    "publicStagePathsEnabled": true,
+    "gitWriteEnabled": true,
+    "objectPublicationEnabled": true,
+    "indexPublicationEnabled": true,
+    "approvalMintingByCapability": false
+  },
+  "integration": {
+    "nativeStagingLanes": {
+      "linux": "PROVEN_CI",
+      "windows": "PROVEN_CI",
+      "macos": "PROVEN_CI"
+    }
+  },
+  "benchmarks": {
+    "state": "NOT_REQUIRED"
+  },
+  "hostedGates": [
+    {
+      "workflow": "Governance",
+      "runId": 35159183327,
+      "sha": "b904b473416786e72c7e805e2e8c8b557d377166",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "workflow": "Desktop Shell",
+      "runId": 35159183326,
+      "sha": "b904b473416786e72c7e805e2e8c8b557d377166",
+      "conclusion": "SUCCESS"
+    }
+  ],
+  "resolvedFindings": [
+    "CR-05",
+    "HCODER-WO-0023-CR-001",
+    "HCODER-WO-0023-CR-002",
+    "HCODER-WO-0023-CR-003",
+    "HCODER-WO-0023-CR-004",
+    "HCODER-WO-0023-CR-005"
+  ],
+  "openFindings": [],
+  "findings": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 3
+  },
+  "risks": [
+    "Bounded-race atomic publication, not strict CAS: an uncooperative external process may act between the last successful revalidation and the atomic call.",
+    "A crash after blob publication but before index publication may leave an unreachable content-addressed blob; never reported as success and never rolled back.",
+    "Published objects keep the private temporary's owner-only mode rather than Git's conventional 0444, because a read-only file cannot be unlinked on Windows."
+  ],
+  "checkpointDelta": ".engineering/checkpoint-deltas/HCODER-WO-0023.md",
+  "canonicalCheckpointMutated": false,
+  "stopState": "PROMOTION_CANDIDATE_READY_FOR_REVIEW",
+  "promotionCandidateHeadNote": "This artifact is committed inside the promotion-candidate head, so it cannot contain that head's own SHA. The exact promotion-candidate head SHA is recorded in the Prompt 06 return and on PR #69, and the fresh exact-head Governance and Desktop Shell receipts for it are recorded in the same return. The technical HEDS head is exact and verified above."
+}

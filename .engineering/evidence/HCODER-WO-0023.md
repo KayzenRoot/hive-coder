@@ -65,6 +65,55 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 **Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)  
 **Authority head:** `52d8cc3195bd4f9c948b1327ed124042739b2530` (Prompt 03: dedicated `git.write` authority, publication and native E2E)
 
+## FINAL TECHNICAL HEDS and promotion candidate (Prompt 06)
+
+**Technical HEDS head:** `b904b473416786e72c7e805e2e8c8b557d377166`  
+**Promotion-preflight canonical main:** `aaa75242826db33442cd96cdc1d550d69bd25faa`  
+**Promotion candidate:** `.engineering/checkpoint-deltas/HCODER-WO-0023.md`  
+**Machine evidence:** `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json`
+
+### Technical HEDS result — APPROVED FOR PROMOTION CANDIDATE
+Audit scope: the complete HCODER-WO-0023 technical delta at the exact head above, across scope/preservation, control plane, request binding, final authority ordering, object publication, index publication, failure and cancellation semantics, platform independence, backend provenance, TREE semantics, residual-race claims and evidence accuracy.
+
+| Severity | Count | Notes |
+|---|---|---|
+| CRITICAL | 0 | — |
+| HIGH | 0 | — |
+| MEDIUM | 0 | — |
+| LOW | 3 | All three were objective source-accuracy prose defects, corrected before the HEDS head |
+
+LOW findings, all corrected at this head:
+
+1. `.engineering/work-orders/HCODER-WO-0023.md` still declared `PREBUILT / BACKEND GATE OPEN` and described backend selection as pending. Reconciled to the proven state; the historical backend-gate section is preserved and explicitly labelled historical with its resolution recorded.
+2. The module banner in `hive_runtime/git_stage.py` still stated the module was intentionally non-mutating, although the same module now contains the governed mutation capability. Corrected.
+3. The module banner in `hive_runtime/git_object_private_prep.py` still described object publication as "a later governed phase", which stopped being true once `LooseObjectPublisher` performed it. Corrected.
+
+All three corrections are **documentation-only**: the structural AST of both modules, with inert banner strings removed, is byte-identical before and after, so no logic, signature, ordering, authority or semantic was changed.
+
+One further item is recorded as an accepted, documented bound rather than a finding: during worktree content re-read, an intermediate directory component could in principle be swapped between revalidation and the read, but any redirection still has to serve bytes hashing to the approved content digest, so no different content can be staged.
+
+### Verification at the technical head
+
+| Check | Command | Exit | Result |
+|---|---|---|---|
+| A0 structural | `python -m compileall -q hive_runtime tests/runtime` | 0 | PASS |
+| A0 foundations | `python tools/foundations/verify_lock.py` | 0 | `FOUNDATIONS_LOCK_OK` |
+| A0 dependency | `python tools/foundations/verify_python_dependencies.py` | 0 | `LOCKED` |
+| A1 authority | `python -m unittest discover -s tests/runtime -p test_git_stage_authority.py` | 0 | 48 tests OK |
+| A1/A2 security | `python -m unittest discover -s tests/runtime -p test_git_stage_security.py` | 0 | 21 tests OK, 13 platform/capability skips, 0 implementation skips |
+| A2 full suite | `python -m unittest discover -s tests -p test_*.py` | 0 | 533 tests OK, 53 skipped |
+| Desktop | security gate (CI precondition) PASS; typecheck PASS; Vitest 26/26; build:web PASS; npm audit 0 | 0 | PASS |
+| Rust | `cargo test --locked` 13/13; `cargo check --locked` PASS | 0 | PASS |
+
+### Exact-head hosted receipts at the technical head
+- Governance run `35159183327`: SUCCESS.
+- Desktop Shell run `35159183326`: SUCCESS.
+- Native governed Git staging proof: Linux SUCCESS, Windows HIGH_ASSURANCE SUCCESS, macOS SUCCESS — each independent, none inferred from another.
+
+### Carried and invalidated proofs
+- **Position:** the Prompt 05 CR-05-A and CR-05-B proofs are **not** carried forward as authoritative for the promotion-candidate head. They remain valid for the technical head they were produced at, and the runtime inputs they cover are unchanged since; but any commit creates a new head, so the promotion-candidate head requires its own fresh exact-head hosted receipts, and that is what the promotion candidate records.
+- **Invalidated:** none. No edit after the technical HEDS head changed `hive_runtime/git_stage.py` logic, `git_loose_object_transaction.py`, control-plane authority, index/object publication, the dependency lock or the security tests.
+
 ## CR-05 correction candidate (Prompt 05)
 
 **Status:** CORRECTION_CANDIDATE_READY_FOR_HEDS. Not APPROVED, not READY, not COMPLETE.
@@ -294,4 +343,6 @@ Current state, stated plainly:
 - **HEDS not yet approved.** No FINAL HEDS has been run, and `DEC-027` remains **PROPOSED** — promotion is the reviewer's decision, not the executor's.
 - **No merge** and no marking ready for review until that review completes.
 
-The only outstanding implementation seam is the promotion review itself; every executable seam the pre-Codex frontier named is complete (`FINAL_HEDS` aside, which is not an implementation seam).
+The only outstanding step is the promotion review itself; every executable seam the pre-Codex frontier named is complete (`FINAL_HEDS` aside, which is not an implementation seam).
+
+**Promotion candidate:** `.engineering/checkpoint-deltas/HCODER-WO-0023.md`, with machine evidence in `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json`. Final technical HEDS reports CRITICAL `0`, HIGH `0`, MEDIUM `0`, LOW `3` (all corrected). `DEC-027` is recorded as a promotion candidate and remains **PROPOSED**. The canonical checkpoint is untouched, PR #69 remains Draft, and nothing has been merged.
