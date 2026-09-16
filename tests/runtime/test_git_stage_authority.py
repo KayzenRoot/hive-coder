@@ -185,6 +185,104 @@ class GovernedStagingEndToEndTests(unittest.TestCase):
             self.assertEqual(created, [f"{oid[:2]}/{oid[2:]}"])
 
 
+class IndexTransactionPublicationTests(unittest.TestCase):
+    """Platform-neutral coverage of the owned index lock publication seam.
+
+    This deliberately runs on Windows as well. The equivalent assertions live in a
+    POSIX-gated class elsewhere, and a Windows-specific regression previously hid
+    behind that gate, so the seam is covered here unconditionally.
+    """
+
+    def _repo(self, root: Path) -> None:
+        git_dir = root / ".git"
+        (git_dir / "objects" / "info").mkdir(parents=True)
+        (git_dir / "objects" / "pack").mkdir()
+        (git_dir / "config").write_text("[core]\n repositoryformatversion = 0\n", encoding="ascii")
+        (git_dir / "HEAD").write_text("ref: refs/heads/main\n", encoding="ascii")
+        (git_dir / "refs" / "heads").mkdir(parents=True)
+        (git_dir / "refs" / "heads" / "main").write_text("2" * 40 + "\n", encoding="ascii")
+        (git_dir / "index").write_bytes(b"original-index")
+
+    def test_prepare_writes_only_the_private_lock(self) -> None:
+        import hashlib
+
+        from hive_runtime.git_stage_transaction import PosixGitIndexTransaction
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._repo(root)
+            git_dir = root / ".git"
+            candidate = b"candidate-index"
+            transaction = PosixGitIndexTransaction(git_dir)
+            try:
+                transaction.acquire()
+                transaction.write_prepared_index(candidate)
+                self.assertEqual((git_dir / "index").read_bytes(), b"original-index")
+                self.assertEqual((git_dir / "index.lock").read_bytes(), candidate)
+            finally:
+                transaction.close()
+            self.assertEqual((git_dir / "index").read_bytes(), b"original-index")
+            self.assertFalse((git_dir / "index.lock").exists())
+
+    def test_publish_is_atomic_and_only_when_the_lock_matches(self) -> None:
+        import hashlib
+
+        from hive_runtime.git_stage_transaction import PosixGitIndexTransaction
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._repo(root)
+            git_dir = root / ".git"
+            candidate = b"candidate-index"
+            digest = hashlib.sha256(candidate).hexdigest()
+
+            # A mismatching digest must fail closed and leave the index untouched.
+            mismatched = PosixGitIndexTransaction(git_dir)
+            try:
+                mismatched.acquire()
+                mismatched.write_prepared_index(candidate)
+                with self.assertRaises(GitStageUnavailableError):
+                    mismatched.publish(expected_sha256="0" * 64, expected_bytes=len(candidate))
+                self.assertEqual((git_dir / "index").read_bytes(), b"original-index")
+            finally:
+                mismatched.close()
+            self.assertFalse((git_dir / "index.lock").exists())
+
+            # A matching digest publishes the exact candidate and consumes the lock.
+            published = PosixGitIndexTransaction(git_dir)
+            try:
+                published.acquire()
+                published.write_prepared_index(candidate)
+                published.publish(expected_sha256=digest, expected_bytes=len(candidate))
+                self.assertEqual((git_dir / "index").read_bytes(), candidate)
+                self.assertFalse((git_dir / "index.lock").exists())
+            finally:
+                published.close()
+            self.assertEqual((git_dir / "index").read_bytes(), candidate)
+
+    def test_published_index_bytes_hash_to_the_approved_candidate(self) -> None:
+        import hashlib
+
+        from hive_runtime.git_stage_transaction import PosixGitIndexTransaction
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._repo(root)
+            git_dir = root / ".git"
+            candidate = b"DIRC-candidate-payload"
+            transaction = PosixGitIndexTransaction(git_dir)
+            try:
+                transaction.acquire()
+                transaction.write_prepared_index(candidate)
+                transaction.publish(
+                    expected_sha256=hashlib.sha256(candidate).hexdigest(), expected_bytes=len(candidate)
+                )
+                committed = (git_dir / "index").read_bytes()
+                self.assertEqual(hashlib.sha256(committed).hexdigest(), hashlib.sha256(candidate).hexdigest())
+            finally:
+                transaction.close()
+
+
 @unittest.skipUnless(_GIT is not None, _GIT_REASON)
 class GovernedStagingRequestBindingTests(unittest.TestCase):
     def _repo(self, tmp: str) -> RealRepo:

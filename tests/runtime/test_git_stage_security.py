@@ -101,10 +101,44 @@ class PosixGitStageSecurityAcceptanceMap(unittest.TestCase):
             tx.close(); self.assertEqual(lock.read_bytes(), foreign)
 
     def test_owned_index_lock_is_private_preparation_and_cleanup_is_identity_safe(self) -> None:
+        import hashlib
+
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp); _ordinary_repo(root); git = root / ".git"; index = git / "index"; index.write_bytes(b"original-index"); tx = PosixGitIndexTransaction(git); identity = tx.acquire(); self.assertTrue(tx.owns_lock); self.assertEqual(tx.lock_identity, identity); tx.write_prepared_index(b"candidate-index"); self.assertEqual(index.read_bytes(), b"original-index"); self.assertEqual((git / "index.lock").read_bytes(), b"candidate-index")
-            with self.assertRaises(GitStageUnavailableError): tx.publish()
-            tx.close(); self.assertFalse((git / "index.lock").exists()); self.assertEqual(index.read_bytes(), b"original-index")
+            root = Path(tmp); _ordinary_repo(root); git = root / ".git"; index = git / "index"; index.write_bytes(b"original-index"); tx = PosixGitIndexTransaction(git); identity = tx.acquire(); self.assertTrue(tx.owns_lock); self.assertEqual(tx.lock_identity, identity)
+            candidate = b"candidate-index"
+            tx.write_prepared_index(candidate)
+            # Preparation writes only the private lock, never the live index.
+            self.assertEqual(index.read_bytes(), b"original-index")
+            self.assertEqual((git / "index.lock").read_bytes(), candidate)
+            # Publication now exists, but it must fail closed unless the lock still
+            # matches the approved candidate exactly.
+            with self.assertRaises(GitStageUnavailableError):
+                tx.publish(expected_sha256="0" * 64, expected_bytes=len(candidate))
+            self.assertEqual(index.read_bytes(), b"original-index")
+            self.assertTrue((git / "index.lock").exists())
+            tx.close()
+            self.assertFalse((git / "index.lock").exists())
+            self.assertEqual(index.read_bytes(), b"original-index")
+
+    def test_owned_index_lock_publishes_atomically_only_when_it_matches(self) -> None:
+        import hashlib
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); _ordinary_repo(root); git = root / ".git"; index = git / "index"; index.write_bytes(b"original-index")
+            candidate = b"candidate-index"
+            digest = hashlib.sha256(candidate).hexdigest()
+            tx = PosixGitIndexTransaction(git)
+            try:
+                tx.acquire()
+                tx.write_prepared_index(candidate)
+                tx.publish(expected_sha256=digest, expected_bytes=len(candidate))
+                self.assertEqual(index.read_bytes(), candidate)
+                self.assertFalse((git / "index.lock").exists())
+            finally:
+                tx.close()
+            # A published lock is not cleaned up as if it were still owned.
+            self.assertEqual(index.read_bytes(), candidate)
+            self.assertFalse((git / "index.lock").exists())
 
 
 class GitStageSecurityAcceptanceMap(unittest.TestCase):
