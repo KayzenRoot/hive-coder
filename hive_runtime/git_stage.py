@@ -343,11 +343,18 @@ class GovernedGitStageCapability:
                     self._require_active(request.session_id)
 
                     # 8) publish required content-addressed blob objects. The
-                    # session stays authoritative across a multi-object action, so
-                    # it is re-checked immediately before and after each promotion.
+                    # session stays authoritative across a multi-object action: it
+                    # is checked before and after each promotion, and again inside
+                    # the publisher immediately before the atomic link, so a state
+                    # transition during preparation cannot let a canonical object
+                    # appear. Permit consumption is NOT moved here; this is session
+                    # freshness at the real publication boundary.
+                    def require_active() -> None:
+                        self._require_active(request.session_id)
+
                     for item, compressed in prepared:
                         self._require_active(request.session_id)
-                        publisher.publish(item, compressed)
+                        publisher.publish(item, compressed, pre_publish_check=require_active)
                         self._require_active(request.session_id)
 
                     # 9) last safe session/state recheck before index publication

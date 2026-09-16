@@ -8,6 +8,7 @@ import stat
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 from .git_object_candidate import GitBlobCandidate, MAX_GIT_BLOB_BYTES, prepare_git_blob_candidate
 from .git_object_store_inspector import GitObjectStoreEnvelope, inspect_local_object_store
@@ -144,7 +145,24 @@ class LooseObjectPublisher:
         self.workspace_root = Path(workspace_root)
         self._preparer = preparer if preparer is not None else PrivateObjectPreparer(self.workspace_root)
 
-    def publish(self, preparation: GitLooseObjectPreparation, compressed: bytes) -> str:
+    def publish(
+        self,
+        preparation: GitLooseObjectPreparation,
+        compressed: bytes,
+        *,
+        pre_publish_check: Callable[[], None] | None = None,
+    ) -> str:
+        """Publish one blob, invoking ``pre_publish_check`` at the final-link boundary.
+
+        ``pre_publish_check`` is a Hive-owned authority check supplied by the
+        caller. It runs after every preparation and revalidation step and
+        immediately before the atomic promotion, so a cancellation, takeover,
+        expiry or emergency transition occurring during preparation cannot let a
+        canonical object appear. A failure there leaves the canonical pathname
+        absent, produces no success receipt, and lets the private temporary follow
+        the normal identity-safe cleanup. It is an authority check, never a bypass
+        and never a test-only hook.
+        """
         digest = hashlib.sha256(compressed).hexdigest()
         if digest != preparation.compressed_sha256 or len(compressed) != preparation.compressed_bytes:
             raise GitStageUnavailableError("compressed object no longer matches the approved preparation")
@@ -157,7 +175,9 @@ class LooseObjectPublisher:
         objects_dir = Path(self.workspace_root).resolve(strict=True) / ".git" / "objects"
         final_path = objects_dir / preparation.fanout / preparation.leaf
 
-        # Fast path: an already-correct object needs no temp and no promotion.
+        # Fast path: an already-correct object needs no temp, no promotion and no
+        # new mutation, so no authority check is consumed here; the caller's own
+        # external checks already protect that flow.
         if self._prove_existing_loose_blob(preparation) is not None:
             return PUBLISHED_ALREADY_PRESENT
 
@@ -182,6 +202,12 @@ class LooseObjectPublisher:
                 raise GitStageUnavailableError("private object temporary length changed before promotion")
 
             _ensure_fanout_directory(objects_dir, preparation.fanout)
+
+            # 3) Final authority check at the real publication boundary, after all
+            #    preparation and revalidation and immediately before the promotion.
+            #    A failure here must not produce a canonical object.
+            if pre_publish_check is not None:
+                pre_publish_check()
 
             # 3) Promote atomically as create-if-absent. os.link is no-clobber on
             #    POSIX and on Windows/NTFS, and never overwrites an existing object.

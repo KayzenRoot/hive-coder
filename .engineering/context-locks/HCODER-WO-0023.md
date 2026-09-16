@@ -140,6 +140,28 @@ This delta authorizes exactly these files, and nothing else:
 ### Not granted
 No new Git capability. No commit/ref/branch/remote/credential capability. No generic Git argv, shell, subprocess Git, hooks, filters, network, remotes or arbitrary `.git` writer. No expansion to linked worktrees, submodules/nested repos, bare repos, sparse/split index, conflicts, alternates, promisor/partial clone, SHA-256 repositories, deleted-path staging or unproven extensions.
 
+## Context Lock Delta 006 — same-WO correction: CR-05 final-link freshness and approval-confusion proof
+Review verdict after Prompt 04 was CORRECTION REQUIRED on one residual finding, CR-05, with two parts. This delta records that correction. **It does not broaden `git.write`.** The only capability and action remain `git.write` / `git_stage_paths_v1` in the same envelope, with the same mandatory-approval and single-use-permit law. No permission-plane, publisher-contract or authority redesign occurred.
+
+### CR-05-A — authority freshness at the real final-link boundary
+`stage_paths()` checked session state before calling `LooseObjectPublisher.publish()`, but `publish()` still materialized the private temporary, re-proved store and temp, and prepared the fanout directory before reaching `os.link(temp_path, final_path)`. A cancel, takeover, expiry or emergency transition inside that interval could therefore let a canonical object appear before the caller's next external check.
+
+Corrected law: `publish()` accepts an optional Hive-owned `pre_publish_check` callback and invokes it after every preparation and revalidation step and immediately **before** the atomic promotion. `stage_paths()` passes a closure that re-checks the session is ACTIVE; the existing external checks before and after each promotion remain. The already-present fast path performs no new mutation, so it does not invoke the check. Permit consumption is deliberately **not** moved into the publisher: this is session freshness at the publication boundary, not a permission-control-plane redesign.
+
+### CR-05-B — approval-confusion proof corrected
+The previous test obtained approval and a permit for the *valid* request and only then mutated `arguments['paths']`, so it could pass merely because the permit fingerprint no longer matched. It did not prove that semantic path equality blocks a contradictory request holding a legitimate permit of its own.
+
+Corrected proof: the contradictory request is constructed before any challenge, then receives its own real challenge, trusted approval and permit. Execution must be rejected by semantic path validation with zero object/index mutation, zero residual `index.lock`, and the permit still unconsumed — proven through the canonical `consume_execution_permit` API rather than any new introspection surface.
+
+### Authorized files
+- `hive_runtime/git_loose_object_transaction.py`
+- `hive_runtime/git_stage.py`
+- `tests/runtime/test_git_stage_authority.py`
+- `.engineering/evidence/HCODER-WO-0023.md`
+- this Context Lock (append-only)
+
+`tests/runtime/test_git_stage_security.py` was inspected and required no change: its acceptance lane already covers the properties, and the new proof lives in the authority lane without duplication.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 

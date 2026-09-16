@@ -766,32 +766,60 @@ class ApprovalConfusionTests(unittest.TestCase):
         return request, permit
 
     def test_contradictory_paths_are_rejected_before_permit_consumption(self) -> None:
+        """A contradictory request receives its OWN approval and permit, then is rejected.
+
+        Approving the valid request and mutating it afterwards would prove only that
+        the permit fingerprint no longer matches. It would not prove that semantic
+        path equality blocks a contradictory request that legitimately obtained a
+        permit for itself. This test builds the contradiction first, then runs the
+        real challenge -> trusted approval -> permit flow against it, so the
+        rejection can only come from the executor's own validation.
+        """
         from dataclasses import replace
 
         with tempfile.TemporaryDirectory() as tmp:
             repo, harness = self._prepare(tmp)
-            # A legitimate, fully approved request for "a.txt" only.
-            request, permit = self._approved_request(harness, ["a.txt"])
+
+            # 1) A legitimate request, used only as the source of consistent
+            #    worktree states and path bindings.
+            legitimate = harness.request("a.txt")
+
+            # 2) Contradiction built BEFORE any challenge: declared paths name a
+            #    different safe-looking file while the worktree states and bindings
+            #    still describe "a.txt". The result stays schema-valid.
+            arguments = dict(legitimate.arguments)
+            arguments["paths"] = ["b.txt"]
+            contradictory = replace(legitimate, arguments=arguments)
+
+            # 3-5) Real challenge, real trusted approval, real permit bound to the
+            #      CONTRADICTORY request.
+            challenge = harness.plane.create_approval_challenge(contradictory)
+            token = harness.plane.approve_challenge_from_trusted_ui(
+                challenge.challenge_id, session_id=harness.session
+            )
+            permit = harness.plane.authorize(contradictory, approval_token=token)
+            self.assertEqual(permit.request_fingerprint, harness.plane.request_fingerprint(contradictory))
+
+            # 6) Snapshot before execution.
             before_index = repo.index_bytes()
             before_objects = repo.objects_listing()
 
-            # Now contradict it: declared paths name the other safe-looking file
-            # while worktree states and path bindings still describe "a.txt".
-            arguments = dict(request.arguments)
-            arguments["paths"] = ["b.txt"]
-            contradictory = replace(request, arguments=arguments)
-
-            with self.assertRaises(Exception):
+            # 7-8) Execution must be rejected by semantic path validation.
+            with self.assertRaises(Exception) as caught:
                 harness.capability.stage_paths(contradictory, permit_token=permit.token)
+            self.assertNotIsInstance(caught.exception, PermitError)
 
-            # Rejection happened before any mutation.
+            # 9) Zero mutation, zero residual lock.
             self.assertEqual(repo.index_bytes(), before_index)
             self.assertEqual(repo.objects_listing(), before_objects)
             self.assertFalse((repo.root / ".git" / "index.lock").exists())
 
-            # The permit was not consumed: it still works for the exact request it
-            # was issued for, which proves validation rejected before the boundary.
-            harness.capability.stage_paths(request, permit_token=permit.token)
+            # 10) The permit was NOT consumed by stage_paths. Proven through the
+            #     canonical control-plane API: consumption succeeds here only if the
+            #     earlier rejection happened before the permit boundary.
+            harness.plane.consume_execution_permit(permit.token, contradictory)
+            with self.assertRaises(PermitError):
+                harness.plane.consume_execution_permit(permit.token, contradictory)
 
     def test_path_count_disagreement_is_rejected(self) -> None:
         from dataclasses import replace
@@ -877,8 +905,8 @@ class MidPublicationAuthorityTests(unittest.TestCase):
             calls = {"count": 0}
             real_publish = LooseObjectPublisher.publish
 
-            def publishing_then_transition(self, preparation, compressed):
-                result = real_publish(self, preparation, compressed)
+            def publishing_then_transition(self, preparation, compressed, *, pre_publish_check=None):
+                result = real_publish(self, preparation, compressed, pre_publish_check=pre_publish_check)
                 calls["count"] += 1
                 if calls["count"] == 1:
                     if transition == "cancel":
@@ -930,6 +958,167 @@ class MidPublicationAuthorityTests(unittest.TestCase):
             staged = {line.split("\t")[1]: line.split()[1] for line in repo.listing().splitlines()}
             for item in request.arguments["path_bindings"]:
                 self.assertEqual(staged[item["path"]], item["blob_oid"])
+
+
+@unittest.skipUnless(_GIT is not None, _GIT_REASON)
+class FinalLinkFreshnessTests(unittest.TestCase):
+    """CR-05-A: authority is enforced at the real final-link boundary.
+
+    The session is transitioned after the private temporary has been materialized
+    and re-proved, and before the atomic promotion. The injection point is the
+    real fanout helper: the test calls the genuine behavior and then applies the
+    transition, so no test-only hook exists in production code and the timing is
+    deterministic rather than sleep-based.
+    """
+
+    def _prepare(self, tmp: str, files=("a.txt",)):
+        repo = RealRepo(Path(tmp) / "repo")
+        for name in files:
+            repo.write(name, f"{name} original\n")
+        repo.seed()
+        for name in files:
+            repo.write(name, f"{name} modified\n")
+        harness = GovernedHarness(repo.root)
+        return repo, harness
+
+    def _assert_transition_at_final_link(self, transition: str, files=("a.txt",)) -> None:
+        from hive_runtime import git_loose_object_transaction as loose_module
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._prepare(tmp, files)
+            request = harness.request(*files)
+            bound = [item["blob_oid"] for item in request.arguments["path_bindings"]]
+            permit = harness.permit(request)
+            before_index = repo.index_bytes()
+            before_objects = repo.objects_listing()
+
+            real_fanout = loose_module._ensure_fanout_directory
+            calls = {"count": 0}
+
+            def fanout_then_transition(objects_dir, fanout):
+                result = real_fanout(objects_dir, fanout)
+                calls["count"] += 1
+                if calls["count"] == 1:
+                    if transition == "cancel":
+                        harness.plane.cancel_session(harness.session)
+                    elif transition == "takeover":
+                        harness.plane.user_takeover(harness.session)
+                    elif transition == "emergency":
+                        harness.plane.emergency_stop(session_id=harness.session)
+                    else:
+                        harness.plane.emergency_stop()
+                return result
+
+            with mock.patch.object(loose_module, "_ensure_fanout_directory", fanout_then_transition):
+                with self.assertRaises((SessionStateError, GitStageUnavailableError)):
+                    # No success receipt: the call raises instead of returning one.
+                    harness.capability.stage_paths(request, permit_token=permit.token)
+
+            # The transition happened after temp materialization, before the link.
+            self.assertEqual(calls["count"], 1, f"{transition}: the fanout helper must run once")
+            for oid in bound:
+                self.assertFalse(
+                    (repo.root / ".git" / "objects" / oid[:2] / oid[2:]).exists(),
+                    f"{transition}: no canonical object may appear after the transition",
+                )
+            self.assertEqual(repo.index_bytes(), before_index)
+            self.assertEqual(repo.objects_listing(), before_objects)
+            self.assertFalse((repo.root / ".git" / "index.lock").exists())
+
+    def test_cancel_at_final_link_boundary(self) -> None:
+        self._assert_transition_at_final_link("cancel")
+
+    def test_takeover_at_final_link_boundary(self) -> None:
+        self._assert_transition_at_final_link("takeover")
+
+    def test_emergency_stop_at_final_link_boundary(self) -> None:
+        self._assert_transition_at_final_link("emergency")
+
+    def test_global_emergency_stop_at_final_link_boundary(self) -> None:
+        self._assert_transition_at_final_link("global_emergency")
+
+    def test_session_expiry_at_final_link_boundary(self) -> None:
+        from hive_runtime import git_loose_object_transaction as loose_module
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = RealRepo(Path(tmp) / "repo")
+            repo.write("a.txt", "a.txt original\n")
+            repo.seed()
+            repo.write("a.txt", "a.txt modified\n")
+
+            clock = [1000.0]
+            policy = ControlPolicy.build(
+                rules=[
+                    CapabilityRule.build(
+                        Capability.GIT_WRITE, allowed_actions={ACTION}, allowed_workspace_roots={str(repo.root)}
+                    )
+                ]
+            )
+            plane = PermissionControlPlane(security_clock=lambda: clock[0], max_session_seconds=600)
+            session = plane.create_session(policy, duration_seconds=30)
+            capability = GovernedGitStageCapability(repo.root, plane)
+            request = capability.prepare_stage_request(session, ["a.txt"])
+            oid = request.arguments["path_bindings"][0]["blob_oid"]
+            challenge = plane.create_approval_challenge(request)
+            token = plane.approve_challenge_from_trusted_ui(challenge.challenge_id, session_id=session)
+            permit = plane.authorize(request, approval_token=token)
+            before_index = repo.index_bytes()
+
+            real_fanout = loose_module._ensure_fanout_directory
+
+            def fanout_then_expire(objects_dir, fanout):
+                result = real_fanout(objects_dir, fanout)
+                clock[0] += 31
+                return result
+
+            with mock.patch.object(loose_module, "_ensure_fanout_directory", fanout_then_expire):
+                with self.assertRaises((SessionStateError, GitStageUnavailableError)):
+                    capability.stage_paths(request, permit_token=permit.token)
+
+            self.assertFalse((repo.root / ".git" / "objects" / oid[:2] / oid[2:]).exists())
+            self.assertEqual(repo.index_bytes(), before_index)
+            self.assertFalse((repo.root / ".git" / "index.lock").exists())
+
+    def test_later_blobs_and_index_are_not_published_after_transition(self) -> None:
+        """Multi-file: a blob already published stays; later blobs and the index do not."""
+        from hive_runtime import git_loose_object_transaction as loose_module
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._prepare(tmp, ("a.txt", "b.txt", "c.txt"))
+            request = harness.request("a.txt", "b.txt", "c.txt")
+            bound = [item["blob_oid"] for item in request.arguments["path_bindings"]]
+            permit = harness.permit(request)
+            before_index = repo.index_bytes()
+
+            real_fanout = loose_module._ensure_fanout_directory
+            real_publish = loose_module.LooseObjectPublisher.publish
+            calls = {"published": 0}
+
+            def counting_publish(self, preparation, compressed, *, pre_publish_check=None):
+                result = real_publish(self, preparation, compressed, pre_publish_check=pre_publish_check)
+                calls["published"] += 1
+                return result
+
+            def fanout_then_transition(objects_dir, fanout):
+                result = real_fanout(objects_dir, fanout)
+                # Only the second promotion is interrupted, so one blob is already
+                # canonical when the transition happens.
+                if calls["published"] == 1:
+                    harness.plane.cancel_session(harness.session)
+                return result
+
+            with mock.patch.object(loose_module.LooseObjectPublisher, "publish", counting_publish), mock.patch.object(
+                loose_module, "_ensure_fanout_directory", fanout_then_transition
+            ):
+                with self.assertRaises((SessionStateError, GitStageUnavailableError)):
+                    harness.capability.stage_paths(request, permit_token=permit.token)
+
+            present = [oid for oid in bound if (repo.root / ".git" / "objects" / oid[:2] / oid[2:]).exists()]
+            self.assertEqual(present, [bound[0]], "only the first blob may be canonical")
+            self.assertEqual(repo.index_bytes(), before_index)
+            self.assertFalse((repo.root / ".git" / "index.lock").exists())
+            # The already-published blob is valid and unreachable; it is not rolled back.
+            self.assertEqual(git(repo.root, "cat-file", "-t", bound[0]).strip(), "blob")
 
 
 if __name__ == "__main__":

@@ -65,6 +65,30 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 **Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)  
 **Authority head:** `52d8cc3195bd4f9c948b1327ed124042739b2530` (Prompt 03: dedicated `git.write` authority, publication and native E2E)
 
+## CR-05 correction candidate (Prompt 05)
+
+**Status:** CORRECTION_CANDIDATE_READY_FOR_HEDS. Not APPROVED, not READY, not COMPLETE.
+
+GEF V1 universal was adopted on `main` during this correction. The real main delta (`ccfed1f..aaa7524`) touched only GEF governance, templates, the PR template and `AGENTS.md`; it touched no WO-0023 runtime, contract, publisher, permit-boundary or test file, so the frozen authority model is unaffected. `origin/main` was integrated with a provenance-preserving merge commit and no history rewrite. Two conflicts (`AGENTS.md`, `GEF-REVIEW-PROTOCOL.md`) were resolved by the local source hierarchy: GEF V1 adoption content and the prompt-01 review-deliverable law are both preserved, and neither side's governance was deleted.
+
+### CR-05-A — final-link freshness
+`LooseObjectPublisher.publish()` now takes an optional Hive-owned `pre_publish_check` invoked after every preparation/revalidation step and immediately before `os.link`. `stage_paths()` supplies a closure that re-checks session ACTIVE; the external pre/post checks per blob remain, and permit consumption is not moved into the publisher.
+
+Deterministic integrated proof (`FinalLinkFreshnessTests`), using the real request -> approval -> permit -> `stage_paths` flow: the session is transitioned at the genuine fanout helper, i.e. after the private temporary is materialized and re-proved and before the atomic promotion. Coverage: cancel, takeover, session expiry, session-scoped emergency stop, global emergency stop, and a multi-file case where one blob is already canonical. In every case the affected canonical OID pathnames stay absent, `.git/index` is byte-identical, no success receipt is produced, and no `index.lock` remains. No sleep is used and no test-only hook exists in production code.
+
+### CR-05-B — approval-confusion proof
+The test now builds the contradictory request **before** any challenge, then runs the real challenge -> trusted approval -> authorize flow against that contradictory request, so the rejection can only come from the executor's semantic path-equality validation rather than a fingerprint mismatch. It proves zero object/index mutation, zero residual lock, and that the permit was **not** consumed — verified by successfully consuming it afterwards through the canonical `consume_execution_permit` API, with no new introspection surface.
+
+### Local assurance (A0-A2)
+
+| Step | Command | Exit | Seconds | Result |
+|---|---|---|---|---|
+| A0 | `python -m compileall -q hive_runtime tests/runtime` | 0 | 0.27 | PASS |
+| A1 focused | `python -m unittest discover -s tests/runtime -p "test_git_stage_authority.py"` | 0 | 16.3 | PASS, 48 tests |
+| A1/A2 impacted | `python -m unittest discover -s tests/runtime -p "test_git_stage_security.py"` | 0 | 3.36 | PASS, 21 tests (13 platform/capability skips) |
+
+`test_git_stage_security.py` required no edit; its lane already covers the properties and the new proof is not duplicated.
+
 ### Exact-head CI at `411c9facb6649315e85072f43dd53438250bdc02` (Prompt 04 correction head)
 
 | Workflow | Run | Result |
