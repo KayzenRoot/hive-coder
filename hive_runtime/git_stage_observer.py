@@ -33,9 +33,9 @@ def _identity(st: os.stat_result) -> str:
 
 
 def _open_regular_nofollow(path: Path) -> tuple[int, os.stat_result]:
-    # O_NONBLOCK prevents hostile FIFOs/devices from stalling before fstat rejects them.
     flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     try: fd = os.open(path, flags)
+    except FileNotFoundError: raise
     except OSError as exc: raise GitStageUnsupportedRepositoryError("required Git/worktree object is not safely readable") from exc
     try:
         st = os.fstat(fd)
@@ -53,6 +53,12 @@ def _read_bounded_regular(path: Path, ceiling: int) -> str:
         return data.decode("ascii", "strict").strip()
     except UnicodeError as exc: raise GitStageUnsupportedRepositoryError("Git metadata is not bounded ASCII") from exc
     finally: os.close(fd)
+
+
+def _read_optional_bounded_regular(path: Path, ceiling: int) -> str | None:
+    """Return None only for true absence; unsafe/corrupt metadata remains an error."""
+    try: return _read_bounded_regular(path, ceiling)
+    except FileNotFoundError: return None
 
 
 class PosixGitStageObserver:
@@ -77,11 +83,8 @@ class PosixGitStageObserver:
         return GitStageObservedState(repository_identity=self.repository_identity, repository_head=head, index_state=index_state, index_identity=index_identity, index_sha256=index_sha, worktree_states=worktree)
 
     def revalidate(self, expected: GitStageObservedState) -> None:
-        """Require exact equality with the approved repository/index/worktree observation."""
-        paths = tuple(item.path for item in expected.worktree_states)
-        current = self.observe(paths)
-        if current != expected:
-            raise GitStageUnavailableError("approved Git repository state is stale")
+        paths = tuple(item.path for item in expected.worktree_states); current = self.observe(paths)
+        if current != expected: raise GitStageUnavailableError("approved Git repository state is stale")
 
     def _reject_unsupported_repository_features(self) -> None:
         for name in ("commondir", "modules", "shallow"):
@@ -91,20 +94,21 @@ class PosixGitStageObserver:
             raise GitStageUnsupportedRepositoryError(f"unsupported Git repository feature: {name}")
 
     def _observe_head(self) -> str:
-        value = _read_bounded_regular(self.git_dir / "HEAD", _MAX_HEAD_BYTES)
+        try: value = _read_bounded_regular(self.git_dir / "HEAD", _MAX_HEAD_BYTES)
+        except FileNotFoundError as exc: raise GitStageUnsupportedRepositoryError("Git HEAD is absent") from exc
         if value.startswith("ref: "):
             ref = value[5:]
             if not ref.startswith("refs/heads/") or ".." in ref or "\\" in ref: raise GitStageUnsupportedRepositoryError("HEAD symbolic ref is outside supported envelope")
-            try: oid = _read_bounded_regular(self.git_dir.joinpath(*ref.split("/")), _MAX_REF_BYTES)
-            except GitStageUnsupportedRepositoryError:
+            oid = _read_optional_bounded_regular(self.git_dir.joinpath(*ref.split("/")), _MAX_REF_BYTES)
+            if oid is None:
                 oid = self._packed_ref(ref)
                 if oid is None: return UNBORN_HEAD
             return self._validate_oid(oid)
         return self._validate_oid(value)
 
     def _packed_ref(self, ref: str) -> str | None:
-        try: text = _read_bounded_regular(self.git_dir / "packed-refs", 1024 * 1024)
-        except GitStageUnsupportedRepositoryError: return None
+        text = _read_optional_bounded_regular(self.git_dir / "packed-refs", 1024 * 1024)
+        if text is None: return None
         for line in text.splitlines():
             if not line or line.startswith(("#", "^")): continue
             parts = line.split(" ", 1)
@@ -119,9 +123,7 @@ class PosixGitStageObserver:
     def _observe_index(self) -> tuple[str, str, str]:
         path = self.git_dir / "index"
         try: fd, st = _open_regular_nofollow(path)
-        except GitStageUnsupportedRepositoryError:
-            if not path.exists(): return "absent", ABSENT_INDEX_IDENTITY, ABSENT_INDEX_SHA256
-            raise
+        except FileNotFoundError: return "absent", ABSENT_INDEX_IDENTITY, ABSENT_INDEX_SHA256
         try:
             digest, _ = _sha256_file(fd); return "regular", _identity(st), digest
         finally: os.close(fd)
@@ -133,14 +135,14 @@ class PosixGitStageObserver:
             try: st = cursor.lstat()
             except OSError as exc: raise GitStageUnsupportedRepositoryError("approved worktree path is unavailable") from exc
             if stat.S_ISLNK(st.st_mode): raise GitStageUnsupportedRepositoryError("symlink worktree paths are unsupported")
-        fd, st = _open_regular_nofollow(path)
+        try: fd, st = _open_regular_nofollow(path)
+        except FileNotFoundError as exc: raise GitStageUnsupportedRepositoryError("approved worktree path is unavailable") from exc
         try:
             digest, size = _sha256_file(fd); return GitStageWorktreeState(relative, _identity(st), digest, size)
         finally: os.close(fd)
 
     def mutation_ready(self, prepared: GitStagePreparation) -> None:
-        self.revalidate(prepared.observed)
-        raise GitStageUnavailableError("repository state is current but Git mutation authority is unavailable")
+        self.revalidate(prepared.observed); raise GitStageUnavailableError("repository state is current but Git mutation authority is unavailable")
 
     def publish(self, prepared):
         del prepared; raise GitStageUnavailableError("observer has no mutation authority")
