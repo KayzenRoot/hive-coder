@@ -9,10 +9,12 @@
 **Branch:** `feat/HCODER-WO-0021-workspace-file-capability`
 
 ## OBJECTIVE
-Establish the first Hive-owned privileged workspace file capability boundary. The first mutation slice must be root-bound, traversal-resistant, no-follow, live-identity revalidated and gated by the canonical Permission & Control Plane. Every `FILESYSTEM_WRITE` mutation consumes a short-lived request-bound single-use permit immediately before mutation.
+Establish the first Hive-owned privileged workspace file capability boundary. The first mutation slice is deliberately **atomic create-only / no-clobber**: root-bound, traversal-resistant, no-follow, live-identity revalidated and gated by the canonical Permission & Control Plane. Every `FILESYSTEM_WRITE` mutation consumes a short-lived request-bound single-use permit immediately before mutation.
 
 ## CONTEXT
 CP-0016 deliberately accepted path-based TOCTOU only for non-authoritative read presentation and required a separately governed stronger handle-relative/no-follow design before privileged file/Git mutation. CP-0020 is fully sealed and introduces no mutation authority.
+
+Preflight rejected a generic overwrite primitive: neither portable POSIX rename nor ordinary Windows replace provides a cross-platform inode/file-ID compare-and-swap guarantee for an existing target. Rather than weaken the target-swap proof obligation, WO-0021 admits only creation of a previously absent file. Existing-file replacement/edit remains a later separately governed capability.
 
 ## SCOPE
 - Hive runtime workspace-file capability contract.
@@ -23,44 +25,44 @@ CP-0016 deliberately accepted path-based TOCTOU only for non-authoritative read 
 - Existing `FILESYSTEM_WRITE` mandatory approval and permit flow, with permit consumption immediately before commit/mutation.
 - Live session/workspace/parent/target revalidation before commit.
 - Bounded payload and path component limits.
-- Atomic or rollback-aware file commit only when the platform primitive can preserve the security contract; otherwise fail closed.
+- Atomic create-only/no-clobber commit: target must be absent when requested and must still be absent at commit; a concurrently appearing target makes the operation fail closed.
 - Cancellation, emergency stop and takeover blocking before commit.
 - Adversarial Ubuntu and Windows HIGH_ASSURANCE tests.
 
 ## OUT OF SCOPE
-Generic shell/terminal execution; Git mutation; caller-selected outside-workspace paths; symlink/reparse traversal; permit bypass; Tauri/desktop write commands; provider/model execution or credentials; Cua/computer-use mutation; remote control; billing/purchases; automatic skill activation; recursive delete/rename/chmod/chown.
+Existing-file overwrite/edit/append/truncate; generic shell/terminal execution; Git mutation; caller-selected outside-workspace paths; symlink/reparse traversal; permit bypass; Tauri/desktop write commands; provider/model execution or credentials; Cua/computer-use mutation; remote control; billing/purchases; automatic skill activation; recursive delete/rename/chmod/chown.
 
 ## FILES / SOURCES TO READ
 `AGENTS.md`; canonical Checkpoint, Decisions Ledger, Scope, Definition of Done, Architecture, Requirements, Security; `hive_runtime/control_types.py`; `hive_runtime/control_policy.py`; `hive_runtime/control_plane.py`; control-plane tests and Governance workflow.
 
 ## REQUIREMENTS
-1. Privileged writes use only `Capability.FILESYSTEM_WRITE` and a fixed Hive-owned action contract.
+1. Privileged writes use only `Capability.FILESYSTEM_WRITE` and fixed Hive-owned action `write_file_v1`, whose WO-0021 semantics are create-only/no-clobber.
 2. Workspace identity used by policy and executor must be canonical and must match the executor-owned workspace root.
 3. Relative paths are normalized syntactically without resolving through links; empty, dot/dot-dot, absolute, drive-qualified, UNC/device and NUL-containing targets fail closed.
 4. Every traversed existing path component is opened/validated no-follow and must be an ordinary directory where a directory is expected.
-5. A write request fingerprints the exact workspace, normalized target and bounded content digest/length. Raw content is not stored in audit metadata.
+5. A write request fingerprints the exact workspace, normalized target, parent identity, target-absent state and bounded content digest/length. Raw content is not stored in audit metadata.
 6. `FILESYSTEM_WRITE` remains HIGH with mandatory trusted approval. Model/tool text cannot approve a challenge or mint a permit.
-7. Executor revalidates live session and workspace/file identity, then consumes the matching permit immediately before the commit boundary.
-8. Stale, consumed, wrong-session, wrong-workspace, wrong-target or wrong-content permits fail closed.
-9. Failure before commit leaves the previous target unchanged; temporary artifacts are removed best-effort. Platform primitives that cannot uphold the boundary are not silently downgraded.
-10. No shell, Git, desktop mutation or broader filesystem authority is introduced.
+7. Executor revalidates live session, workspace, parent identity and target absence, then consumes the matching permit immediately before the first mutation.
+8. Stale, consumed, wrong-session, wrong-workspace, wrong-parent, wrong-target or wrong-content permits/requests fail closed.
+9. The final publication step must be atomic and no-clobber. If another actor creates the target before publication, the operation fails and preserves that target. Temporary artifacts are removed best-effort without deleting an unverified object.
+10. No shell, Git, desktop mutation, existing-file replacement or broader filesystem authority is introduced.
 
 ## ARCHITECTURE RULES
-`Trusted host/orchestrator -> PermissionControlPlane -> WorkspaceFileCapability -> OS handle/no-follow primitives -> workspace file`.
+`Trusted host/orchestrator -> PermissionControlPlane -> WorkspaceFileCapability(create-only) -> OS handle/no-follow/no-clobber primitives -> new workspace file`.
 
 The Permission & Control Plane remains the sole authorization choke point. The file adapter owns capability-I/O mechanics only and cannot mint approvals/permits or infer authority from task/model text.
 
 ## CONSTRAINTS
-No shell strings; no external process; no PATH lookup; no ambient credential use; no following symlink/reparse components; no outside-root fallback; no caller-selected OS absolute destination; no hidden desktop/Tauri invoke; no generic filesystem API export.
+No shell strings; no external process; no PATH lookup; no ambient credential use; no following symlink/reparse components; no outside-root fallback; no caller-selected OS absolute destination; no hidden desktop/Tauri invoke; no generic filesystem API export; no overwrite fallback when atomic no-clobber is unavailable.
 
 ## ACCEPTANCE CRITERIA
-- exact request/workspace/target/content binding proven;
-- traversal, absolute/drive/UNC/device, symlink/reparse, wrong workspace, stale/consumed/wrong permit and oversize payload fail closed;
-- target/workspace swap adversarial tests fail closed or the OS primitive proves the swap cannot succeed while capability handles are held;
+- exact request/workspace/parent/target/content binding proven;
+- traversal, absolute/drive/UNC/device, symlink/reparse, existing target, wrong workspace, wrong parent, stale/consumed/wrong permit and oversize payload fail closed;
+- target-appears-after-approval adversarial test preserves the concurrently created target and fails closed;
 - cancellation/emergency/takeover before commit prevents mutation;
-- rollback/failure-injection tests preserve prior target/no unexpected new target;
+- publication failure leaves no final target and best-effort cleans only the capability-created verified temporary object;
 - Ubuntu complete suite green and Windows HIGH_ASSURANCE workspace-file suite green;
-- no generic shell/Git/desktop mutation authority in diff;
+- no generic shell/Git/desktop mutation authority or existing-file overwrite path in diff;
 - exact-head HEDS unresolved HIGH/CRITICAL = 0 before promotion.
 
 ## TESTS
@@ -70,7 +72,7 @@ No shell strings; no external process; no PATH lookup; no ambient credential use
 Work Order, Context Lock, implementation, adversarial tests, CI wiring if required, Evidence Bundle, proposed Decision/Checkpoint Delta, PR and exact-head HEDS receipts.
 
 ## REVIEW FORMAT
-`HEDS_DELTA`, HIGH_ASSURANCE, exact-head. Any permit bypass, outside-root write, link/reparse follow, exploitable target-swap window, unbounded write, destructive failure behavior, or shell/Git authority expansion is HIGH/CRITICAL.
+`HEDS_DELTA`, HIGH_ASSURANCE, exact-head. Any permit bypass, outside-root write, link/reparse follow, existing-file clobber, exploitable target-swap window, unbounded write, unsafe temporary cleanup, or shell/Git authority expansion is HIGH/CRITICAL.
 
 ## STOP CONDITION
-Do not weaken no-follow/TOCTOU guarantees to make a platform pass. Do not introduce generic shell/terminal execution, Git mutation, caller-selected outside-workspace paths, desktop write authority, provider credentials, computer-use mutation, remote control, billing/purchases or skill activation under WO-0021. Promotion requires exact-head required CI, HEDS and unresolved HIGH/CRITICAL 0.
+Do not weaken no-follow/TOCTOU/no-clobber guarantees to make a platform pass. Do not introduce existing-file overwrite/edit, generic shell/terminal execution, Git mutation, caller-selected outside-workspace paths, desktop write authority, provider credentials, computer-use mutation, remote control, billing/purchases or skill activation under WO-0021. Promotion requires exact-head required CI, HEDS and unresolved HIGH/CRITICAL 0.
