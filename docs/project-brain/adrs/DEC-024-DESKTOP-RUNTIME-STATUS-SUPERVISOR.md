@@ -1,13 +1,16 @@
 # DEC-024 — Desktop Runtime Status Supervisor Boundary
 
-**Status:** APPROVED FOR SQUASH MERGE / NOT CANONICAL  
+**Status:** APPROVED / CANONICAL — CLOSEOUT SEAL PENDING  
 **Work Order:** `HCODER-WO-0020`  
 **Source checkpoint:** `HCODER-CP-0019`  
 **Target checkpoint:** `HCODER-CP-0020`  
 **Technical head:** `86c6e956985e0b51e0f56b3568a3fe9db61fef90`  
 **HEDS technical:** `5216871217`  
 **Promotion head:** `bf76c2a451763d7bc361437028e819d2df5f97ba`  
-**HEDS promotion:** `5216925860`
+**HEDS promotion:** `5216925860`  
+**Final reviewed product head:** `344130199536e33a656d49a365e746610f89e245`  
+**Final HEDS:** `5217039528`  
+**Canonical product merge SHA:** `621732c00ba1f3325272dfa1631fddbbabf3dfc4`
 
 ## Decision
 Hive Coder may introduce exactly one audited desktop child-process observation boundary for runtime status. The process is not a generic executor. It is a fixed supervisor whose only admitted target is the CP-0019 status helper adjacent to the current Hive desktop executable.
@@ -49,7 +52,11 @@ Technical exact head `86c6e956985e0b51e0f56b3568a3fe9db61fef90` passed Governanc
 
 Promotion head `bf76c2a451763d7bc361437028e819d2df5f97ba` changed only 7 documentation/evidence/governance files, then passed Governance #264 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #100, including release build + launch smoke. HEDS `5216925860` approved the final state mutation with unresolved HIGH/CRITICAL `0`.
 
+Final head `344130199536e33a656d49a365e746610f89e245` changed only 5 state/evidence/governance files after promotion and passed Governance #265 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #101 (security gate, frontend **26/26**, Rust **13/13**, audits/checks, release build + launch smoke). HEDS final `5217039528` approved squash merge with unresolved HIGH/CRITICAL `0`.
+
+PR #54 was squash-merged with expected-head protection as GitHub-signed product commit `621732c00ba1f3325272dfa1631fddbbabf3dfc4`. Post-merge Governance #266 and Desktop Shell #102 both passed on that exact SHA, including release build and launch smoke.
+
 `HCODER-WO-0020-CR-001` and `HCODER-WO-0020-CR-002` are resolved.
 
 ## Approval result
-DEC-024 is **APPROVED FOR SQUASH MERGE / NOT CANONICAL**. It becomes canonical only with CP-0020 after the final approval head passes exact-head gates/HEDS, product squash merge passes post-merge validation, and documentation-only canonical closeout is itself gated, reviewed, merged and push-validated.
+DEC-024 is **APPROVED / CANONICAL**, subject only to the documentation-only closeout seal. Canonicalization covers the fixed read-only runtime-status supervisor and System Truth observation boundary only. No generic execution or mutation authority is implied or inherited.
