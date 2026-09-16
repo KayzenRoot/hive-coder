@@ -13,42 +13,65 @@ def index_fixture(version: int = 2, entries: int = 0, body: bytes = b"") -> byte
     return payload + hashlib.sha1(payload).digest()
 
 
+def entry(path: bytes = b"a.py", *, stage: int = 0) -> bytes:
+    fixed = bytearray(62)
+    flags = len(path) | ((stage & 0x3) << 12)
+    fixed[60:62] = struct.pack(">H", flags)
+    raw = bytes(fixed) + path + b"\x00"
+    return raw + (b"\x00" * ((8 - (len(raw) % 8)) % 8))
+
+
+def extension(signature: bytes, payload: bytes = b"") -> bytes:
+    return signature + struct.pack(">I", len(payload)) + payload
+
+
 class GitIndexEnvelopeTests(unittest.TestCase):
     def test_accepts_checksum_valid_v2_and_v3_outer_envelopes(self) -> None:
         for version in (2, 3):
             with self.subTest(version=version):
                 data = index_fixture(version)
                 envelope = inspect_git_index_envelope(data)
-                self.assertEqual(envelope.version, version)
-                self.assertEqual(envelope.entry_count, 0)
+                self.assertEqual(envelope.version, version); self.assertEqual(envelope.entry_count, 0)
                 self.assertEqual(envelope.sha1, hashlib.sha1(data[:-20]).hexdigest())
+
+    def test_accepts_ordinary_stage_zero_entry_and_known_safe_tree_extension(self) -> None:
+        data = index_fixture(2, 1, entry() + extension(b"TREE", b"fixture"))
+        envelope = inspect_git_index_envelope(data)
+        self.assertEqual(envelope.entry_count, 1); self.assertEqual(envelope.extensions, ("TREE",))
 
     def test_rejects_truncated_wrong_magic_and_bad_checksum(self) -> None:
         cases = [b"", b"DIRC", b"NOPE" + index_fixture()[4:]]
         damaged = bytearray(index_fixture()); damaged[-1] ^= 0x01; cases.append(bytes(damaged))
         for data in cases:
             with self.subTest(length=len(data)):
-                with self.assertRaises(GitStageUnsupportedRepositoryError):
-                    inspect_git_index_envelope(data)
+                with self.assertRaises(GitStageUnsupportedRepositoryError): inspect_git_index_envelope(data)
 
     def test_rejects_unproven_versions_including_v4(self) -> None:
         for version in (0, 1, 4, 5, 0xFFFFFFFF):
             with self.subTest(version=version):
-                with self.assertRaises(GitStageUnsupportedRepositoryError):
-                    inspect_git_index_envelope(index_fixture(version))
+                with self.assertRaises(GitStageUnsupportedRepositoryError): inspect_git_index_envelope(index_fixture(version))
+
+    def test_rejects_conflict_stages(self) -> None:
+        for stage in (1, 2, 3):
+            with self.subTest(stage=stage):
+                with self.assertRaises(GitStageUnsupportedRepositoryError): inspect_git_index_envelope(index_fixture(2, 1, entry(stage=stage)))
+
+    def test_rejects_split_sparse_mandatory_and_unproven_optional_extensions(self) -> None:
+        for signature in (b"link", b"sdir", b"abcd", b"UNKN"):
+            with self.subTest(signature=signature):
+                with self.assertRaises(GitStageUnsupportedRepositoryError): inspect_git_index_envelope(index_fixture(2, 0, extension(signature)))
+
+    def test_rejects_truncated_entry_and_extension_payload(self) -> None:
+        with self.assertRaises(GitStageUnsupportedRepositoryError): inspect_git_index_envelope(index_fixture(2, 1, b"short"))
+        with self.assertRaises(GitStageUnsupportedRepositoryError): inspect_git_index_envelope(index_fixture(2, 0, b"TREE" + struct.pack(">I", 99) + b"x"))
 
     def test_rejects_governance_entry_count_ceiling_before_codec(self) -> None:
-        with self.assertRaises(GitStageUnsupportedRepositoryError):
-            inspect_git_index_envelope(index_fixture(2, 1_000_001))
+        with self.assertRaises(GitStageUnsupportedRepositoryError): inspect_git_index_envelope(index_fixture(2, 1_000_001))
 
     def test_inspector_is_bytes_only_and_has_no_publication_surface(self) -> None:
-        with self.assertRaises(TypeError):
-            inspect_git_index_envelope(bytearray(index_fixture()))  # type: ignore[arg-type]
+        with self.assertRaises(TypeError): inspect_git_index_envelope(bytearray(index_fixture()))  # type: ignore[arg-type]
         envelope = inspect_git_index_envelope(index_fixture())
-        self.assertFalse(hasattr(envelope, "publish"))
-        self.assertFalse(hasattr(envelope, "permit_token"))
-        self.assertFalse(hasattr(envelope, "path"))
+        self.assertFalse(hasattr(envelope, "publish")); self.assertFalse(hasattr(envelope, "permit_token")); self.assertFalse(hasattr(envelope, "path"))
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()
