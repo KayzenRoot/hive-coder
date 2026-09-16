@@ -342,9 +342,13 @@ class GovernedGitStageCapability:
                     # 7) session again, immediately after consumption
                     self._require_active(request.session_id)
 
-                    # 8) publish required content-addressed blob objects
+                    # 8) publish required content-addressed blob objects. The
+                    # session stays authoritative across a multi-object action, so
+                    # it is re-checked immediately before and after each promotion.
                     for item, compressed in prepared:
+                        self._require_active(request.session_id)
                         publisher.publish(item, compressed)
+                        self._require_active(request.session_id)
 
                     # 9) last safe session/state recheck before index publication
                     self._require_active(request.session_id)
@@ -452,7 +456,30 @@ class GovernedGitStageCapability:
             raise GitStageUnsupportedRepositoryError("git stage request binding is malformed") from exc
         if int(arguments["path_count"]) != len(path_bindings):
             raise GitStageUnsupportedRepositoryError("git stage path count does not match the bindings")
+
+        # The request carries three path representations plus a count. Contradiction
+        # between them is a malformed request and must be rejected here, before any
+        # permit consumption or mutation, rather than silently canonicalized.
+        try:
+            declared_paths = self._explicit_paths_argument(arguments["paths"])
+        except ValueError as exc:
+            raise GitStageUnsupportedRepositoryError("git stage declared paths are malformed") from exc
+        observed_paths = tuple(state.path for state in observed.worktree_states)
+        bound_paths = tuple(item.path for item in path_bindings)
+        if declared_paths != observed_paths:
+            raise GitStageUnsupportedRepositoryError("git stage declared paths disagree with the approved worktree state")
+        if bound_paths != observed_paths:
+            raise GitStageUnsupportedRepositoryError("git stage path bindings disagree with the approved worktree state")
+        if int(arguments["path_count"]) != len(declared_paths):
+            raise GitStageUnsupportedRepositoryError("git stage path count does not match the declared paths")
         return binding
+
+    @staticmethod
+    def _explicit_paths_argument(value: object) -> tuple[str, ...]:
+        """Parse the declared paths through the same normalizer used for preparation."""
+        if isinstance(value, (str, bytes)) or not isinstance(value, (list, tuple)):
+            raise ValueError("declared paths must be an explicit sequence of strings, not a pathspec string")
+        return GovernedGitStageAdapter._normalize_explicit_paths(value)
 
     def _prepare_objects(self, paths: tuple[str, ...], observed: GitStageObservedState, prepare_loose_blob):
         prepared = []

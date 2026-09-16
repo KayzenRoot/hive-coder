@@ -14,6 +14,7 @@ Linux and macOS. A platform is never inferred from another platform's result.
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -512,6 +513,423 @@ class GovernedStagingOrderingAndFailureTests(unittest.TestCase):
             with self.assertRaises((SessionStateError, GitStageUnavailableError)):
                 capability.stage_paths(request, permit_token=permit.token)
             self.assertEqual(repo.index_bytes(), before_index)
+
+
+class LooseObjectPublicationSafetyTests(unittest.TestCase):
+    """Crash-safety and no-clobber law for final loose-object publication.
+
+    The canonical OID pathname must never contain partial bytes, must never be
+    overwritten, and must never be deleted.
+    """
+
+    def _repo(self, root: Path) -> None:
+        git_dir = root / ".git"
+        (git_dir / "objects" / "info").mkdir(parents=True)
+        (git_dir / "objects" / "pack").mkdir()
+        (git_dir / "config").write_text("[core]\n repositoryformatversion = 0\n", encoding="ascii")
+
+    def _fixture(self, root: Path):
+        from hive_runtime.git_loose_object_transaction import LooseObjectPublisher, prepare_loose_blob
+
+        self._repo(root)
+        prepared, compressed = prepare_loose_blob(root, b"governed payload\n")
+        return prepared, compressed, LooseObjectPublisher(root)
+
+    def _final(self, root: Path, prepared) -> Path:
+        return root / ".git" / prepared.relative_object_path
+
+    def test_complete_object_is_promoted_and_temp_is_cleaned(self) -> None:
+        from hive_runtime.git_loose_object_transaction import PUBLISHED_CREATED
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            prepared, compressed, publisher = self._fixture(root)
+            self.assertEqual(publisher.publish(prepared, compressed), PUBLISHED_CREATED)
+            self.assertEqual(self._final(root, prepared).read_bytes(), compressed)
+            # No private temp survives a successful publication.
+            temp_dir = root / ".git" / "hive-object-tmp"
+            self.assertEqual(list(temp_dir.glob("*")) if temp_dir.exists() else [], [])
+
+    def test_partial_private_write_leaves_the_canonical_path_absent(self) -> None:
+        """A private write that never completes must not create the OID pathname."""
+        from hive_runtime.git_object_private_prep import PrivateObjectPreparer
+        from hive_runtime.git_loose_object_transaction import LooseObjectPublisher
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            prepared, compressed, _ = self._fixture(root)
+            publisher = LooseObjectPublisher(root)
+
+            real_materialize = PrivateObjectPreparer.materialize_private_temp
+
+            def truncated(self, plan, payload):
+                temp = real_materialize(self, plan, payload)
+                # Simulate a private write that stopped early: the temp is short.
+                Path(temp.identity.path).write_bytes(payload[: max(1, len(payload) // 2)])
+                return temp
+
+            with mock.patch.object(PrivateObjectPreparer, "materialize_private_temp", truncated):
+                with self.assertRaises(GitStageUnavailableError):
+                    publisher.publish(prepared, compressed)
+            self.assertFalse(self._final(root, prepared).exists())
+
+    def test_failed_private_materialization_leaves_the_canonical_path_absent(self) -> None:
+        from hive_runtime.git_object_private_prep import PrivateObjectPreparer
+        from hive_runtime.git_loose_object_transaction import LooseObjectPublisher
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            prepared, compressed, _ = self._fixture(root)
+            publisher = LooseObjectPublisher(root)
+            with mock.patch.object(
+                PrivateObjectPreparer, "materialize_private_temp", side_effect=GitStageUnavailableError("injected")
+            ):
+                with self.assertRaises(GitStageUnavailableError):
+                    publisher.publish(prepared, compressed)
+            self.assertFalse(self._final(root, prepared).exists())
+
+    def test_abrupt_termination_before_promotion_leaves_the_canonical_path_absent(self) -> None:
+        """Process death before promotion must not expose a canonical object.
+
+        The child process materializes the private temporary and is killed with
+        ``os._exit`` before promotion ever runs. This is the exact scenario the
+        correction exists for: the old design streamed bytes directly into the
+        canonical pathname, so a kill at this point would have left a partial
+        object there.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._repo(root)
+            script = (
+                "import os, sys\n"
+                "from hive_runtime.git_loose_object_transaction import prepare_loose_blob\n"
+                "from hive_runtime.git_object_private_prep import PrivateObjectPreparer, plan_private_object\n"
+                "root = sys.argv[1]\n"
+                "prepared, compressed = prepare_loose_blob(root, b'abrupt payload\\n')\n"
+                "plan = plan_private_object(prepared, compressed)\n"
+                "PrivateObjectPreparer(root).materialize_private_temp(plan, compressed)\n"
+                "print(prepared.relative_object_path, flush=True)\n"
+                "os._exit(9)\n"
+            )
+            env = dict(os.environ)
+            env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
+            result = subprocess.run(
+                [sys.executable, "-c", script, str(root)],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=120,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 9, result.stderr)
+            relative = result.stdout.strip()
+            self.assertTrue(relative)
+            self.assertFalse((root / ".git" / relative).exists())
+            # The complete private temp is inert; the canonical pathname is absent.
+            temp_dir = root / ".git" / "hive-object-tmp"
+            self.assertTrue(temp_dir.exists())
+            self.assertEqual(len(list(temp_dir.glob("*.tmp"))), 1)
+
+    def test_existing_exact_object_is_never_overwritten(self) -> None:
+        from hive_runtime.git_loose_object_transaction import PUBLISHED_ALREADY_PRESENT
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            prepared, compressed, publisher = self._fixture(root)
+            final = self._final(root, prepared)
+            final.parent.mkdir(parents=True, exist_ok=True)
+            final.write_bytes(compressed)
+            before = final.stat().st_mtime_ns
+            self.assertEqual(publisher.publish(prepared, compressed), PUBLISHED_ALREADY_PRESENT)
+            self.assertEqual(final.read_bytes(), compressed)
+            self.assertEqual(final.stat().st_mtime_ns, before)
+
+    def test_corrupt_existing_object_fails_closed_and_is_preserved(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            prepared, compressed, publisher = self._fixture(root)
+            final = self._final(root, prepared)
+            final.parent.mkdir(parents=True, exist_ok=True)
+            foreign = b"not-the-approved-object"
+            final.write_bytes(foreign)
+            with self.assertRaises(Exception):
+                publisher.publish(prepared, compressed)
+            self.assertEqual(final.read_bytes(), foreign)
+
+    def test_concurrent_winner_is_accepted_only_with_exact_proof(self) -> None:
+        from hive_runtime.git_loose_object_transaction import PUBLISHED_ALREADY_PRESENT
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            prepared, compressed, publisher = self._fixture(root)
+            final = self._final(root, prepared)
+
+            real_materialize = publisher._preparer.materialize_private_temp
+
+            def racing(self, plan, payload):
+                # Another publisher wins the final pathname before we promote.
+                final.parent.mkdir(parents=True, exist_ok=True)
+                final.write_bytes(payload)
+                return real_materialize(plan, payload)
+
+            with mock.patch.object(type(publisher._preparer), "materialize_private_temp", racing):
+                self.assertEqual(publisher.publish(prepared, compressed), PUBLISHED_ALREADY_PRESENT)
+            self.assertEqual(final.read_bytes(), compressed)
+
+    def test_concurrent_corrupt_winner_fails_closed_without_clobbering(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            prepared, compressed, publisher = self._fixture(root)
+            final = self._final(root, prepared)
+            foreign = b"foreign-winner-must-survive"
+
+            real_materialize = publisher._preparer.materialize_private_temp
+
+            def racing(self, plan, payload):
+                final.parent.mkdir(parents=True, exist_ok=True)
+                final.write_bytes(foreign)
+                return real_materialize(plan, payload)
+
+            with mock.patch.object(type(publisher._preparer), "materialize_private_temp", racing):
+                with self.assertRaises(Exception):
+                    publisher.publish(prepared, compressed)
+            self.assertEqual(final.read_bytes(), foreign)
+
+    def test_no_clobber_promotion_primitive_is_available_here(self) -> None:
+        """Native proof that os.link is an atomic create-if-absent on this platform."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.bin"
+            target = root / "target.bin"
+            source.write_bytes(b"payload")
+            os.link(source, target)
+            self.assertEqual(target.read_bytes(), b"payload")
+            with self.assertRaises(FileExistsError):
+                os.link(source, target)
+            self.assertEqual(target.read_bytes(), b"payload")
+            # The promoted object shares the inode, so the temp can be removed
+            # without affecting the final pathname.
+            os.unlink(source)
+            self.assertEqual(target.read_bytes(), b"payload")
+
+    def test_identity_safe_temp_cleanup_preserves_a_replacement(self) -> None:
+        from hive_runtime.git_object_private_prep import PrivateObjectPreparer, plan_private_object
+        from hive_runtime.git_loose_object_transaction import prepare_loose_blob
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._repo(root)
+            preparer = PrivateObjectPreparer(root)
+            prepared, compressed = prepare_loose_blob(root, b"payload\n")
+            temp = preparer.materialize_private_temp(plan_private_object(prepared, compressed), compressed)
+            path = Path(temp.identity.path)
+            path.unlink()
+            path.mkdir()
+            preparer.cleanup_private_temp(temp)
+            self.assertTrue(path.is_dir())
+
+    def test_published_object_is_readable_by_git(self) -> None:
+        if _GIT is None:
+            self.skipTest(_GIT_REASON)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "repo"
+            root.mkdir()
+            git(root, "init", "-q", ".")
+            from hive_runtime.git_loose_object_transaction import LooseObjectPublisher, prepare_loose_blob
+
+            prepared, compressed = prepare_loose_blob(root, b"governed payload\n")
+            LooseObjectPublisher(root).publish(prepared, compressed)
+            self.assertEqual(git(root, "cat-file", "-t", prepared.candidate.oid).strip(), "blob")
+            self.assertEqual(git(root, "cat-file", "-s", prepared.candidate.oid).strip(), str(prepared.candidate.content_bytes))
+
+
+@unittest.skipUnless(_GIT is not None, _GIT_REASON)
+class ApprovalConfusionTests(unittest.TestCase):
+    """A contradictory approved request must be rejected before permit consumption."""
+
+    def _prepare(self, tmp: str):
+        repo = RealRepo(Path(tmp) / "repo")
+        repo.write("a.txt", "alpha\n")
+        repo.write("b.txt", "beta\n")
+        repo.seed()
+        repo.write("a.txt", "alpha MODIFIED\n")
+        repo.write("b.txt", "beta MODIFIED\n")
+        harness = GovernedHarness(repo.root)
+        return repo, harness
+
+    def _approved_request(self, harness, paths):
+        """Build a real challenge and permit for the given request."""
+        request = harness.request(*paths)
+        challenge = harness.plane.create_approval_challenge(request)
+        token = harness.plane.approve_challenge_from_trusted_ui(challenge.challenge_id, session_id=harness.session)
+        permit = harness.plane.authorize(request, approval_token=token)
+        return request, permit
+
+    def test_contradictory_paths_are_rejected_before_permit_consumption(self) -> None:
+        from dataclasses import replace
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._prepare(tmp)
+            # A legitimate, fully approved request for "a.txt" only.
+            request, permit = self._approved_request(harness, ["a.txt"])
+            before_index = repo.index_bytes()
+            before_objects = repo.objects_listing()
+
+            # Now contradict it: declared paths name the other safe-looking file
+            # while worktree states and path bindings still describe "a.txt".
+            arguments = dict(request.arguments)
+            arguments["paths"] = ["b.txt"]
+            contradictory = replace(request, arguments=arguments)
+
+            with self.assertRaises(Exception):
+                harness.capability.stage_paths(contradictory, permit_token=permit.token)
+
+            # Rejection happened before any mutation.
+            self.assertEqual(repo.index_bytes(), before_index)
+            self.assertEqual(repo.objects_listing(), before_objects)
+            self.assertFalse((repo.root / ".git" / "index.lock").exists())
+
+            # The permit was not consumed: it still works for the exact request it
+            # was issued for, which proves validation rejected before the boundary.
+            harness.capability.stage_paths(request, permit_token=permit.token)
+
+    def test_path_count_disagreement_is_rejected(self) -> None:
+        from dataclasses import replace
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._prepare(tmp)
+            request, permit = self._approved_request(harness, ["a.txt", "b.txt"])
+            before_index = repo.index_bytes()
+            arguments = dict(request.arguments)
+            arguments["path_count"] = 1
+            with self.assertRaises(Exception):
+                harness.capability.stage_paths(replace(request, arguments=arguments), permit_token=permit.token)
+            self.assertEqual(repo.index_bytes(), before_index)
+
+    def test_reordered_paths_are_rejected(self) -> None:
+        from dataclasses import replace
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._prepare(tmp)
+            request, permit = self._approved_request(harness, ["a.txt", "b.txt"])
+            before_index = repo.index_bytes()
+            arguments = dict(request.arguments)
+            arguments["paths"] = ["b.txt", "a.txt"]
+            with self.assertRaises(Exception):
+                harness.capability.stage_paths(replace(request, arguments=arguments), permit_token=permit.token)
+            self.assertEqual(repo.index_bytes(), before_index)
+
+    def test_duplicate_declared_paths_are_rejected(self) -> None:
+        from dataclasses import replace
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._prepare(tmp)
+            request, permit = self._approved_request(harness, ["a.txt"])
+            arguments = dict(request.arguments)
+            arguments["paths"] = ["a.txt", "a.txt"]
+            with self.assertRaises(Exception):
+                harness.capability.stage_paths(replace(request, arguments=arguments), permit_token=permit.token)
+
+    def test_pathspec_string_and_glob_declared_paths_are_rejected(self) -> None:
+        from dataclasses import replace
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._prepare(tmp)
+            request, permit = self._approved_request(harness, ["a.txt"])
+            for bad in ("a.txt", ["*.txt"], ["../a.txt"], [".git/config"], ["a/../a.txt"]):
+                with self.subTest(bad=bad):
+                    arguments = dict(request.arguments)
+                    arguments["paths"] = bad
+                    with self.assertRaises(Exception):
+                        harness.capability.stage_paths(replace(request, arguments=arguments), permit_token=permit.token)
+            self.assertFalse((repo.root / ".git" / "index.lock").exists())
+
+
+@unittest.skipUnless(_GIT is not None, _GIT_REASON)
+class MidPublicationAuthorityTests(unittest.TestCase):
+    """The session stays authoritative during a multi-object staging action."""
+
+    def _prepare(self, tmp: str):
+        repo = RealRepo(Path(tmp) / "repo")
+        for name in ("a.txt", "b.txt", "c.txt"):
+            repo.write(name, f"{name} original\n")
+        repo.seed()
+        for name in ("a.txt", "b.txt", "c.txt"):
+            repo.write(name, f"{name} modified\n")
+        harness = GovernedHarness(repo.root)
+        return repo, harness
+
+    def _assert_transition_after_first_blob(self, transition: str) -> None:
+        """Transition the session after the first blob and assert the consequences.
+
+        All assertions run inside the live fixture: the repository is a temporary
+        directory that is removed as soon as this method returns.
+        """
+        from hive_runtime.git_loose_object_transaction import LooseObjectPublisher
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._prepare(tmp)
+            request = harness.request("a.txt", "b.txt", "c.txt")
+            bound = [item["blob_oid"] for item in request.arguments["path_bindings"]]
+            permit = harness.permit(request)
+            before_index = repo.index_bytes()
+
+            calls = {"count": 0}
+            real_publish = LooseObjectPublisher.publish
+
+            def publishing_then_transition(self, preparation, compressed):
+                result = real_publish(self, preparation, compressed)
+                calls["count"] += 1
+                if calls["count"] == 1:
+                    if transition == "cancel":
+                        harness.plane.cancel_session(harness.session)
+                    elif transition == "takeover":
+                        harness.plane.user_takeover(harness.session)
+                    elif transition == "emergency":
+                        harness.plane.emergency_stop(session_id=harness.session)
+                    else:
+                        harness.plane.emergency_stop()
+                return result
+
+            with mock.patch.object(LooseObjectPublisher, "publish", publishing_then_transition):
+                with self.assertRaises((SessionStateError, GitStageUnavailableError)):
+                    harness.capability.stage_paths(request, permit_token=permit.token)
+
+            published = [oid for oid in bound if (repo.root / ".git" / "objects" / oid[:2] / oid[2:]).exists()]
+            # Exactly the first blob was published; no later promotion ever ran.
+            self.assertEqual(published, [bound[0]], f"{transition}: only the first blob may be published")
+            self.assertEqual(calls["count"], 1, f"{transition}: no later promotion may run")
+            # The index is untouched and no owned lock is left behind.
+            self.assertEqual(repo.index_bytes(), before_index)
+            self.assertFalse((repo.root / ".git" / "index.lock").exists())
+            # The already-published blob is NOT rolled back: it stays reachable.
+            self.assertEqual(git(repo.root, "cat-file", "-t", bound[0]).strip(), "blob")
+            for oid in bound[1:]:
+                self.assertFalse((repo.root / ".git" / "objects" / oid[:2] / oid[2:]).exists())
+
+    def test_cancellation_after_first_blob_stops_later_blobs_and_index(self) -> None:
+        self._assert_transition_after_first_blob("cancel")
+
+    def test_takeover_after_first_blob_stops_later_blobs_and_index(self) -> None:
+        self._assert_transition_after_first_blob("takeover")
+
+    def test_emergency_stop_after_first_blob_stops_later_blobs_and_index(self) -> None:
+        self._assert_transition_after_first_blob("emergency")
+
+    def test_global_emergency_stop_after_first_blob_stops_later_blobs_and_index(self) -> None:
+        self._assert_transition_after_first_blob("global_emergency")
+
+    def test_multi_file_staging_succeeds_when_no_transition_occurs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, harness = self._prepare(tmp)
+            request = harness.request("a.txt", "b.txt", "c.txt")
+            permit = harness.permit(request)
+            receipt = harness.capability.stage_paths(request, permit_token=permit.token)
+            self.assertEqual(receipt.committed_state, "index_updated")
+            self.assertEqual(receipt.staged_paths, ("a.txt", "b.txt", "c.txt"))
+            staged = {line.split("\t")[1]: line.split()[1] for line in repo.listing().splitlines()}
+            for item in request.arguments["path_bindings"]:
+                self.assertEqual(staged[item["path"]], item["blob_oid"])
 
 
 if __name__ == "__main__":

@@ -103,10 +103,19 @@ Normalize paths, observe repository/HEAD/index/worktree, prepare each blob candi
 ### Final safe boundary (ordering proven by tests, not comments)
 1. validate request shape and exact prepared metadata; 2. late observer revalidation of HEAD, source index and worktree; 3. late object-store revalidation; rebuild the plan and candidate from live bytes and prove they reproduce the approved bindings exactly; 4. acquire the owned `index.lock`, write the candidate, verify digest/length and lock identity; 5. session ACTIVE check; 6. **consume the request-bound single-use permit**; 7. session ACTIVE check again; 8. publish content-addressed blobs; 9. session and state recheck; 10. atomic index publication; 11. postconditions; 12. receipt only after verification.
 
-### Publication law
-- Blobs are published content-addressed, no-follow, no-clobber. An existing object is accepted only after proving it is the exact approved blob; it is never overwritten and never deleted. Fanout directories are created only with bounded identity checks and fail closed on symlink/reparse/non-directory collisions.
+### Publication law (as corrected by Prompt 04)
+- **A canonical OID pathname is never opened for writing.** The complete compressed object is materialized and digest-verified in Hive-owned private storage outside `.git/objects`, then promoted with an atomic create-if-absent primitive (`os.link`, no-clobber on POSIX and on Windows/NTFS). `os.replace` is never used for objects because it would overwrite.
+- A crash, kill or power loss at any point before promotion leaves the canonical pathname **absent**. It can never hold partial bytes.
+- An existing object is accepted only after proving it is the exact approved blob; it is never overwritten and never deleted. Fanout directories are created only with bounded identity checks and fail closed on symlink/reparse/non-directory collisions.
+- The private temporary is removed only under identity-safe cleanup, and the mode is left at the owner-only creation mode because a read-only file cannot be unlinked on Windows.
 - The index is published only by the capability-owned `index.lock` transaction. A foreign or pre-existing lock fails closed and is never removed.
 - A crash after blob publication but before index publication may leave an unreachable content-addressed blob. That is the documented, accepted outcome; it is never reported as success and the blob is not rolled back.
+
+### Request-binding law (as corrected by Prompt 04)
+`paths`, the observed worktree paths and the path-binding paths must be **identical** after canonical normalization, in the same deterministic order, and `path_count` must equal all three lengths. A contradiction is a malformed request and is rejected before any permit consumption or mutation; it is never silently canonicalized.
+
+### Mid-publication authority (as corrected by Prompt 04)
+The session is re-checked immediately **before and after each** final object promotion, in addition to the existing check before index publication. A cancellation, takeover, expiry or emergency transition after one blob is published prevents every later publication and prevents index publication, while the already-published blob is left in place and never rolled back.
 
 ### Windows platform finding
 `os.replace` fails with `WinError 32` while a handle to the source file is still open, so the owned lock handle is released immediately before the atomic replacement, with the lock identity re-proved on the pathname in between. Publication remains a single atomic same-filesystem replacement; ownership cannot be lost silently because a changed identity aborts before the call.
@@ -233,4 +242,14 @@ For each exact technical head record:
 
 ## STOP
 
-This head delivers the data-only slice only. `git.write`, permit consumption, blob publication to final object paths and atomic `.git/index` publication are the next reviewed phase and remain unavailable. No merge/promotion of mutation authority until backend selection is governed, all required tests are executable, all three native target lanes are green at exact head, and HEDS reports H/C `0/0`.
+Authority is **implemented** at this Work Order, not pending. `Capability.GIT_WRITE` / `git_stage_paths_v1`, request-bound single-use permit consumption, content-addressed blob publication and atomic `.git/index` publication all exist and are covered by activated acceptance gates, including crash-safety, no-clobber and mid-publication cancellation proof on all three platforms.
+
+Current state, stated plainly:
+
+- **Authority implemented**: yes, bounded to exactly `git_stage_paths_v1`.
+- **Correction pending final review**: yes. This ledger records the Prompt 04 correction head; the independent review of it is the next step.
+- **PR #69 remains Draft.**
+- **HEDS not yet approved.** No FINAL HEDS has been run, and `DEC-027` remains **PROPOSED** — promotion is the reviewer's decision, not the executor's.
+- **No merge** and no marking ready for review until that review completes.
+
+The only outstanding implementation seam is the promotion review itself; every executable seam the pre-Codex frontier named is complete (`FINAL_HEDS` aside, which is not an implementation seam).

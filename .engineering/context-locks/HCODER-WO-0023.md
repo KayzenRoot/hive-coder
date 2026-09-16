@@ -110,12 +110,42 @@ No new executor module is created: the orchestration lives in the existing `hive
 ### Residual bounded-race claim
 Consistent with CP-0022, this slice does not claim strict CAS across an uncooperative external writer acting after the last successful revalidation. The index publication primitive is atomic, but an external process may act between the final revalidation and the atomic call. This must be stated, never represented as strict CAS.
 
+## Context Lock Delta 005 — same-WO correction: crash-safe object publication and exact binding
+Review verdict on the Prompt 03 authority slice was CORRECTION REQUIRED. This delta corrects three promotion-blocking defects. **It does not broaden `git.write`.** The only capability and action remain `git.write` / `git_stage_paths_v1` for the existing ordinary local SHA-1 repository envelope, under the same mandatory-approval and single-use-permit law.
+
+### Corrected defect A — partial bytes at a canonical OID path
+`LooseObjectPublisher.publish()` opened the final `.git/objects/<fanout>/<leaf>` path and streamed compressed bytes into it. An abrupt process or host termination during that write leaves a **partial file visible at a canonical object pathname**, which is repository corruption, not merely an unreachable object. The in-process handler only covered raised exceptions, not process death.
+
+Corrected law: a canonical OID pathname may become visible only after the complete compressed object has been written, fsynced and digest-verified in Hive-owned private storage outside `.git/objects`. Promotion to the final pathname uses an atomic create-if-absent primitive — `os.link`, which is no-clobber on POSIX and on Windows/NTFS — never `os.replace`, which would overwrite.
+
+### Corrected defect B — contradictory approval request reached execution
+`_validate_request()` reconstructed the observed state and path bindings but never checked them against `arguments['paths']` or `arguments['path_count']`. A request whose `paths` named a different path while the worktree states and bindings still described the original could therefore reach permit consumption. Corrected law: `paths`, the observed worktree paths and the path-binding paths must be *identical* after canonical normalization, in the same deterministic order, and `path_count` must equal all three lengths. Contradiction is an error, never silently canonicalized.
+
+### Corrected defect C — cancellation did not bind multi-object publication
+The session was checked once before the blob loop, so a cancellation, takeover, expiry or emergency transition after the first blob was published did not prevent later publications. Corrected law: session ACTIVE is checked immediately before **and** immediately after each final object promotion, in addition to the existing check before index publication.
+
+### Authorized files
+This delta authorizes exactly these files, and nothing else:
+- `hive_runtime/git_loose_object_transaction.py`
+- `hive_runtime/git_object_private_prep.py`
+- `hive_runtime/git_stage.py`
+- `hive_runtime/git_stage_contract.py`
+- `tests/runtime/test_git_stage_authority.py`
+- `tests/runtime/test_git_stage_security.py`
+- `tests/runtime/test_git_object_private_prep.py`
+- `hive_runtime/git_stage_codex_frontier.py` and its test, only if their records require it
+- `.engineering/evidence/HCODER-WO-0023.md`
+- the stale prose in this Context Lock
+
+### Not granted
+No new Git capability. No commit/ref/branch/remote/credential capability. No generic Git argv, shell, subprocess Git, hooks, filters, network, remotes or arbitrary `.git` writer. No expansion to linked worktrees, submodules/nested repos, bare repos, sparse/split index, conflicts, alternates, promisor/partial clone, SHA-256 repositories, deleted-path staging or unproven extensions.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 
 The canonical filesystem mutation layer in `hive_runtime/workspace_files.py` supplies the pattern to preserve: trusted canonical workspace, exact request arguments, mandatory HIGH approval, request-bound single-use permit at the final safe mutation boundary, active-session rechecks, fail-closed native backends and `.git` excluded from arbitrary filesystem-write authority.
 
-`Capability` currently has no Git-specific mutation capability. `SHELL_EXECUTE` is CRITICAL and is not an acceptable implementation route.
+**Historical (pre-authority, as recorded when this Context Lock was first written).** At that time `Capability` had no Git-specific mutation capability. That is no longer current: Delta 004 granted `Capability.GIT_WRITE` for exactly `git_stage_paths_v1`. `SHELL_EXECUTE` remains CRITICAL and is still not an acceptable implementation route, and `FILESYSTEM_WRITE` is still not reused.
 
 ## Selected first slice
 The first Git mutation is exact-path staging/index update, action `git_stage_paths_v1`. It stages approved current workspace content for an explicit bounded path set. It does not commit and does not expose generic Git commands.

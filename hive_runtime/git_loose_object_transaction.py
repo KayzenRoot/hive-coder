@@ -117,17 +117,32 @@ def _ensure_fanout_directory(objects_dir: Path, fanout: str) -> Path:
 
 
 class LooseObjectPublisher:
-    """Content-addressed, no-clobber publication of one governed loose blob.
+    """Crash-safe, content-addressed, no-clobber publication of one loose blob.
 
-    This is the only place the capability writes into `.git/objects`. It never
-    overwrites an existing object and never deletes one: an object already at the
-    final path is accepted only after proving it is the exact approved blob.
+    This is the only place the capability writes into `.git/objects`. The final
+    canonical OID pathname is never opened for writing: the complete compressed
+    object is materialized and digest-verified in Hive-owned private storage
+    outside the object store, then promoted atomically with a no-clobber
+    primitive. A crash before promotion therefore leaves the canonical pathname
+    absent, and a canonical pathname never contains partial bytes.
+
+    An existing object is never overwritten and never deleted: it is accepted
+    only after proving it is the exact approved blob.
+
+    A published object keeps the private temporary's owner-only creation mode
+    (0600). That is deliberately more restrictive than Git's conventional 0444
+    and is never a disclosure risk, whereas 0444 would make the capability's own
+    temporary impossible to unlink on Windows, where a read-only file cannot be
+    deleted. The mode is not part of any approval binding.
     """
 
     mutation_authority_enabled = True
 
-    def __init__(self, workspace_root: str | Path) -> None:
+    def __init__(self, workspace_root: str | Path, *, preparer=None) -> None:
+        from .git_object_private_prep import PrivateObjectPreparer
+
         self.workspace_root = Path(workspace_root)
+        self._preparer = preparer if preparer is not None else PrivateObjectPreparer(self.workspace_root)
 
     def publish(self, preparation: GitLooseObjectPreparation, compressed: bytes) -> str:
         digest = hashlib.sha256(compressed).hexdigest()
@@ -140,45 +155,63 @@ class LooseObjectPublisher:
             raise GitStageUnsupportedRepositoryError("only the SHA-1 object format is supported")
 
         objects_dir = Path(self.workspace_root).resolve(strict=True) / ".git" / "objects"
-        path = objects_dir / preparation.fanout / preparation.leaf
+        final_path = objects_dir / preparation.fanout / preparation.leaf
 
-        existing = self._prove_existing_loose_blob(preparation)
-        if existing is not None:
+        # Fast path: an already-correct object needs no temp and no promotion.
+        if self._prove_existing_loose_blob(preparation) is not None:
             return PUBLISHED_ALREADY_PRESENT
 
-        _ensure_fanout_directory(objects_dir, preparation.fanout)
+        # 1) Materialize the COMPLETE compressed object in private repo-local
+        #    storage. Nothing canonical is visible while this happens.
+        from .git_object_private_prep import plan_private_object
 
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0) | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        plan = plan_private_object(preparation, compressed)
+        temp = self._preparer.materialize_private_temp(plan, compressed)
+        temp_path = Path(temp.identity.path)
         try:
-            fd = os.open(path, flags, 0o444)
-        except FileExistsError:
-            # A concurrent publisher won the race. Accept only an exact identity proof.
+            # 2) Re-prove the store and the private temp immediately before promotion.
+            if inspect_local_object_store(self.workspace_root) != preparation.store:
+                raise GitStageUnavailableError("Git object-store identity changed during publication")
+            live = temp_path.lstat()
+            if not temp.identity.matches(live):
+                raise GitStageUnavailableError("private object temporary identity changed before promotion")
+            on_disk = temp_path.read_bytes()
+            if hashlib.sha256(on_disk).hexdigest() != preparation.compressed_sha256:
+                raise GitStageUnavailableError("private object temporary digest changed before promotion")
+            if len(on_disk) != preparation.compressed_bytes:
+                raise GitStageUnavailableError("private object temporary length changed before promotion")
+
+            _ensure_fanout_directory(objects_dir, preparation.fanout)
+
+            # 3) Promote atomically as create-if-absent. os.link is no-clobber on
+            #    POSIX and on Windows/NTFS, and never overwrites an existing object.
+            try:
+                os.link(temp_path, final_path)
+                created = True
+            except FileExistsError:
+                created = False
+            except (OSError, NotImplementedError, AttributeError) as exc:
+                raise GitStageUnsupportedRepositoryError(
+                    "the filesystem does not support no-clobber object promotion"
+                ) from exc
+
+            if not created:
+                # Another publisher won the race. Accept only an exact proof.
+                if self._prove_existing_loose_blob(preparation) is None:
+                    raise GitStageUnsupportedRepositoryError("object path appeared but is not the approved blob")
+                return PUBLISHED_ALREADY_PRESENT
+
+            # 4) Prove the promoted object is the exact approved blob.
             if self._prove_existing_loose_blob(preparation) is None:
-                raise GitStageUnsupportedRepositoryError("object path appeared but is not the approved blob")
-            return PUBLISHED_ALREADY_PRESENT
-        except OSError as exc:
-            raise GitStageUnsupportedRepositoryError("cannot create the content-addressed object") from exc
-        try:
-            view = memoryview(compressed)
-            while view:
-                written = os.write(fd, view)
-                if written <= 0:
-                    raise GitStageUnsupportedRepositoryError("short write while publishing a blob object")
-                view = view[written:]
-            os.fsync(fd)
-        except BaseException:
-            os.close(fd)
-            # The path was created exclusively by us microseconds ago. Removing it
-            # can only discard our own partial object, never a foreign one.
-            try: os.unlink(path)
-            except OSError: pass
-            raise
-        else:
-            os.close(fd)
-
-        if self._prove_existing_loose_blob(preparation) is None:
-            raise GitStageUnsupportedRepositoryError("published blob did not prove its own identity")
-        return PUBLISHED_CREATED
+                raise GitStageUnsupportedRepositoryError("published blob did not prove its own identity")
+            return PUBLISHED_CREATED
+        finally:
+            # 5) Remove only our own private temp, identity-checked. A failure here
+            #    leaves an inert temporary in the Hive-owned directory.
+            try:
+                self._preparer.cleanup_private_temp(temp)
+            except Exception:
+                pass
 
     def _prove_existing_loose_blob(self, preparation: GitLooseObjectPreparation) -> ExistingLooseObjectProof | None:
         return verify_existing_loose_blob(self.workspace_root, preparation)
