@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import binascii
 import math
 import struct
+import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-OUTPUT = ROOT / "apps" / "desktop" / "src-tauri" / "icons" / "icon.ico"
+ICON_DIR = ROOT / "apps" / "desktop" / "src-tauri" / "icons"
+ICO_OUTPUT = ICON_DIR / "icon.ico"
+PNG_OUTPUT = ICON_DIR / "icon.png"
 SIZE = 64
 
 
@@ -69,46 +73,49 @@ def build_icon() -> bytes:
 
     and_stride = ((SIZE + 31) // 32) * 4
     and_bitmap = b"\x00" * (and_stride * SIZE)
-
     bitmap_info = struct.pack(
-        "<IIIHHIIIIII",
-        40,
-        SIZE,
-        SIZE * 2,
-        1,
-        32,
-        0,
-        len(xor_bitmap),
-        0,
-        0,
-        0,
-        0,
+        "<IIIHHIIIIII", 40, SIZE, SIZE * 2, 1, 32, 0, len(xor_bitmap), 0, 0, 0, 0
     )
     image_data = bitmap_info + xor_bitmap + and_bitmap
-
     icon_dir = struct.pack("<HHH", 0, 1, 1)
     icon_entry = struct.pack(
-        "<BBBBHHII",
-        SIZE,
-        SIZE,
-        0,
-        0,
-        1,
-        32,
-        len(image_data),
-        6 + 16,
+        "<BBBBHHII", SIZE, SIZE, 0, 0, 1, 32, len(image_data), 6 + 16
     )
     return icon_dir + icon_entry + image_data
 
 
+def _png_chunk(kind: bytes, data: bytes) -> bytes:
+    body = kind + data
+    return struct.pack(">I", len(data)) + body + struct.pack(">I", binascii.crc32(body) & 0xFFFFFFFF)
+
+
+def build_png() -> bytes:
+    rows = bytearray()
+    for y in range(SIZE):
+        rows.append(0)  # PNG filter type 0
+        for x in range(SIZE):
+            rows.extend(_pixel_rgba(x, y))
+    header = struct.pack(">IIBBBBB", SIZE, SIZE, 8, 6, 0, 0, 0)
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + _png_chunk(b"IHDR", header)
+        + _png_chunk(b"IDAT", zlib.compress(bytes(rows), level=9))
+        + _png_chunk(b"IEND", b"")
+    )
+
+
 def main() -> int:
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    payload = build_icon()
-    OUTPUT.write_bytes(payload)
-    if len(payload) < 1024:
-        raise RuntimeError("generated icon is unexpectedly small")
-    print(f"HIVE_DESKTOP_ICON={OUTPUT.relative_to(ROOT)}")
-    print(f"HIVE_DESKTOP_ICON_BYTES={len(payload)}")
+    ICON_DIR.mkdir(parents=True, exist_ok=True)
+    ico_payload = build_icon()
+    png_payload = build_png()
+    ICO_OUTPUT.write_bytes(ico_payload)
+    PNG_OUTPUT.write_bytes(png_payload)
+    if len(ico_payload) < 1024 or len(png_payload) < 256:
+        raise RuntimeError("generated icon payload is unexpectedly small")
+    print(f"HIVE_DESKTOP_ICON_ICO={ICO_OUTPUT.relative_to(ROOT)}")
+    print(f"HIVE_DESKTOP_ICON_ICO_BYTES={len(ico_payload)}")
+    print(f"HIVE_DESKTOP_ICON_PNG={PNG_OUTPUT.relative_to(ROOT)}")
+    print(f"HIVE_DESKTOP_ICON_PNG_BYTES={len(png_payload)}")
     return 0
 
 

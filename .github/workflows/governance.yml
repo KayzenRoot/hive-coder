@@ -66,6 +66,36 @@ jobs:
           PYTHONWARNINGS: error::ResourceWarning
         run: python -m unittest discover -s tests -p "test_*.py"
 
+  governed-runtime-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact-head and Linux runner identity
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          test "$ACTUAL_SHA" = "$EXPECTED_SHA"
+          echo "EXACT_HEAD_OK=$ACTUAL_SHA"
+          uname -a
+          cat /etc/os-release
+          python --version
+      - name: Compile governed filesystem runtime
+        run: python -m compileall -q hive_runtime
+      - name: Native Linux governed filesystem proof
+        env:
+          PYTHONWARNINGS: error::ResourceWarning
+        run: |
+          python -m unittest \
+            tests.runtime.test_workspace_files \
+            tests.runtime.test_workspace_file_path_security \
+            tests.runtime.test_workspace_file_replace_contract \
+            tests.runtime.test_workspace_file_replace_security
+
   control-plane-windows:
     runs-on: windows-latest
     steps:
