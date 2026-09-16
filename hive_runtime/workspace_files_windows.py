@@ -29,7 +29,7 @@ _WriteFile=_kernel32.WriteFile; _WriteFile.argtypes=[wintypes.HANDLE,wintypes.LP
 _FlushFileBuffers=_kernel32.FlushFileBuffers; _FlushFileBuffers.argtypes=[wintypes.HANDLE]; _FlushFileBuffers.restype=wintypes.BOOL
 _GetFinalPathNameByHandleW=_kernel32.GetFinalPathNameByHandleW; _GetFinalPathNameByHandleW.argtypes=[wintypes.HANDLE,wintypes.LPWSTR,wintypes.DWORD,wintypes.DWORD]; _GetFinalPathNameByHandleW.restype=wintypes.DWORD
 _NtCreateFile=_ntdll.NtCreateFile; _NtCreateFile.argtypes=[ctypes.POINTER(wintypes.HANDLE),wintypes.DWORD,ctypes.POINTER(_OBJECT_ATTRIBUTES),ctypes.POINTER(_IO_STATUS_BLOCK),wintypes.LPVOID,wintypes.ULONG,wintypes.ULONG,wintypes.ULONG,wintypes.ULONG,wintypes.LPVOID,wintypes.ULONG]; _NtCreateFile.restype=_NTSTATUS
-_NtSetInformationFile=_ntdll.NtSetInformationFile; _NtSetInformationFile.argtypes=[wintypes.HANDLE,ctypes.POINTER(_IO_STATUS_BLOCK),wintypes.LPVOID,wintypes.ULONG,wintypes.ULONG]; _NtSetInformationFile.restype=_NTSTATUS
+_NtSetInformationFile=_ntdll.NtSetInformationFile; _NtSetInformationFile.argtypes=[wintypes.HANDLE,ctypes.POINTER(_IO_STATUS_BLOCK),wintypes.LPVOID,wintypes.ULONG,wintypes.ULONG,wintypes.ULONG]; _NtSetInformationFile.restype=_NTSTATUS
 class _NtOpenError(WorkspaceBoundaryError):
     def __init__(self,message:str,status:int)->None: super().__init__(f"{message} (ntstatus=0x{status:08x})"); self.status=status
 def _win_close(handle):
@@ -155,7 +155,7 @@ class WindowsPreparedCreate:
             if not _FlushFileBuffers(wintypes.HANDLE(temp)):raise _win_error("FlushFileBuffers failed")
             pre_publish_check();_nt_rename_relative_no_clobber(temp,self._parent_handle,self._leaf);published=True;final=_win_info(temp)
             if final.dwFileAttributes&(_FILE_ATTRIBUTE_REPARSE_POINT|_FILE_ATTRIBUTE_DIRECTORY):raise WorkspaceMutationError("published Windows target is not a regular file")
-            return _win_file_identity(final)
+            return _win_file_state(final)
         finally:
             if temp is not None:
                 if not published:
