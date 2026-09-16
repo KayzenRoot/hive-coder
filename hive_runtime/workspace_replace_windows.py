@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-"""Windows implementation skeleton for HCODER-WO-0022.
+"""Windows replacement seam for HCODER-WO-0022 / CR-001.
 
-The existing WO-0021 backend already proves handle-relative NT opens and
-no-clobber create publication. Replacement requires a stronger expected-target
-proof. Do not replace this skeleton with MoveFileEx/ReplaceFile/path-only logic
-unless real race tests prove the exact Hive CAS contract.
+Windows support is deliberately fail-closed until the handle-pinned implementation
+proves the same bounded-race contract already implemented on POSIX. The contract
+requires latest observable target revalidation, verified same-volume staging and
+an atomic native publication. It does NOT claim strict expected-file-id CAS across
+an uncooperative external writer in the final native-call interval.
 """
 
 from typing import Callable
@@ -18,16 +19,22 @@ _TEMP_PREFIX = ".hive-replace-"
 class WindowsPreparedReplace:
     """Pinned Windows replacement candidate.
 
-    Executor requirements:
+    Native implementation requirements:
     * traverse from the canonical root with NtCreateFile relative handles;
-    * FILE_OPEN_REPARSE_POINT for parent and target surfaces;
-    * reject any reparse-point component and non-regular target;
-    * bind volume/file-id identity and digest bytes read from the pinned handle;
-    * re-open the live pathname handle-relative before commit and compare exact
-      identity + content state;
-    * publish through a native primitive that can prove expected-target
-      semantics under a real concurrent replacement race;
-    * cleanup only a temp object whose file identity is still capability-owned.
+    * use FILE_OPEN_REPARSE_POINT and reject reparse/non-regular components;
+    * bind volume/file-id identity and SHA-256/length read from a pinned target handle;
+    * re-open the live pathname handle-relative before publication and compare exact
+      identity + approved old content;
+    * stage exact approved bytes in an exclusive capability-owned regular file on
+      the same volume, flush and verify its identity/digest/length;
+    * expose mutation_ready only after publication is objectively available;
+    * consume no permit merely to discover this adapter is unavailable;
+    * perform latest revalidation immediately before the native atomic replacement;
+    * cleanup only an unpublished staging object whose file identity is still owned.
+
+    `MoveFileEx`, `ReplaceFile` or an NT rename may be selected only as the atomic
+    publication primitive for CR-001 after native evidence. None may be described
+    as strict CAS because they expose no approved-destination file-id predicate.
     """
 
     def __init__(self, *, observed: WorkspaceReplaceObservedState) -> None:
@@ -35,15 +42,20 @@ class WindowsPreparedReplace:
         self._closed = False
 
     def revalidate_expected(self, expected: WorkspaceReplaceObservedState) -> None:
-        raise NotImplementedError("HCODER-WO-0022 executor must prove Windows live expected-target revalidation")
+        raise NotImplementedError("HCODER-WO-0022 Windows live expected-state revalidation is not yet proven")
+
+    def stage_replace(self, content: bytes, expected: WorkspaceReplaceObservedState) -> None:
+        raise NotImplementedError("HCODER-WO-0022 Windows verified same-volume staging is not yet proven")
+
+    def mutation_ready(self, expected: WorkspaceReplaceObservedState) -> None:
+        raise NotImplementedError("HCODER-WO-0022 Windows atomic publication is not yet proven")
 
     def publish_replace(
         self,
-        content: bytes,
         expected: WorkspaceReplaceObservedState,
         pre_publish_check: Callable[[], None],
     ) -> str:
-        raise NotImplementedError("HCODER-WO-0022 forbids unproven Windows overwrite fallback")
+        raise NotImplementedError("HCODER-WO-0022 Windows replacement remains fail-closed pending native proof")
 
     def close(self) -> None:
         self._closed = True
