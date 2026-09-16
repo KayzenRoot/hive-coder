@@ -33,6 +33,7 @@ _SetFilePointerEx = _kernel32.SetFilePointerEx
 _SetFilePointerEx.argtypes = [wintypes.HANDLE, ctypes.c_longlong, ctypes.POINTER(ctypes.c_longlong), wintypes.DWORD]
 _SetFilePointerEx.restype = wintypes.BOOL
 _FILE_BEGIN = 0
+_FILE_SHARE_DELETE = 0x00000004
 _TEMP_PREFIX = ".hive-replace-"
 
 
@@ -114,7 +115,7 @@ class WindowsPreparedReplace:
         if hashlib.sha256(pinned).hexdigest() != self._stage_digest or len(pinned) != self._stage_bytes: raise WorkspaceBoundaryError("pinned Windows replacement staging bytes changed")
         live: int | None = None
         try:
-            live = _nt_open_relative(self._parent_handle, self._stage_name, desired_access=_FILE_READ_DATA | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE, disposition=_FILE_OPEN, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
+            live = _nt_open_relative(self._parent_handle, self._stage_name, desired_access=_FILE_READ_DATA | _FILE_READ_ATTRIBUTES | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE, disposition=_FILE_OPEN, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT)
             live_info = _win_info(live)
             if live_info.dwFileAttributes & (_FILE_ATTRIBUTE_REPARSE_POINT | _FILE_ATTRIBUTE_DIRECTORY) or _win_file_identity(live_info) != self._stage_identity: raise WorkspaceBoundaryError("live Windows replacement staging pathname identity changed")
             data = _read_handle_bytes(live)
@@ -124,9 +125,9 @@ class WindowsPreparedReplace:
     def stage_replace(self, content: bytes, expected: WorkspaceReplaceObservedState) -> None:
         if self._stage_handle is not None: raise WorkspaceBoundaryError("Windows replacement staging already exists")
         self.revalidate_expected(expected); name = f"{_TEMP_PREFIX}{secrets.token_hex(16)}.tmp"
-        # The owned handle must share READ/WRITE. Without these shares, the later
-        # identity-proof reopen of the same pathname fails with STATUS_SHARING_VIOLATION.
-        handle = _nt_open_relative(self._parent_handle, name, desired_access=_FILE_READ_DATA | _FILE_WRITE_DATA | _FILE_READ_ATTRIBUTES | _FILE_WRITE_ATTRIBUTES | _DELETE | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE, disposition=_FILE_CREATE, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT, file_attributes=_FILE_ATTRIBUTE_TEMPORARY)
+        # DELETE access is needed for later atomic publication and identity-owned
+        # cleanup, so every concurrent reopen must also share DELETE.
+        handle = _nt_open_relative(self._parent_handle, name, desired_access=_FILE_READ_DATA | _FILE_WRITE_DATA | _FILE_READ_ATTRIBUTES | _FILE_WRITE_ATTRIBUTES | _DELETE | _SYNCHRONIZE, share_access=_FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE, disposition=_FILE_CREATE, options=_FILE_NON_DIRECTORY_FILE | _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT, file_attributes=_FILE_ATTRIBUTE_TEMPORARY)
         try:
             info = _win_info(handle)
             if info.dwFileAttributes & (_FILE_ATTRIBUTE_REPARSE_POINT | _FILE_ATTRIBUTE_DIRECTORY): raise WorkspaceBoundaryError("Windows replacement staging object is not a regular file")
