@@ -85,4 +85,4 @@ jobs:
       - name: HIGH_ASSURANCE control-plane, executor, real-harness, workspace-file and status-sidecar contract tests
         env:
           PYTHONWARNINGS: error::ResourceWarning
-        run: python -m unittest tests.control_plane.test_control_plane tests.control_plane.test_surface tests.runtime.test_cua_executor tests.runtime.test_cua_real_harness tests.runtime.test_workspace_files tests.runtime.test_workspace_files_windows tests.runtime.test_runtime_status_sidecar
+        run: python -m unittest tests.control_plane.test_control_plane tests.control_plane.test_surface tests.runtime.test_cua_executor tests.runtime.test_cua_real_harness tests.runtime.test_workspace_files tests.runtime.test_workspace_file_path_security tests.runtime.test_workspace_files_windows tests.runtime.test_runtime_status_sidecar
