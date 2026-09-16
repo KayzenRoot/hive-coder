@@ -20,12 +20,23 @@ from .errors import (
     ControlPlaneError,
     PermitError,
     SessionStateError,
+    WorkspaceBoundaryError,
+    WorkspaceFileError,
+    WorkspaceMutationError,
 )
 from .foundation_lock import expected_foundation_version, load_foundation_record
 from .interpreter import ACP_PROTOCOL_VERSION, InterpreterAdapter, InterpreterIdentity
 from .jsonrpc import JsonRpcPeer
 from .process import ManagedStdioProcess, ProcessSpec
 from .preflight import reports_exact_version, verify_binary_version
+from .workspace_files import (
+    DEFAULT_MAX_WRITE_BYTES,
+    WRITE_ACTION,
+    WRITE_CONTRACT,
+    WorkspaceFileCapability,
+    WorkspaceWriteReceipt,
+    normalize_relative_file_path,
+)
 
 __all__ = [
     "ACP_PROTOCOL_VERSION",
@@ -44,6 +55,7 @@ __all__ = [
     "ControlPolicy",
     "CuaAdapter",
     "CuaDiscovery",
+    "DEFAULT_MAX_WRITE_BYTES",
     "DecisionKind",
     "ExecutionPermit",
     "InterpreterAdapter",
@@ -57,8 +69,16 @@ __all__ = [
     "RiskClass",
     "SessionState",
     "SessionStateError",
+    "WRITE_ACTION",
+    "WRITE_CONTRACT",
+    "WorkspaceBoundaryError",
+    "WorkspaceFileCapability",
+    "WorkspaceFileError",
+    "WorkspaceMutationError",
+    "WorkspaceWriteReceipt",
     "expected_foundation_version",
     "load_foundation_record",
+    "normalize_relative_file_path",
     "redact",
     "reports_exact_version",
     "verify_binary_version",
