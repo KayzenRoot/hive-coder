@@ -25,6 +25,9 @@ _WINDOWS_RESERVED = {
     *(f"com{i}" for i in range(1, 10)),
     *(f"lpt{i}" for i in range(1, 10)),
 }
+_RESERVED_COMPONENTS = {".git"}
+_WINDOWS_FORBIDDEN_CHARS = set('<>"|?*')
+_REJECTED_UNICODE_CATEGORIES = {"Cc", "Cf", "Cs", "Zl", "Zp"}
 
 
 @dataclass(frozen=True)
@@ -60,15 +63,22 @@ def normalize_relative_file_path(value: str) -> str:
         raise WorkspaceBoundaryError("relative path must be text")
     if not value or value != value.strip():
         raise WorkspaceBoundaryError("relative path is empty or padded")
-    if "\x00" in value:
-        raise WorkspaceBoundaryError("relative path contains NUL")
     if unicodedata.normalize("NFC", value) != value:
         raise WorkspaceBoundaryError("relative path must be NFC-normalized")
+    for character in value:
+        if unicodedata.category(character) in _REJECTED_UNICODE_CATEGORIES:
+            raise WorkspaceBoundaryError("relative path contains control or display-format characters")
+        if character in _WINDOWS_FORBIDDEN_CHARS:
+            raise WorkspaceBoundaryError("relative path contains non-portable filename characters")
     if "\\" in value:
         raise WorkspaceBoundaryError("backslash path syntax is not accepted")
     if value.startswith("/") or value.startswith("//"):
         raise WorkspaceBoundaryError("absolute paths are not accepted")
-    if len(value.encode("utf-8")) > MAX_RELATIVE_PATH_BYTES:
+    try:
+        encoded_value = value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise WorkspaceBoundaryError("relative path is not valid UTF-8 text") from exc
+    if len(encoded_value) > MAX_RELATIVE_PATH_BYTES:
         raise WorkspaceBoundaryError("relative path exceeds byte ceiling")
 
     parts = value.split("/")
@@ -78,6 +88,9 @@ def normalize_relative_file_path(value: str) -> str:
     for part in parts:
         if part in {"", ".", ".."}:
             raise WorkspaceBoundaryError("relative path contains traversal or empty component")
+        folded = part.casefold()
+        if folded in _RESERVED_COMPONENTS:
+            raise WorkspaceBoundaryError("VCS-internal path components are outside filesystem-write authority")
         if len(part.encode("utf-8")) > MAX_COMPONENT_BYTES:
             raise WorkspaceBoundaryError("path component exceeds byte ceiling")
         if ":" in part:
