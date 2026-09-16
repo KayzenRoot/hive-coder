@@ -2,17 +2,57 @@ from __future__ import annotations
 
 import unittest
 
+from hive_runtime.git_stage import (
+    GitStageUnavailableError,
+    GovernedGitStageAdapter,
+    UnsupportedGitStageBackend,
+)
+
 
 class GitStageSecurityAcceptanceMap(unittest.TestCase):
-    """Executable checklist that remains skipped until the governed adapter exists.
+    """Security acceptance map for the governed Git staging boundary.
 
-    These skips are intentional prebuilt gates, not promotion evidence. WO-0023 cannot be
-    promoted while any item in this class is skipped.
+    Only properties objectively implemented by the pre-authority adapter are active. The
+    remaining skips are hard promotion gates and must become native/backend evidence before
+    WO-0023 can be promoted.
     """
 
-    @unittest.skip("PREBUILT: implement exact-path normalizer in governed Git adapter")
     def test_rejects_traversal_dot_git_pathspec_magic_and_duplicate_aliases(self) -> None:
-        self.fail("executor must materialize adversarial path cases")
+        adapter = GovernedGitStageAdapter()
+        invalid = (
+            ["../escape.py"],
+            ["a/../b.py"],
+            ["./a.py"],
+            ["/absolute.py"],
+            [".git/index"],
+            [".GIT/config"],
+            ["*.py"],
+            ["src/?.py"],
+            ["src/[ab].py"],
+            [":(top)src/a.py"],
+            ["src/a.py", "src/a.py"],
+            ["src\\a.py", "src/a.py"],
+            ["src//a.py"],
+            ["src/./a.py"],
+            ["src/../a.py"],
+            ["bad\x00name.py"],
+        )
+        for paths in invalid:
+            with self.subTest(paths=paths):
+                with self.assertRaises(ValueError):
+                    adapter.prepare(paths)
+
+    def test_default_adapter_is_non_mutating_and_fails_closed(self) -> None:
+        adapter = GovernedGitStageAdapter()
+        self.assertEqual(adapter.backend_id, "unsupported-git-stage-v1")
+        self.assertFalse(adapter.mutation_authority_enabled)
+        with self.assertRaises(GitStageUnavailableError):
+            adapter.prepare(["src/a.py"])
+
+    def test_pre_authority_adapter_exposes_no_public_stage_operation(self) -> None:
+        adapter = GovernedGitStageAdapter(UnsupportedGitStageBackend())
+        self.assertFalse(hasattr(adapter, "stage_paths"))
+        self.assertFalse(adapter.mutation_authority_enabled)
 
     @unittest.skip("PREBUILT: implement no-follow worktree observation")
     def test_rejects_symlink_reparse_directory_and_special_file_targets(self) -> None:
