@@ -11,13 +11,15 @@
   },
   "adoption": {
     "mode": "UNIVERSAL_BROWNFIELD_ADOPTION",
-    "status": "ADOPTION_CANDIDATE",
+    "status": "PROMOTION_CANDIDATE",
     "workOrder": "HCODER-GEF-ADOPT-0001",
+    "technicalHead": "a62d7602be8a1ed23ca3fc4459aa40188205c860",
+    "technicalVerdict": "APPROVED",
     "preserveHistoricalGef": true,
     "retroactiveCompletionClaimsAllowed": false
   },
   "sourceHierarchy": [
-    "docs/project-brain/11-CHECKPOINT.md",
+    "docs/project-brain/11-CHECKPOINT.md / proven production state",
     "docs/project-brain/10-DECISIONS-LEDGER.md + approved ADRs",
     "docs/project-brain/03-SCOPE.md + docs/project-brain/02-REQUIREMENTS.md",
     "docs/project-brain/09-DEFINITION-OF-DONE.md",

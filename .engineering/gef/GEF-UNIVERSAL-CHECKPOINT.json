@@ -7,6 +7,16 @@
   "adoptionWorkOrder": "HCODER-GEF-ADOPT-0001",
   "adoptionStatus": "GEF_ADOPTION_EXACT_HEAD_EVIDENCE_REQUIRED",
   "preAdoptionMainSha": "ccfed1f960c80dc58e4f45cb627451e77c7d5a79",
+  "technicalAdoptionHead": "a62d7602be8a1ed23ca3fc4459aa40188205c860",
+  "technicalEvidence": {
+    "governanceRun": 35150628413,
+    "governanceRunNumber": 397,
+    "desktopShellRun": 35150628435,
+    "desktopShellRunNumber": 233,
+    "verdict": "APPROVED",
+    "critical": 0,
+    "high": 0
+  },
   "acceptedMergeSha": null,
   "canonicalHumanCheckpoint": "docs/project-brain/11-CHECKPOINT.md",
   "knownSourceDrift": [
@@ -20,11 +30,10 @@
     "state": "DRAFT_CORRECTION_IN_PROGRESS"
   },
   "blockedItems": [],
-  "acceptedEvidence": [],
   "unresolvedRisks": [
-    "universal adoption exact-head CI/audit pending",
+    "final adoption evidence-only PR head exact-head CI/audit pending",
     "active WO-0023 must reconcile adopted main before next execution"
   ],
-  "nextLegalAction": "run exact-head Governance and Desktop Shell for HCODER-GEF-ADOPT-0001, audit, merge if green, verify main, then resume HCODER-WO-0023 under universal GEF",
+  "nextLegalAction": "verify the final adoption PR head with Governance + Desktop Shell, audit exact head, squash merge with expected-head protection, verify main, then seal post-adoption resume state",
   "stopCondition": "GEF_ADOPTION_EXACT_HEAD_EVIDENCE_REQUIRED"
 }
