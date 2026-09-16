@@ -10,6 +10,14 @@ from typing import Mapping, Protocol
 from .control_plane import PermissionControlPlane
 from .control_types import ActionRequest, ActionTarget, Capability, SessionState, normalize_workspace
 from .errors import ControlPlaneError, WorkspaceBoundaryError, WorkspaceMutationError
+from .workspace_replace_contract import (
+    REPLACE_ACTION,
+    REPLACE_ARGUMENT_KEYS,
+    REPLACE_CONTRACT,
+    REPLACE_TARGET_STATE,
+    WorkspaceReplaceObservedState,
+    WorkspaceReplaceReceipt,
+)
 
 WRITE_CONTRACT = "hive-workspace-write-v1"
 WRITE_ACTION = "write_file_v1"
@@ -50,10 +58,22 @@ class _PreparedCreate(Protocol):
     def close(self) -> None: ...
 
 
+class _PreparedReplace(Protocol):
+    observed: WorkspaceReplaceObservedState
+
+    def revalidate_expected(self, expected: WorkspaceReplaceObservedState) -> None: ...
+
+    def publish_replace(self, content: bytes, expected: WorkspaceReplaceObservedState, pre_publish_check) -> str: ...
+
+    def close(self) -> None: ...
+
+
 class _Backend(Protocol):
     canonical_root: str
 
     def prepare_create(self, relative_path: str) -> _PreparedCreate: ...
+
+    def prepare_replace(self, relative_path: str) -> _PreparedReplace: ...
 
     def close(self) -> None: ...
 
@@ -125,11 +145,12 @@ def _build_backend(workspace_root: str | os.PathLike[str]) -> _Backend:
 
 
 class WorkspaceFileCapability:
-    """Permit-gated atomic create-only workspace mutation capability.
+    """Permit-gated governed workspace file capability.
 
-    WO-0021 deliberately does not overwrite, append, truncate, delete or rename
-    existing user files. Approval/permit authority remains exclusively inside
-    PermissionControlPlane and its trusted-UI boundary.
+    `write_file_v1` remains the CP-0021 create-only/no-clobber contract.
+    WO-0022 prebuilds a separate `replace_file_v1` existing-file contract; its
+    mutation path remains fail-closed until native expected-target publication
+    is proven on each supported platform.
     """
 
     def __init__(
@@ -164,12 +185,7 @@ class WorkspaceFileCapability:
             self._backend.close()
             self._closed = True
 
-    def prepare_write_request(
-        self,
-        session_id: str,
-        relative_path: str,
-        content: bytes | bytearray | memoryview,
-    ) -> ActionRequest:
+    def prepare_write_request(self, session_id: str, relative_path: str, content: bytes | bytearray | memoryview) -> ActionRequest:
         data = _content_bytes(content)
         self._validate_size(data)
         relative = normalize_relative_file_path(relative_path)
@@ -182,31 +198,44 @@ class WorkspaceFileCapability:
             finally:
                 prepared.close()
         return ActionRequest(
-            session_id=str(session_id),
-            capability=Capability.FILESYSTEM_WRITE,
-            action=WRITE_ACTION,
+            session_id=str(session_id), capability=Capability.FILESYSTEM_WRITE, action=WRITE_ACTION,
+            target=ActionTarget(workspace=self.workspace),
+            arguments={"contract": WRITE_CONTRACT, "path": relative, "parent_identity": parent_identity,
+                       "target_state": "absent", "content_sha256": _sha256(data), "content_bytes": len(data)},
+        )
+
+    def prepare_replace_request(self, session_id: str, relative_path: str, content: bytes | bytearray | memoryview) -> ActionRequest:
+        """Build a bounded replacement request without performing mutation."""
+        data = _content_bytes(content)
+        self._validate_size(data)
+        relative = normalize_relative_file_path(relative_path)
+        with self._lock:
+            self._require_open()
+            prepared = self._backend.prepare_replace(relative)
+            try:
+                observed = prepared.observed
+            finally:
+                prepared.close()
+        return ActionRequest(
+            session_id=str(session_id), capability=Capability.FILESYSTEM_WRITE, action=REPLACE_ACTION,
             target=ActionTarget(workspace=self.workspace),
             arguments={
-                "contract": WRITE_CONTRACT,
+                "contract": REPLACE_CONTRACT,
                 "path": relative,
-                "parent_identity": parent_identity,
-                "target_state": "absent",
-                "content_sha256": _sha256(data),
-                "content_bytes": len(data),
+                "parent_identity": observed.parent_identity,
+                "target_state": REPLACE_TARGET_STATE,
+                "target_identity": observed.target_identity,
+                "old_content_sha256": observed.content_sha256,
+                "old_content_bytes": observed.content_bytes,
+                "new_content_sha256": _sha256(data),
+                "new_content_bytes": len(data),
             },
         )
 
-    def write_bytes(
-        self,
-        request: ActionRequest,
-        content: bytes | bytearray | memoryview,
-        *,
-        permit_token: str,
-    ) -> WorkspaceWriteReceipt:
+    def write_bytes(self, request: ActionRequest, content: bytes | bytearray | memoryview, *, permit_token: str) -> WorkspaceWriteReceipt:
         data = _content_bytes(content)
         self._validate_size(data)
         relative, expected_parent = self._validate_request(request, data)
-
         with self._lock:
             self._require_open()
             prepared = self._backend.prepare_create(relative)
@@ -214,17 +243,11 @@ class WorkspaceFileCapability:
                 if prepared.parent_identity != expected_parent:
                     raise WorkspaceBoundaryError("parent identity changed after approval request")
                 prepared.revalidate_absent()
-
-                # All read-only validation is complete. Permit consumption is the
-                # final authorization operation immediately before the first OS
-                # mutation (creation of a private same-parent temporary file).
                 self._plane.consume_execution_permit(permit_token, request)
                 self._require_active(request.session_id)
-
                 def pre_publish_check() -> None:
                     self._require_active(request.session_id)
                     prepared.revalidate_absent()
-
                 committed_state = prepared.publish(data, pre_publish_check)
             except WorkspaceBoundaryError:
                 raise
@@ -236,14 +259,43 @@ class WorkspaceFileCapability:
                 raise WorkspaceMutationError("workspace create failed closed") from exc
             finally:
                 prepared.close()
+        return WorkspaceWriteReceipt(workspace=self.workspace, relative_path=relative, parent_identity=expected_parent,
+                                     content_sha256=_sha256(data), content_bytes=len(data), committed_state=committed_state)
 
-        return WorkspaceWriteReceipt(
-            workspace=self.workspace,
-            relative_path=relative,
-            parent_identity=expected_parent,
-            content_sha256=_sha256(data),
-            content_bytes=len(data),
-            committed_state=committed_state,
+    def replace_bytes(self, request: ActionRequest, content: bytes | bytearray | memoryview, *, permit_token: str) -> WorkspaceReplaceReceipt:
+        """Fail-closed mutation seam; native publication is intentionally unimplemented."""
+        data = _content_bytes(content)
+        self._validate_size(data)
+        relative, expected = self._validate_replace_request(request, data)
+        with self._lock:
+            self._require_open()
+            prepared = self._backend.prepare_replace(relative)
+            try:
+                prepared.revalidate_expected(expected)
+                # No permit is consumed before platform expected-target proof succeeds.
+                # Current platform skeletons stop here rather than weakening the contract.
+                self._plane.consume_execution_permit(permit_token, request)
+                self._require_active(request.session_id)
+                def pre_publish_check() -> None:
+                    self._require_active(request.session_id)
+                    prepared.revalidate_expected(expected)
+                committed_state = prepared.publish_replace(data, expected, pre_publish_check)
+            except WorkspaceBoundaryError:
+                raise
+            except ControlPlaneError as exc:
+                raise WorkspaceMutationError("control-plane authorization rejected workspace replace") from exc
+            except WorkspaceMutationError:
+                raise
+            except NotImplementedError:
+                raise
+            except Exception as exc:
+                raise WorkspaceMutationError("workspace replace failed closed") from exc
+            finally:
+                prepared.close()
+        return WorkspaceReplaceReceipt(
+            workspace=self.workspace, relative_path=relative, parent_identity=expected.parent_identity,
+            previous_target_identity=expected.target_identity, previous_content_sha256=expected.content_sha256,
+            new_content_sha256=_sha256(data), new_content_bytes=len(data), committed_state=committed_state,
         )
 
     def _validate_request(self, request: ActionRequest, data: bytes) -> tuple[str, str]:
@@ -259,10 +311,8 @@ class WorkspaceFileCapability:
         if canonical_target.get("workspace") != self.workspace:
             raise WorkspaceBoundaryError("request workspace does not match capability workspace")
         args: Mapping[str, object] = request.arguments
-        if not isinstance(args, Mapping):
-            raise WorkspaceBoundaryError("request arguments must be a mapping")
         required = {"contract", "path", "parent_identity", "target_state", "content_sha256", "content_bytes"}
-        if set(args) != required:
+        if not isinstance(args, Mapping) or set(args) != required:
             raise WorkspaceBoundaryError("request arguments do not match create contract")
         if args.get("contract") != WRITE_CONTRACT:
             raise WorkspaceBoundaryError("write contract mismatch")
@@ -272,11 +322,38 @@ class WorkspaceFileCapability:
             raise WorkspaceBoundaryError("parent identity is missing")
         if args.get("target_state") != "absent":
             raise WorkspaceBoundaryError("WO-0021 only authorizes creation of an absent target")
-        if args.get("content_bytes") != len(data):
-            raise WorkspaceBoundaryError("content length does not match approved request")
-        if args.get("content_sha256") != _sha256(data):
-            raise WorkspaceBoundaryError("content digest does not match approved request")
+        if args.get("content_bytes") != len(data) or args.get("content_sha256") != _sha256(data):
+            raise WorkspaceBoundaryError("content does not match approved create request")
         return relative, parent_identity
+
+    def _validate_replace_request(self, request: ActionRequest, data: bytes) -> tuple[str, WorkspaceReplaceObservedState]:
+        try:
+            capability = Capability(request.capability)
+        except (TypeError, ValueError) as exc:
+            raise WorkspaceBoundaryError("request capability is invalid") from exc
+        if capability is not Capability.FILESYSTEM_WRITE or str(request.action).strip() != REPLACE_ACTION:
+            raise WorkspaceBoundaryError("request is not the governed replace contract")
+        if request.target.canonical().get("workspace") != self.workspace:
+            raise WorkspaceBoundaryError("request workspace does not match capability workspace")
+        args: Mapping[str, object] = request.arguments
+        if not isinstance(args, Mapping) or set(args) != REPLACE_ARGUMENT_KEYS:
+            raise WorkspaceBoundaryError("request arguments do not match replace contract")
+        if args.get("contract") != REPLACE_CONTRACT or args.get("target_state") != REPLACE_TARGET_STATE:
+            raise WorkspaceBoundaryError("replace contract/state mismatch")
+        relative = normalize_relative_file_path(args.get("path"))  # type: ignore[arg-type]
+        parent_identity = args.get("parent_identity")
+        target_identity = args.get("target_identity")
+        old_digest = args.get("old_content_sha256")
+        old_bytes = args.get("old_content_bytes")
+        if not isinstance(parent_identity, str) or not isinstance(target_identity, str) or not isinstance(old_digest, str) or not isinstance(old_bytes, int):
+            raise WorkspaceBoundaryError("replace expected state is malformed")
+        if args.get("new_content_bytes") != len(data) or args.get("new_content_sha256") != _sha256(data):
+            raise WorkspaceBoundaryError("new content does not match approved replace request")
+        try:
+            expected = WorkspaceReplaceObservedState(parent_identity, target_identity, old_digest, old_bytes)
+        except ValueError as exc:
+            raise WorkspaceBoundaryError("replace expected state is invalid") from exc
+        return relative, expected
 
     def _validate_size(self, data: bytes) -> None:
         if len(data) > self._max_write_bytes:
