@@ -51,7 +51,9 @@ class PosixGitIndexTransaction:
     def acquire(self) -> GitIndexLockIdentity:
         if self._fd is not None:
             raise GitStageUnavailableError("index transaction already owns a lock")
-        flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0)
+        # O_BINARY is required on Windows: without it the CRT opens in text mode
+        # and os.write translates every LF to CRLF, corrupting binary index bytes.
+        flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0) | getattr(os, "O_CLOEXEC", 0)
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
         try:

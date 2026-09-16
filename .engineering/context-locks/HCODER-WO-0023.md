@@ -15,6 +15,43 @@ The WO branch must not force-rewrite history merely to absorb the evidence-only 
 
 The competitive capability matrix and harness benchmark are planning/benchmark inputs only. They cannot activate runtime permissions, dependencies, subprocess execution, network access or Git mutation.
 
+## Context Lock Delta 002 — governance reconciliation and reviewed Python dependency mechanism
+This delta records the Prompt 01 governance repair and the bounded Python dependency mechanism required to close the Dulwich backend/provenance gate. **It does not grant runtime Git mutation authority, does not enable a public `stage_paths` API, does not enable `git.write`, and does not enable object or index publication.** The prebuilt authority posture (`mutation_authority_enabled = False` everywhere, no permit path) is unchanged by this delta.
+
+### Authorized additional files
+This delta authorizes exactly these additional files, and nothing else:
+- `AGENTS.md` (current-state prose only; historical facts preserved)
+- `docs/project-brain/11-CHECKPOINT.md`
+- `docs/project-brain/10-DECISIONS-LEDGER.md`
+- `.engineering/prebuilt/HCODER-WO-0023-CODEX-100-HANDOFF.md`
+- `.engineering/gef/GEF-REVIEW-PROTOCOL.md`
+- `.engineering/prompts/REVIEW-PROMPT-TEMPLATE.md`
+- `foundations/python-dependencies.lock.json` (new)
+- `tools/foundations/verify_python_dependencies.py` (new)
+- `.github/workflows/governance.yml` (dependency installation and exact native proof lanes only)
+- `tests/runtime/test_git_stage_index_codec.py`
+- `tests/runtime/test_git_stage_contract.py`
+- `tests/runtime/test_git_object_private_prep.py` (new focused lane)
+- `tests/runtime/test_git_binary_byte_fidelity.py` (new focused regression lane)
+- `foundations/python-dependencies.requirements.txt` (new, hash-pinned, CI-consumed)
+
+### Recorded resolution 001 — DEC-025 status disagreement
+`docs/project-brain/11-CHECKPOINT.md` (CP-0021, canonical) states `DEC-025` is APPROVED / CANONICAL. The `DEC-025` ADR header still reads APPROVED / FINAL CANDIDATE — NOT CANONICAL because it was last written at the WO-0021 product merge `ee2e01e99aaea89deb2754ba8295fe34d7744541` and was not updated by the CP-0021 source-of-truth reconciliation `9c2623f8b335cf29b63b5db5f43e694bfd77938e`.
+
+Resolution: the canonical checkpoint `HCODER-CP-0021` (git-proven closeout main SHA `200540c2605ff4e5c32f54cd1c3be40dbd167520`) is authoritative for DEC-025's promoted status. This delta does **not** rewrite the DEC-025 ADR file; the stale ADR header is carried forward as recorded documentary drift.
+
+### Recorded resolution 002 — Decisions Ledger coverage gap
+`docs/project-brain/10-DECISIONS-LEDGER.md` was last updated at CP-0017 (`79e6eb6`) and stops at DEC-021, while ADR files for DEC-022 through DEC-027 already exist under `docs/project-brain/adrs/`. The reconciliation folds those already-evidenced decisions into the ledger verbatim from their ADR records, preserving existing IDs and chronology. No decision content is invented and no historical decision is rewritten.
+
+### Recorded resolution 003 — handoff module-name mismatch
+`HCODER-WO-0023-CODEX-100-HANDOFF.md` names `hive_runtime/git_stage_pre_authority.py`, which does not exist. Code evidence shows the pre-authority adapter seam is implemented by `GovernedGitStageAdapter` in `hive_runtime/git_stage.py`, with the pre-authority stage executor in `hive_runtime/git_stage_plan.py`. The stale reference is corrected in the handoff rather than creating a redundant module.
+
+### Recorded resolution 004 — review deliverable policy
+The rule that every completed review must deliver the next executable Codex prompt as a generated PDF is canonicalized in `.engineering/gef/GEF-REVIEW-PROTOCOL.md` and referenced from `.engineering/prompts/REVIEW-PROMPT-TEMPLATE.md`.
+
+### Reviewed Python dependency mechanism
+The repository had no canonical Python third-party dependency mechanism. This delta authorizes exactly one minimal mechanism: a hash-pinned `foundations/python-dependencies.lock.json` with a verifier `tools/foundations/verify_python_dependencies.py`, consumed by CI. It introduces no packaging redesign and no new runtime authority. At the time of this delta the only admitted entry is `dulwich==1.2.15` as an index **parser/serializer primitive**, pinned to the pure-Python wheel, with `urllib3` deliberately not materialized so the client/network path is structurally unavailable.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 

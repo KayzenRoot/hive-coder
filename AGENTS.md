@@ -31,24 +31,27 @@ If the user says `continue`, `continue do chat anterior`, or equivalent for Hive
 4. Continue autonomously from its `NEXT EXACT ACTIONS`; do not ask the user to restate recoverable context.
 
 ## Current execution state
-`HCODER-CP-0020 — Desktop Runtime Status Supervisor & System Truth Surface` is **APPROVED / CANONICAL subject only to the documentation-only closeout seal**.
+`HCODER-CP-0022 — Governed Existing-File Replacement Capability` is **APPROVED / CANONICAL**.
 
-Product receipts:
-- Issue #51 CLOSED / COMPLETED.
-- Product PR #54 SQUASH MERGED with expected-head protection.
-- Final reviewed head `344130199536e33a656d49a365e746610f89e245` passed Governance #265 (**288/288 Ubuntu + 61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #101 (security gate, frontend **26/26**, npm audit 0, Rust **13/13**, locked RustSec/check, Windows release build and launch smoke).
-- Final HEDS `5217039528`: APPROVED FOR SQUASH MERGE, unresolved HIGH/CRITICAL 0.
-- GitHub-signed product merge `621732c00ba1f3325272dfa1631fddbbabf3dfc4` passed post-merge Governance #266 (**288/288 + 61/61**) and Desktop Shell #102, including release build and launch smoke.
-- `DEC-024 — Desktop Runtime Status Supervisor Boundary` is APPROVED / CANONICAL subject only to closeout seal.
-- `HCODER-WO-0020-CR-001` MEDIUM and `HCODER-WO-0020-CR-002` MEDIUM are RESOLVED.
+Canonical state:
+- `HCODER-CP-0022` / `DEC-026 — Governed Existing-File Replacement Capability` is **CANONICAL**, promoted by closeout merge `795ed101eaf5d770f63a96db7f01a82369be34f1`.
+- Canonical base `HCODER-CP-0021` / `9c2623f8b335cf29b63b5db5f43e694bfd77938e`.
+- Product PR #62 squash-merged as `06c68611a42e07b85ae765145d94bb613110ac14`; post-merge Governance #324 and Desktop Shell #160 passed.
+- CP-0022 closeout exact head `a777ac207b42059a33ce9d73d8287122ff43c0a9` passed Governance #325 and Desktop Shell #161 with HEDS closeout review `5222180870`, unresolved HIGH/CRITICAL `0/0`.
+- `HCODER-WO-0022-CR-001` is resolved; the canonical guarantee is bounded-race atomic replacement, explicitly **not** strict CAS.
+- Hive runtime has exactly two privileged workspace file mutation adapters: CP-0021 create-only `write_file_v1` and CP-0022 `replace_file_v1`, both under `Capability.FILESYSTEM_WRITE`, both mandatory trusted-approval gated, both permit-bound and single-use.
 
-CP-0020 authority remains presentation-only: exactly one fixed child-process site, fixed sibling basename, fixed `--stdio-status-v1`, cleared child environment, canonical request/33,024-byte response ceiling, strict raw decoder, argument-free main-window Tauri command and read-only Runtime/Provider/Task/Permission System Truth. No generic process/shell capability, caller-controlled process input, provider/model execution, credential authority, task/permission/filesystem/Git/terminal/computer-use mutation, remote control, skill activation or billing/purchase authority exists.
+CP-0022 authority remains replacement-only: append, truncate-in-place, delete, arbitrary rename/move, recursive mutation, chmod/chown, Git mutation, generic filesystem mutation, shell/terminal/process execution, Tauri/desktop write commands, provider/model execution or credentials, Cua/computer-use mutation beyond prior governed boundaries, remote control, automatic skill activation and billing/purchase authority remain unapproved.
+
+Earlier checkpoint receipts (CP-0020 and prior) remain historically recorded in their closeout evidence files under `.engineering/evidence/` and are not restated here.
+
+### In-flight increments (not checkpoints, not canonical-complete)
+- `HCODER-PLATFORM-001` (Issue #63) native validation matrix is on `main` at `22b56b0f3111158cbf50789b1647c5a578a171c1`, evidence ledger reconciled at `ccfed1f960c80dc58e4f45cb627451e77c7d5a79`. Its ledger is **PREBUILT / NATIVE MATRIX INCOMPLETE**: Linux and macOS native desktop/Tauri exact-head evidence is still required.
+- `HCODER-WO-0023` (Issue #68, PR #69 Draft) governed Git staging is an active Work Order with its own Context Lock. It grants no Git mutation authority and is not promoted.
 
 ### NEXT EXACT ACTIONS
-1. Complete the documentation-only CP-0020 closeout from product merge `621732c00ba1f3325272dfa1631fddbbabf3dfc4`.
-2. Require exact-head Governance + Desktop Shell on the closeout head.
-3. Perform closeout HEDS; stop on unresolved HIGH/CRITICAL.
-4. Squash merge closeout with expected-head protection.
-5. Require push-triggered Governance + Desktop Shell on the resulting `main` SHA.
-6. Refresh Issue #30 with the fully sealed CP-0020 receipts.
-7. Only then run a fresh canonical source-check and select the next NECESSARY increment. Do not infer it from historical branches.
+1. Continue the active Work Order from its own Context Lock and Work Order sources; do not infer scope from historical branches.
+2. Complete `HCODER-PLATFORM-001` Linux and macOS native desktop/Tauri exact-head evidence, or explicitly record it as deferred.
+3. Require exact-head Governance + Desktop Shell on every promotion head; any new head invalidates old exact-head evidence.
+4. Perform HEDS with unresolved HIGH/CRITICAL `0/0` before promotion.
+5. Refresh Issue #30 with fully sealed receipts once the active Work Order reaches a governed closeout.

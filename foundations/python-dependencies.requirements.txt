@@ -1,0 +1,13 @@
+# Governed Python runtime dependencies for Hive Coder (HCODER-WO-0023).
+#
+# Consumed by CI and by local preflight exactly as written:
+#   python -m pip install --no-deps --require-hashes -r foundations/python-dependencies.requirements.txt
+#
+# The exact pure-Python artifact is pinned by URL and sha256. Platform wheels are
+# deliberately not admitted, so correctness never depends on the optional compiled
+# extension. `--no-deps` keeps the declared urllib3 client/network dependency
+# unmaterialized; see foundations/python-dependencies.lock.json.
+#
+# Any change here requires a governed dependency/provenance decision plus an
+# exact-head Context Lock delta.
+dulwich @ https://files.pythonhosted.org/packages/3a/96/b4c8f1cf6c69811098415903ec299cdea87576c51b0c1f13f21215368c63/dulwich-1.2.15-py3-none-any.whl --hash=sha256:5c863992962bab0fc5f75be132399a16f670f2a9283faf9aaeb953fd8891db83

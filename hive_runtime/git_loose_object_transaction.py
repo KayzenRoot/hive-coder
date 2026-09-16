@@ -33,7 +33,7 @@ def prepare_loose_blob(workspace_root: str | Path, content: bytes) -> tuple[GitL
     return GitLooseObjectPreparation(LOOSE_OBJECT_TRANSACTION_CONTRACT,candidate,store,candidate.oid[:2],candidate.oid[2:],hashlib.sha256(compressed).hexdigest(),len(compressed)), compressed
 
 def _read_existing_regular_nofollow(path: Path) -> tuple[bytes, os.stat_result]:
-    flags=os.O_RDONLY|getattr(os,"O_CLOEXEC",0)|getattr(os,"O_NOFOLLOW",0)|getattr(os,"O_NONBLOCK",0)
+    flags=os.O_RDONLY|getattr(os,"O_BINARY",0)|getattr(os,"O_CLOEXEC",0)|getattr(os,"O_NOFOLLOW",0)|getattr(os,"O_NONBLOCK",0)
     try: fd=os.open(path,flags)
     except FileNotFoundError: raise
     except OSError as exc: raise GitStageUnsupportedRepositoryError("existing loose object is not safely readable") from exc

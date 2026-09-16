@@ -27,6 +27,79 @@ GIT_STAGE_ARGUMENT_KEYS = frozenset(
 
 
 @dataclass(frozen=True)
+class GitStageWorktreeStat:
+    """Bounded numeric stat record for one approved regular worktree file.
+
+    A Git index entry carries stat data so Git can decide cheaply whether the
+    worktree still matches the index. Without the exact observed values the
+    codec would have to guess, so the values are captured here and bound into
+    the same observation the approval is taken over.
+    """
+
+    dev: int
+    ino: int
+    mode: int
+    uid: int
+    gid: int
+    size: int
+    atime_s: int
+    atime_ns: int
+    mtime_s: int
+    mtime_ns: int
+    ctime_s: int
+    ctime_ns: int
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("dev", self.dev),
+            ("ino", self.ino),
+            ("mode", self.mode),
+            ("uid", self.uid),
+            ("gid", self.gid),
+            ("size", self.size),
+        ):
+            if not isinstance(value, int) or value < 0:
+                raise ValueError(f"worktree stat {label} must be a non-negative integer")
+        if not 0 <= self.mode <= 0xFFFF:
+            raise ValueError("worktree stat mode is outside the bounded range")
+        for label, value in (
+            ("atime_s", self.atime_s),
+            ("mtime_s", self.mtime_s),
+            ("ctime_s", self.ctime_s),
+        ):
+            if not isinstance(value, int):
+                raise ValueError(f"worktree stat {label} must be an integer")
+        for label, value in (
+            ("atime_ns", self.atime_ns),
+            ("mtime_ns", self.mtime_ns),
+            ("ctime_ns", self.ctime_ns),
+        ):
+            if not isinstance(value, int) or not 0 <= value < 1_000_000_000:
+                raise ValueError(f"worktree stat {label} must be sub-second nanoseconds")
+
+    @property
+    def git_mode(self) -> int:
+        """Git index file mode for this regular file (100644 or 100755)."""
+        return 0o100755 if self.mode & 0o111 else 0o100644
+
+    def canonical(self) -> dict[str, int]:
+        return {
+            "dev": self.dev,
+            "ino": self.ino,
+            "mode": self.mode,
+            "uid": self.uid,
+            "gid": self.gid,
+            "size": self.size,
+            "atime_s": self.atime_s,
+            "atime_ns": self.atime_ns,
+            "mtime_s": self.mtime_s,
+            "mtime_ns": self.mtime_ns,
+            "ctime_s": self.ctime_s,
+            "ctime_ns": self.ctime_ns,
+        }
+
+
+@dataclass(frozen=True)
 class GitStageWorktreeState:
     """Bounded approved state for one regular worktree file. Raw bytes never belong here."""
 
@@ -35,6 +108,7 @@ class GitStageWorktreeState:
     content_sha256: str
     content_bytes: int
     state: str = "regular"
+    stat: GitStageWorktreeStat | None = None
 
     def __post_init__(self) -> None:
         if not self.path or not self.file_identity:
@@ -45,6 +119,8 @@ class GitStageWorktreeState:
             raise ValueError("worktree digest must be lowercase SHA-256")
         if not isinstance(self.content_bytes, int) or self.content_bytes < 0:
             raise ValueError("worktree byte length is invalid")
+        if self.stat is not None and self.stat.size != self.content_bytes:
+            raise ValueError("worktree stat size must equal the observed byte length")
 
     def canonical(self) -> dict[str, object]:
         return {
@@ -53,6 +129,7 @@ class GitStageWorktreeState:
             "content_sha256": self.content_sha256,
             "content_bytes": self.content_bytes,
             "state": self.state,
+            "stat": None if self.stat is None else self.stat.canonical(),
         }
 
 

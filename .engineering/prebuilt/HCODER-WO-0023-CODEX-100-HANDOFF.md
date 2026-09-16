@@ -54,9 +54,12 @@ Prefer completing existing files rather than creating parallel architecture:
 - `hive_runtime/git_object_store_inspector.py`
 - `hive_runtime/git_loose_object_transaction.py`
 - `hive_runtime/git_stage_plan.py`
-- `hive_runtime/git_stage_pre_authority.py`
+- `hive_runtime/git_object_private_prep.py`
+- `hive_runtime/git_stage_codex_frontier.py`
 - corresponding `tests/runtime/test_git_*`
 - control-plane files only after explicit Context Lock authority delta.
+
+> **Prompt 01 correction (WO-0023 Context Lock Delta 002).** This list previously named `hive_runtime/git_stage_pre_authority.py`. That module does not exist and never did. Code evidence shows the pre-authority seams are already implemented in existing modules: `GovernedGitStageAdapter` in `hive_runtime/git_stage.py`, `PreAuthorityStageExecutor` in `hive_runtime/git_stage_plan.py`, and `PreAuthorityLooseObjectTransaction` in `hive_runtime/git_loose_object_transaction.py`. The stale reference was corrected rather than creating a redundant parallel module. Do not create `git_stage_pre_authority.py`.
 
 ## Forbidden shortcuts
 

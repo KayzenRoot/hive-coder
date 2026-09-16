@@ -52,7 +52,14 @@ def _reject_if_present(path: Path, label: str) -> None:
 
 
 def _read_config_bytes(config_path: Path) -> bytes:
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    # O_BINARY is required on Windows so the CRT does not treat 0x1A as EOF.
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_BINARY", 0)
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0)
+    )
     try:
         fd = os.open(config_path, flags)
     except FileNotFoundError:

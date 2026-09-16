@@ -9,7 +9,14 @@ from pathlib import Path
 from typing import Sequence
 
 from .git_stage import GitStagePreparation, GitStageUnavailableError, GitStageUnsupportedRepositoryError
-from .git_stage_contract import ABSENT_INDEX_IDENTITY, ABSENT_INDEX_SHA256, GitStageObservedState, GitStageWorktreeState, UNBORN_HEAD
+from .git_stage_contract import (
+    ABSENT_INDEX_IDENTITY,
+    ABSENT_INDEX_SHA256,
+    GitStageObservedState,
+    GitStageWorktreeState,
+    GitStageWorktreeStat,
+    UNBORN_HEAD,
+)
 from .workspace_files import normalize_relative_file_path
 
 _MAX_HEAD_BYTES = 4096
@@ -32,8 +39,39 @@ def _identity(st: os.stat_result) -> str:
     return f"posix:{int(st.st_dev)}:{int(st.st_ino)}:{int(st.st_mode)}"
 
 
+def _bounded_stat(st: os.stat_result) -> GitStageWorktreeStat:
+    """Capture the exact numeric stat values a Git index entry needs.
+
+    ``st_*time_ns`` is authoritative; the integer seconds are derived from it so
+    the two can never disagree.
+    """
+    return GitStageWorktreeStat(
+        dev=int(st.st_dev),
+        ino=int(st.st_ino),
+        mode=int(st.st_mode) & 0xFFFF,
+        uid=int(st.st_uid),
+        gid=int(st.st_gid),
+        size=int(st.st_size),
+        atime_s=int(st.st_atime_ns // 1_000_000_000),
+        atime_ns=int(st.st_atime_ns % 1_000_000_000),
+        mtime_s=int(st.st_mtime_ns // 1_000_000_000),
+        mtime_ns=int(st.st_mtime_ns % 1_000_000_000),
+        ctime_s=int(st.st_ctime_ns // 1_000_000_000),
+        ctime_ns=int(st.st_ctime_ns % 1_000_000_000),
+    )
+
+
 def _open_regular_nofollow(path: Path) -> tuple[int, os.stat_result]:
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    # O_BINARY is mandatory on Windows: the CRT otherwise opens in text mode,
+    # where os.read stops at a 0x1A byte and os.write translates LF to CRLF.
+    # Git metadata and index bytes are binary and routinely contain 0x1A.
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_BINARY", 0)
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0)
+    )
     try: fd = os.open(path, flags)
     except FileNotFoundError: raise
     except OSError as exc: raise GitStageUnsupportedRepositoryError("required Git/worktree object is not safely readable") from exc
@@ -158,7 +196,7 @@ class PosixGitStageObserver:
         try: fd, st = _open_regular_nofollow(path)
         except FileNotFoundError as exc: raise GitStageUnsupportedRepositoryError("approved worktree path is unavailable") from exc
         try:
-            digest, size = _sha256_file(fd); return GitStageWorktreeState(relative, _identity(st), digest, size)
+            digest, size = _sha256_file(fd); return GitStageWorktreeState(relative, _identity(st), digest, size, stat=_bounded_stat(st))
         finally: os.close(fd)
 
     def mutation_ready(self, prepared: GitStagePreparation) -> None:

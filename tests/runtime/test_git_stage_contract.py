@@ -3,8 +3,8 @@ from __future__ import annotations
 import unittest
 
 from hive_runtime.git_stage import GitStageUnavailableError
-from hive_runtime.git_stage_index_codec import DULWICH_CANDIDATE_VERSION, DulwichIndexCodecCandidate, GitIndexCandidate, UnavailableGitIndexCodec
-from hive_runtime.git_stage_contract import ABSENT_INDEX_IDENTITY, ABSENT_INDEX_SHA256, GIT_STAGE_ACTION, GIT_STAGE_ARGUMENT_KEYS, GIT_STAGE_CONTRACT, GIT_STAGE_TARGET_STATE, MAX_STAGE_PATHS, UNBORN_HEAD, GitStageObservedState, GitStageReceipt, GitStageWorktreeState
+from hive_runtime.git_stage_index_codec import DULWICH_CANDIDATE_VERSION, DulwichGitIndexCodec, GitIndexCandidate, UnavailableGitIndexCodec
+from hive_runtime.git_stage_contract import ABSENT_INDEX_IDENTITY, ABSENT_INDEX_SHA256, GIT_STAGE_ACTION, GIT_STAGE_ARGUMENT_KEYS, GIT_STAGE_CONTRACT, GIT_STAGE_TARGET_STATE, MAX_STAGE_PATHS, UNBORN_HEAD, GitStageObservedState, GitStageReceipt, GitStageWorktreeState, GitStageWorktreeStat
 
 DIGEST_A = "a" * 64
 DIGEST_B = "b" * 64
@@ -19,7 +19,17 @@ class GitStageContractTests(unittest.TestCase):
         self.assertEqual(GIT_STAGE_ARGUMENT_KEYS, {"contract","repository_identity","repository_head","index_state","index_identity","index_sha256","paths","worktree_states","path_count","target_state"})
 
     def test_worktree_state_is_redacted_metadata_only(self) -> None:
-        observed = state(); self.assertEqual(set(observed.canonical()), {"path","file_identity","content_sha256","content_bytes","state"}); self.assertNotIn("content", observed.canonical()); self.assertNotIn("bytes", observed.canonical())
+        observed = state()
+        canonical = observed.canonical()
+        self.assertEqual(set(canonical), {"path","file_identity","content_sha256","content_bytes","state","stat"})
+        self.assertNotIn("content", canonical)
+        self.assertNotIn("bytes", canonical)
+        # The stat record is bounded numeric metadata only: no raw file bytes.
+        self.assertIsNone(canonical["stat"])
+        stats = {"dev":1,"ino":2,"mode":0o100644,"uid":0,"gid":0,"size":3,"atime_s":1,"atime_ns":0,"mtime_s":1,"mtime_ns":0,"ctime_s":1,"ctime_ns":0}
+        with_stat = GitStageWorktreeState("src/app.py", "file:1", DIGEST_A, 3, stat=GitStageWorktreeStat(**stats))
+        self.assertEqual(with_stat.canonical()["stat"], stats)
+        self.assertTrue(all(isinstance(value, int) for value in with_stat.canonical()["stat"].values()))
 
     def test_rejects_non_regular_state(self) -> None:
         with self.assertRaises(ValueError): GitStageWorktreeState("src/link", "file:1", DIGEST_A, 3, "symlink")
@@ -46,7 +56,10 @@ class GitStageContractTests(unittest.TestCase):
         observed = GitStageObservedState("repo:1", OID, "regular", "index:1", DIGEST_B, (state(),))
         with self.assertRaises(GitStageUnavailableError): UnavailableGitIndexCodec().build_candidate(observed, ("src/app.py",))
         self.assertEqual(DULWICH_CANDIDATE_VERSION, "1.2.15")
-        with self.assertRaises(GitStageUnavailableError): DulwichIndexCodecCandidate()
+        # The reviewed backend is now proven, so the boundary that still matters is
+        # that a real codec cannot produce candidate bytes without the full governed
+        # inputs: an authority-free stage plan and the exact observed source state.
+        with self.assertRaises(GitStageUnavailableError): DulwichGitIndexCodec().build_candidate(observed, ("src/app.py",))
 
     def test_index_candidate_requires_deterministic_redacted_envelope(self) -> None:
         candidate = GitIndexCandidate("test-codec", DIGEST_B, ("a.py","z.py"), b"candidate-index")
