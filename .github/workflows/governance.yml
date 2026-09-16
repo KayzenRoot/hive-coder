@@ -8,6 +8,7 @@ on:
 jobs:
   source-pack:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,29 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          required=(
-            AGENTS.md
-            docs/project-brain/00-SOURCE-HIERARCHY.md
-            docs/project-brain/01-PROJECT-OVERVIEW.md
-            docs/project-brain/02-REQUIREMENTS.md
-            docs/project-brain/03-SCOPE.md
-            docs/project-brain/04-ARCHITECTURE.md
-            docs/project-brain/05-SECURITY.md
-            docs/project-brain/06-TEST-BENCHMARK-PLAN.md
-            docs/project-brain/07-DEPLOYMENT.md
-            docs/project-brain/08-BACKLOG.md
-            docs/project-brain/09-DEFINITION-OF-DONE.md
-            docs/project-brain/10-DECISIONS-LEDGER.md
-            docs/project-brain/11-CHECKPOINT.md
-            docs/project-brain/12-UI-UX.md
-            docs/project-brain/13-INTEGRATION-CONTRACTS.md
-            docs/project-brain/14-LICENSE-PROVENANCE.md
-            docs/security/PERMISSION-CONTROL-PLANE.md
-            .engineering/gef/GEF-POLICY.md
-            .engineering/gef/GEF-EXECUTION-PROTOCOL.md
-            .engineering/gef/GEF-REVIEW-PROTOCOL.md
-            .engineering/gef/GEF-EVIDENCE-SPEC.md
-          )
+          required=(AGENTS.md docs/project-brain/00-SOURCE-HIERARCHY.md docs/project-brain/01-PROJECT-OVERVIEW.md docs/project-brain/02-REQUIREMENTS.md docs/project-brain/03-SCOPE.md docs/project-brain/04-ARCHITECTURE.md docs/project-brain/05-SECURITY.md docs/project-brain/06-TEST-BENCHMARK-PLAN.md docs/project-brain/07-DEPLOYMENT.md docs/project-brain/08-BACKLOG.md docs/project-brain/09-DEFINITION-OF-DONE.md docs/project-brain/10-DECISIONS-LEDGER.md docs/project-brain/11-CHECKPOINT.md docs/project-brain/12-UI-UX.md docs/project-brain/13-INTEGRATION-CONTRACTS.md docs/project-brain/14-LICENSE-PROVENANCE.md docs/security/PERMISSION-CONTROL-PLANE.md .engineering/gef/GEF-POLICY.md .engineering/gef/GEF-EXECUTION-PROTOCOL.md .engineering/gef/GEF-REVIEW-PROTOCOL.md .engineering/gef/GEF-EVIDENCE-SPEC.md)
           for f in "${required[@]}"; do test -s "$f" || { echo "missing/empty: $f"; exit 1; }; done
       - name: Validate JSON contracts
         run: |
@@ -68,6 +47,7 @@ jobs:
 
   governed-runtime-linux:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -90,14 +70,11 @@ jobs:
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: |
-          python -m unittest \
-            tests.runtime.test_workspace_files \
-            tests.runtime.test_workspace_file_path_security \
-            tests.runtime.test_workspace_file_replace_contract \
-            tests.runtime.test_workspace_file_replace_security
+          python -m unittest tests.runtime.test_workspace_files tests.runtime.test_workspace_file_path_security tests.runtime.test_workspace_file_replace_contract tests.runtime.test_workspace_file_replace_security
 
   control-plane-windows:
     runs-on: windows-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -119,6 +96,7 @@ jobs:
 
   workspace-replace-macos:
     runs-on: macos-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -139,7 +117,4 @@ jobs:
       - name: Native macOS bounded-race atomic replacement proof
         env:
           PYTHONWARNINGS: error::ResourceWarning
-        run: |
-          python -m unittest \
-            tests.runtime.test_workspace_file_replace_contract \
-            tests.runtime.test_workspace_file_replace_security
+        run: python -m unittest tests.runtime.test_workspace_file_replace_contract tests.runtime.test_workspace_file_replace_security
