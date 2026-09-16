@@ -1,65 +1,49 @@
 # HCODER-PLATFORM-001 — Context Lock
 
-**Status:** LOCKED FOR PREBUILT IMPLEMENTATION  
+**Status:** LOCKED FOR PREBUILT IMPLEMENTATION — CI CORRECTION DELTA 001  
 **Issue:** `#63`  
 **Base:** `f192d20065d915636397c33f8f82adf4f313625e`  
 **Risk:** T2 platform/CI, no authority expansion
 
 ## Problem statement
-Hive Coder currently has objective Windows desktop-native evidence, Ubuntu shared/runtime evidence and a dedicated macOS governed-filesystem lane, but the three target operating systems are not represented by one explicit first-class platform support contract. Linux and macOS native desktop/Tauri evidence are missing from the desktop workflow. Linux governed-filesystem evidence is embedded in the broad Ubuntu source-pack rather than represented as an explicit native platform claim.
+Hive Coder needs one explicit first-class validation contract for Windows, Linux and macOS. Windows desktop-native evidence already exists; this increment makes Linux runtime evidence explicit and adds Linux/macOS native desktop evidence without expanding authority.
 
 ## Source-of-truth lock
-Read in this order before execution:
-1. `docs/project-brain/11-CHECKPOINT.md`
-2. `docs/project-brain/10-DECISIONS-LEDGER.md` and canonical ADRs
-3. `docs/project-brain/03-SCOPE.md`
-4. `docs/project-brain/09-DEFINITION-OF-DONE.md`
-5. `docs/project-brain/04-ARCHITECTURE.md`
-6. `docs/project-brain/02-REQUIREMENTS.md`
-7. Issue `#63`
-8. `.engineering/prebuilt/HCODER-PLATFORM-001-IMPLEMENTATION-PACK.md`
+Read in this order before execution: `11-CHECKPOINT.md` → Decisions/ADRs → Scope → DoD → Architecture → Requirements → Issue `#63` → Implementation Pack.
 
-## Observed current CI
-### Governance
-- `source-pack`: Ubuntu, exact-head, canonical pack, foundation checks, Python compile, full unit discovery.
-- `control-plane-windows`: Windows, exact-head, governed runtime compile and HIGH_ASSURANCE focused suite.
-- `workspace-replace-macos`: macOS, exact-head, governed filesystem compile and native replacement contract/security suite.
+## CI Correction Delta 001
+First exact-head execution at `62a81ebad4fd96b2dddb0090f6221d4eaad3b55b` produced objective platform-specific build failures while Governance #329 was fully green, including the new `governed-runtime-linux` job. Windows native desktop and shared desktop-web also remained green.
 
-### Desktop Shell
-- `desktop-web`: Ubuntu shared web/typecheck/test/build/audit gate.
-- `desktop-windows`: Windows exact-head, pinned Node/Rust, RustSec audit, Rust tests/check, Tauri build without bundle and launch smoke.
-- No Linux native Tauri job is present at this lock.
-- No macOS native Tauri job is present at this lock.
+- macOS reached Rust compilation but `tauri::generate_context!()` failed because Tauri expects `apps/desktop/src-tauri/icons/icon.png`; the deterministic generator creates only Windows `icon.ico`.
+- Linux reached Rust compilation but `rfd 0.17.2` failed because default features are disabled and no Linux backend (`gtk3` or `xdg-portal`) is selected.
 
-## Allowed-file set for this increment
-Executor may modify only:
+These are cross-platform build-contract gaps, not permission/runtime-authority requirements. Same-issue correction is authorized with the smallest additional surfaces.
+
+## Allowed-file set
 - `.github/workflows/governance.yml`
 - `.github/workflows/desktop-shell.yml`
 - `.engineering/context-locks/HCODER-PLATFORM-001.md`
 - `.engineering/prebuilt/HCODER-PLATFORM-001-IMPLEMENTATION-PACK.md`
+- `.engineering/prebuilt/HCODER-PLATFORM-001-EXECUTOR-BRIEF.md`
 - `.engineering/evidence/HCODER-PLATFORM-001.md`
-- `docs/project-brain/04-ARCHITECTURE.md`
-- `docs/project-brain/06-TEST-BENCHMARK-PLAN.md`
-- `docs/project-brain/07-DEPLOYMENT.md`
-- `docs/project-brain/10-DECISIONS-LEDGER.md`
-- one new ADR for the first-class platform validation law if needed
-- focused platform-support test/contract files only if a code-level support-state contract is introduced.
+- `apps/desktop/src-tauri/Cargo.toml` only for target-specific native dependency feature selection
+- `apps/desktop/src-tauri/Cargo.lock` only if Cargo legitimately changes the locked graph
+- `tools/desktop/generate_icon.py` only to add deterministic PNG generation while preserving ICO behavior
+- project-brain Architecture/Test/Deployment/Decisions docs and one platform ADR if needed
+- focused platform-support tests only if a code-level support-state contract is introduced.
 
-Any additional file requires a same-issue Context Lock delta explaining why.
+Any additional file requires another same-issue Context Lock delta.
 
-## Fixed implementation direction
-1. Preserve `desktop-web` and `desktop-windows` semantics.
-2. Add explicit Linux and macOS native desktop/Tauri jobs, preferably by a matrix only if readability and platform-specific dependencies remain auditable.
-3. Native jobs must exact-head checkout and print platform/toolchain identity.
-4. Use the repository's pinned Node `24.21.0` and Rust `1.98.1` unless objective incompatibility proves a correction is necessary.
-5. Use `cargo test --locked`, `cargo check --locked` and a credential-free Tauri build/check surface appropriate to the runner.
-6. Linux runner must install only the minimal native system packages required by Tauri/WebKitGTK using auditable package-manager commands.
-7. macOS runner must not be treated as Linux/POSIX-equivalent; it receives its own native desktop proof.
-8. Packaging/signing/notarization is not part of this increment.
-9. No runtime capability, desktop plugin or permission expansion is permitted.
+## Fixed correction direction
+1. Preserve existing Windows and shared web semantics.
+2. Keep Linux and macOS native jobs independent and exact-head.
+3. Keep Node `24.21.0` and Rust `1.98.1` pinned.
+4. Select the Linux `rfd` backend only under Linux target configuration. Prefer `gtk3`, matching the already-installed GTK3/Tauri runner surface, rather than introducing a second portal stack.
+5. Extend deterministic icon generation to produce the PNG Tauri expects while preserving the existing Windows ICO output.
+6. No privileged Tauri plugin, signing/notarization, runtime capability, permit authority or security-gate weakening is permitted.
 
 ## Evidence law
-A platform/surface may move from `UNPROVEN` to `PROVEN_CI` only when an exact-head native job is green and its logs identify runner OS and relevant toolchain. `RELEASE_VALIDATED` is reserved for later package/install/smoke evidence.
+A platform/surface moves from `UNPROVEN` to `PROVEN_CI` only after a green exact-head native job with runner/toolchain identity. `RELEASE_VALIDATED` remains a later packaging/install/smoke gate.
 
 ## STOP CONDITION
-Stop and open a correction delta if native Tauri proof requires new privileged desktop plugins, secrets/signing credentials, weakening a canonical security gate, unpinned remote executable installation, or scope outside the allowed-file set. Do not call the platform matrix complete while Linux or macOS native desktop evidence is absent.
+Stop and open another correction delta if native proof requires privileged desktop plugins, secrets/signing credentials, weakening canonical security, unpinned remote executable installation or scope outside this corrected allowed-file set. Do not call the platform matrix complete while Linux or macOS native desktop evidence is absent.
