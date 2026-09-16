@@ -5,9 +5,11 @@
   "projectState": "BROWNFIELD",
   "gefVersion": "1.0.0",
   "adoptionWorkOrder": "HCODER-GEF-ADOPT-0001",
-  "adoptionStatus": "GEF_ADOPTION_EXACT_HEAD_EVIDENCE_REQUIRED",
+  "adoptionStatus": "GEF_V1_ADOPTED_READY_FOR_GOVERNED_DEVELOPMENT",
   "preAdoptionMainSha": "ccfed1f960c80dc58e4f45cb627451e77c7d5a79",
   "technicalAdoptionHead": "a62d7602be8a1ed23ca3fc4459aa40188205c860",
+  "finalAdoptionPrHead": "f323e8f6337e5d7b323ff9d256fb197beca8e171",
+  "acceptedMergeSha": "6c9fbda50c0477ef353018df1e5aea6f738d3aa4",
   "technicalEvidence": {
     "governanceRun": 35150628413,
     "governanceRunNumber": 397,
@@ -17,23 +19,40 @@
     "critical": 0,
     "high": 0
   },
-  "acceptedMergeSha": null,
+  "finalPrEvidence": {
+    "governanceRun": 35151108739,
+    "governanceRunNumber": 398,
+    "desktopShellRun": 35151108801,
+    "desktopShellRunNumber": 234,
+    "verdict": "APPROVED",
+    "critical": 0,
+    "high": 0
+  },
+  "postMergeEvidence": {
+    "governanceRun": 35151497058,
+    "governanceRunNumber": 399,
+    "desktopShellRun": 35151497012,
+    "desktopShellRunNumber": 235,
+    "governance": "SUCCESS",
+    "desktopShell": "SUCCESS"
+  },
   "canonicalHumanCheckpoint": "docs/project-brain/11-CHECKPOINT.md",
   "knownSourceDrift": [
-    "human checkpoint still declares CP-0021 while later main history proves additional completed work"
+    "human checkpoint still declares CP-0021 while later main history proves additional completed work; universal GEF adoption records but does not fabricate reconciliation"
   ],
   "completedGovernedIncrements": "legacy history preserved by reference; not retroactively reclassified",
   "activeIncrement": {
     "workOrder": "HCODER-WO-0023",
     "pullRequest": 69,
     "branch": "feat/HCODER-WO-0023-git-stage-capability",
-    "state": "DRAFT_CORRECTION_IN_PROGRESS"
+    "state": "DRAFT_CORRECTION_IN_PROGRESS",
+    "resumeRequirement": "merge/reconcile adopted main before next executor mutation, then execute rewritten Prompt 05 under GEF V1 Universal"
   },
   "blockedItems": [],
   "unresolvedRisks": [
-    "final adoption evidence-only PR head exact-head CI/audit pending",
+    "canonical human checkpoint drift remains a separate evidence-backed reconciliation debt",
     "active WO-0023 must reconcile adopted main before next execution"
   ],
-  "nextLegalAction": "verify the final adoption PR head with Governance + Desktop Shell, audit exact head, squash merge with expected-head protection, verify main, then seal post-adoption resume state",
-  "stopCondition": "GEF_ADOPTION_EXACT_HEAD_EVIDENCE_REQUIRED"
+  "nextLegalAction": "resume HCODER-WO-0023 only after source check and provenance-preserving reconciliation with adopted main; execute the same-WO Prompt 05 correction under universal GEF",
+  "stopCondition": "GEF_V1_ADOPTED_READY_FOR_GOVERNED_DEVELOPMENT"
 }
