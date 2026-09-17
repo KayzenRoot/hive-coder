@@ -54,3 +54,36 @@ Runtime Git/filesystem/shell/Cua authority code, control-plane files, dependency
 
 ## STOP CONDITION
 STOP and return to architecture/review if the slice would require activating an updater, a network or download path, installation or restart, signing/notarization, release publication, a dependency carrying update/distribution side effects, `bundle.active=true`, a weakened HIGH_ASSURANCE gate, or any filesystem/Git/shell/Cua/credential authority expansion.
+
+---
+
+# Context Lock Delta 001
+
+**Status:** SAME WORK ORDER — CORRECTION AUTHORISED  
+**Authority granted:** none beyond the pre-existing allowed-file set, plus the two governance-document paths named below  
+**Trigger:** independent review `5236275753`, verdict `CORRECTION_REQUIRED` on exact head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`
+
+## Recorded findings (as returned by the independent review)
+
+Unresolved severity at review time: **CRITICAL 0 / HIGH 4 / MEDIUM 2**.
+
+- **H-20-01** — the authenticity gate is on the wrong edge. `LEGAL_TRANSITIONS` admits `verifying -> ready` unconditionally and `evaluateTransition()` requires a proof only for `ready -> installing`, while `evaluateStatus()` accepts a direct `state:"ready"` snapshot. Install-ready is therefore reachable with no accepted proof, contradicting the claimed "install-ready unreachable by construction" property.
+- **H-20-02** — version and channel do not form one bound identity. `InertUpdateService` validates them independently, `evaluateStatus()` accepts a mismatched pair, and `buildAboutReadModel()` does not require its own version/channel to match the validated status snapshot. `{currentVersion:"0.1.0", currentChannel:"beta"}` was accepted as a positive test case.
+- **H-20-03** — status snapshots are not closed or bounded despite acceptance row C11 claiming they are. `evaluateStatus()` bounds only the event count, does not validate event objects or reject unknown top-level/status/error/event keys, and returns the original untrusted input object cast as `UpdateStatus`.
+- **H-20-04** — `compareIdentifier()` in `version.ts` compares numeric prerelease identifiers through JavaScript `Number()`, so adjacent identifiers above `2^53` can collapse to the same double and compare equal, corrupting same-channel upgrade/downgrade eligibility.
+- **M-20-05** — `versionMatchesChannel()` in `releaseChannel.ts` uses a second, permissive version-shape regex instead of the canonical strict parser, so malformed forms such as an empty prerelease identifier can satisfy the channel-prefix test.
+- **M-20-06** — `DEC-028` is referenced as `PROPOSED` but no ADR exists and the Decisions Ledger has no `DEC-028` entry on this exact head.
+- **Evidence/source-truth** — acceptance-map rows claiming `MATERIALISED` for the defective properties must return to `PENDING` until corrected exact-head tests prove them, and the Work Order/evidence stage vocabulary must say implemented / correction-review pending rather than implementation pending.
+
+## Authorisation
+
+1. This delta authorises the bounded correction of exactly the findings above, inside the existing allowed-file set. It authorises **no new product capability, no new dependency, no new runtime authority** and no change to the slice boundary declared above.
+2. It additionally authorises two governance-document paths not previously in the allowed-file set, solely to materialise the proposal required by M-20-06:
+   - `docs/project-brain/adrs/DEC-028-DISTRIBUTION-VERSION-CHANNEL-CONTRACT.md` — to be created with status `PROPOSED / NOT CANONICAL`;
+   - `docs/project-brain/10-DECISIONS-LEDGER.md` — to receive the matching `DEC-028` proposed entry.
+   Authoring a proposal records no approval and promotes nothing: `DEC-028` remains non-canonical until an independent HEDS approves a later promotion.
+3. Corrections must be made by strengthening the contracts and their tests. No test may be weakened, skipped, deleted or rewritten to accept the reviewed defective behaviour, and no HIGH_ASSURANCE gate or security rule may be relaxed.
+4. The PR remains **Draft and unmerged**. No promotion claim, no DEC promotion and no `HCODER-DIST-001B` work is authorised by this delta.
+
+## STOP CONDITION (unchanged, plus)
+In addition to the pre-existing STOP condition: STOP if any finding can only be closed by widening authority, admitting an authenticity scheme, weakening a gate, or expanding outside the file set above.

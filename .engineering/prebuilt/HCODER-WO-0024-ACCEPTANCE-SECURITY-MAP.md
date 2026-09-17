@@ -1,10 +1,15 @@
 # HCODER-WO-0024 — Acceptance & Security Map
 
-**Status:** PREBUILT — every row is an executable test obligation  
+**Status:** IMPLEMENTED / CORRECTION REVIEW PENDING — rows marked `MATERIALISED` were **withdrawn to PENDING** by review `5236275753`  
 **Issue:** `#77`
 
 Required negative proofs are the point of this slice. A row is satisfied only by a
 test that fails if the guard is removed.
+
+A row may be marked `MATERIALISED` only when a test at the *named* exact head fails
+if the guard is removed, and that head has passed its gates. Green hosted gates on
+the reviewed head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` did **not** mean
+these properties held, so the rows below were returned to `PENDING`.
 
 | # | Property | Test location | State |
 |---|---|---|---|
@@ -22,7 +27,7 @@ test that fails if the guard is removed.
 | A12 | Manifest reader helpers fail closed on broken JSON/TOML | `tests/desktop/test_version_drift.py` | MATERIALISED |
 | B1 | Channel vocabulary is exactly `stable`/`beta`/`dev`, stable default | `releaseChannel.test.ts` | MATERIALISED |
 | B2 | Unknown channel fails closed everywhere | `releaseChannel.test.ts` | MATERIALISED |
-| B3 | Version shape must match the channel | `releaseChannel.test.ts` | MATERIALISED |
+| B3 | Version shape must match the channel, derived from the canonical strict parser and **not** from a second, looser pattern (`M-20-05`) | `releaseChannel.test.ts` | PENDING EXACT-HEAD PROOF |
 | B4 | Only strictly newer same-channel upgrade is eligible | `releaseChannel.test.ts` | MATERIALISED |
 | B5 | Downgrade and identical version refused with distinct reasons | `releaseChannel.test.ts` | MATERIALISED |
 | B6 | Numerically newer but wrong-channel version refused | `releaseChannel.test.ts` | MATERIALISED |
@@ -31,21 +36,21 @@ test that fails if the guard is removed.
 | C2 | Only declared transitions are legal | `updateState.test.ts` | MATERIALISED |
 | C3 | Illegal transitions refused | `updateState.test.ts` | MATERIALISED |
 | C4 | No cryptographic scheme admitted in this slice | `updateState.test.ts` | MATERIALISED |
-| C5 | Install refused without an accepted authenticity proof | `updateState.test.ts`, `updateService.test.ts` | MATERIALISED |
+| C5 | Entering an install-ready state is refused without an accepted authenticity proof, on **both** gated edges (`H-20-01`) | `updateState.test.ts`, `updateService.test.ts` | PENDING EXACT-HEAD PROOF |
 | C6 | Malformed proof refused before any policy question | `updateState.test.ts` | MATERIALISED |
 | C7 | Error code vocabulary closed; unknown code refused | `updateState.test.ts` | MATERIALISED |
 | C8 | Oversized error detail refused | `updateState.test.ts` | MATERIALISED |
 | C9 | Credential-shaped detail refused even when charset-valid | `updateState.test.ts` | MATERIALISED |
 | C10 | Detail containing URLs, paths, uppercase blobs or control characters refused | `updateState.test.ts` | MATERIALISED |
-| C11 | Status snapshot bounded; unknown fields and oversized event lists refused | `updateState.test.ts` | MATERIALISED |
+| C11 | Status snapshot closed and bounded: unknown keys refused at top level, in the error object and in **every** event; per-event vocabulary and structural legality; state-dependent candidate and error invariants; canonical reconstruction instead of a cast (`H-20-01`, `H-20-03`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
 | D1 | Boundary identity fixed | `updateService.test.ts` | MATERIALISED |
 | D2 | Inert service reports unavailable and never claims readiness | `updateService.test.ts` | MATERIALISED |
 | D3 | Inert service exposes no mutating/transport/install member | `updateService.test.ts` | MATERIALISED |
 | D4 | Forbidden-member guard is not vacuous (detects a violating service) | `updateService.test.ts` | MATERIALISED |
 | D5 | Test-only stand-in cannot be imported by production code | `updateService.test.ts` + security gate | MATERIALISED |
-| D6 | Invalid configuration fails closed (malformed version, unknown channel) | `updateService.test.ts` | MATERIALISED |
+| D6 | Invalid configuration fails closed (malformed version, unknown channel, **and** a valid-but-incompatible version/channel pair) (`H-20-02`) | `updateService.test.ts` | PENDING EXACT-HEAD PROOF |
 | E1 | About read model bounded, read-only, no authority surface | `aboutReadModel.test.ts` | MATERIALISED |
-| E2 | About fails closed on unknown channel, malformed version, invalid status, oversized name | `aboutReadModel.test.ts` | MATERIALISED |
+| E2 | About fails closed on unknown channel, malformed version, invalid status, oversized name, and any version/channel/status identity disagreement (`H-20-02`) | `aboutReadModel.test.ts` | PENDING EXACT-HEAD PROOF |
 | E3 | Updater never reported available in this slice | `aboutReadModel.test.ts` | MATERIALISED |
 | F1 | Drift verifier imports no network or process module | `tests/desktop/test_version_drift.py` | MATERIALISED |
 | F2 | `bundle.active` remains `false` | `tools/desktop/security_gate.py` (existing gate) | MATERIALISED |
@@ -53,13 +58,30 @@ test that fails if the guard is removed.
 | G1 | Native contract proof on Windows, Linux and macOS | Governance lanes | PENDING EXACT-HEAD CI |
 | G2 | Version drift gate runs in the Desktop Shell lane | `.github/workflows/desktop-shell.yml` | MATERIALISED |
 
+## Additional rows carried by Context Lock Delta 001
+
+| # | Property | Test location | State |
+|---|---|---|---|
+| H1 | Numeric prerelease identifiers compare exactly above `2^53`, and a very long identifier still orders by value (`H-20-04`) | `version.test.ts` | PENDING EXACT-HEAD PROOF |
+| H2 | No later transition into `ready` or `installing` succeeds anywhere in the state vocabulary while the scheme allowlist is empty (`H-20-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| H3 | A direct `ready`/`installing` status snapshot is refused, with and without proof material (`H-20-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| H4 | Version and channel are one identity at every boundary that asserts it (`H-20-02`) | `updateState.test.ts`, `updateService.test.ts`, `aboutReadModel.test.ts` | PENDING EXACT-HEAD PROOF |
+| H5 | Transition-reason vocabulary is closed and enumerable | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| H6 | Every declared status key is required; unknown keys are refused at every level | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| H7 | `DEC-028` exists as `PROPOSED / NOT CANONICAL` with a matching ledger entry (`M-20-06`) | `docs/project-brain/adrs/DEC-028-DISTRIBUTION-VERSION-CHANNEL-CONTRACT.md`, `docs/project-brain/10-DECISIONS-LEDGER.md` | PENDING EXACT-HEAD PROOF |
+
 ## Security invariants this slice must not weaken
 The existing `tools/desktop/security_gate.py` assertions — zero frontend invokes
 beyond the three governed commands, zero capability permissions, `desktop-read-only`
 scope, zero filesystem mutation primitives, zero generic process execution, one
 fixed runtime sidecar process, zero Apple-specific font references, committed
-lockfiles — must remain unchanged and passing.
+lockfiles — must remain unchanged and passing. The gate runs before `npm ci` in the
+Desktop Shell lane, so a local run against an installed `node_modules` tree is not
+the gate's CI condition.
 
 ## STOP
 Any row that cannot be satisfied without distribution authority, an updater
-dependency or a weakened gate is a STOP condition, not an implementation task.
+dependency or a weakened gate is a STOP condition, not an implementation task. No
+row marked `PENDING EXACT-HEAD PROOF` may be claimed as satisfied before the
+corrected exact head passes its gates and an independent review returns unresolved
+HIGH/CRITICAL `0/0`.

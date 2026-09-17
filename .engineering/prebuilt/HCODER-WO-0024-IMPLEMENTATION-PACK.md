@@ -1,6 +1,6 @@
 # HCODER-WO-0024 — Prebuilt Implementation Pack
 
-**Status:** PREBUILT CONTRACT / EXECUTION NOT YET PROVEN  
+**Status:** IMPLEMENTED / CORRECTION REVIEW PENDING — the reviewed prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` returned CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`, review `5236275753`); corrections are carried in source under Context Lock Delta `001` and their exact-head proof is pending  
 **Base:** `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
 **Issue:** `#77`
 
@@ -28,6 +28,7 @@ CANONICAL_VERSION_SOURCE    = "apps/desktop/src-tauri/tauri.conf.json"
 - Channels: `stable`, `beta`, `dev`. `dev` carries the product label `dev/internal`.
 - Stable is the default production channel.
 - Version shape must match the channel: stable admits no prerelease; `beta`/`dev` admit only a first prerelease identifier equal to their prefix.
+- The shape test derives exclusively from the canonical strict SemVer parser. A second, looser pattern here would admit versions the strict contract refuses, such as `1.0.0-beta.`.
 - Only a strictly newer same-channel version is eligible.
 - Downgrade, identical version and malformed versions are refused with distinct reasons.
 - Cross-channel movement is never implicit: even explicit intent reports `requiresGovernedDecision`.
@@ -46,8 +47,11 @@ failure -> idle
 unavailable -> idle
 ```
 - Unknown states and undeclared transitions fail closed.
-- `ready -> installing` structurally requires an **accepted** authenticity proof.
-- `ADMITTED_AUTHENTICITY_SCHEMES` is empty in this slice, so install-ready is unreachable by construction. No scheme may be invented, faked or bypassed.
+- The table declares *structural* legality. Two edges are additionally authenticity-gated: `verifying -> ready` (the install-ready boundary) and `ready -> installing` (defence in depth). `ready` means install-ready, so entering it is the gate that matters; gating only the install call leaves install-ready reachable from untrusted state.
+- `ADMITTED_AUTHENTICITY_SCHEMES` is empty in this slice, so install-ready is unreachable by construction. No scheme may be invented, faked or bypassed. A status snapshot claiming `ready` or `installing` must carry an accepted proof against the same policy and is therefore invalid here.
+- One current version and one current channel form a single identity: a valid-but-incompatible pair fails closed at service construction, in status validation (for both the current and the candidate version) and in the About read model.
+- A status snapshot is a closed object: exact key sets at the top level, in the error object and in every event; per-event vocabulary and structural legality; state-dependent candidate (`required` / `forbidden` / either) and error invariants; a maximum event count. It is validated and then **reconstructed** from validated fields — never returned as the caller's object cast to `UpdateStatus`.
+- Numeric prerelease identifiers compare exactly, by digit length then lexicographically. Floating-point conversion would collapse distinct identifiers above `2^53`.
 - Error metadata is a closed code vocabulary plus bounded detail drawn from a narrow charset and free of credential shapes.
 
 ## UpdateService boundary
@@ -72,7 +76,7 @@ None. This slice adds no dependency. If completing it appears to require an upda
 - **Uncertainty Ledger:** unresolved assumptions are explicit gates and never silently become implementation facts.
 
 ## Tests before promotion
-Contract tests must cover: strict SemVer acceptance and rejection; canonical/mirror drift, missing and malformed mirrors; channel vocabulary and unknown-channel refusal; version-shape/channel matching; same-channel upgrade eligibility; downgrade, identical-version and prerelease-mismatch refusal; cross-channel refusal with governed-decision reporting; the full transition table including illegal transitions; install-ready refusal without an accepted proof; malformed proof refusal; bounded and credential-shaped error-detail refusal; status bound enforcement; inert-boundary member absence; and absence of any network/process/update side-effect surface.
+Contract tests must cover: strict SemVer acceptance and rejection; exact numeric prerelease precedence above `2^53`; canonical/mirror drift, missing and malformed mirrors; channel vocabulary and unknown-channel refusal; version-shape/channel matching derived from the single strict parser; same-channel upgrade eligibility; downgrade, identical-version and prerelease-mismatch refusal; cross-channel refusal with governed-decision reporting; the full transition table including illegal transitions; install-ready refusal without an accepted proof on **both** gated edges; exhaustive unreachability of `ready` and `installing`; malformed proof refusal; bounded and credential-shaped error-detail refusal; status closure (unknown keys at every level, per-event validation, required keys, candidate and error invariants, canonical reconstruction); version/channel identity at every boundary; inert-boundary member absence; and absence of any network/process/update side-effect surface.
 
 Native proof runs independently on Windows, Linux and macOS. Platform skips cannot promote that platform.
 

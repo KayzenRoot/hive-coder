@@ -8,6 +8,7 @@ import {
   exposesForbiddenMember,
   type UpdateService,
 } from "./updateService";
+import { evaluateStatus } from "../contracts/updateState";
 
 /**
  * Test-only stand-in for a future authorised updater.
@@ -54,8 +55,8 @@ describe("UpdateService boundary", () => {
   });
 
   it("reports current version and channel as read-only observation", () => {
-    const service = new InertUpdateService({ currentVersion: "0.1.0", currentChannel: "beta" });
-    expect(service.currentVersion()).toBe("0.1.0");
+    const service = new InertUpdateService({ currentVersion: "0.1.0-beta.1", currentChannel: "beta" });
+    expect(service.currentVersion()).toBe("0.1.0-beta.1");
     expect(service.currentChannel()).toBe("beta");
   });
 
@@ -70,6 +71,39 @@ describe("UpdateService boundary", () => {
     );
   });
 
+  it("fails closed when version and channel are independently valid but incompatible", () => {
+    // `0.1.0` is a valid version and `beta` is a valid channel; together they are
+    // not an identity, because a beta client runs a beta-prerelease version.
+    const incompatible: Array<[string, string]> = [
+      ["0.1.0", "beta"],
+      ["0.1.0", "dev"],
+      ["0.1.0-beta.1", "stable"],
+      ["0.1.0-beta.1", "dev"],
+      ["0.1.0-dev.1", "stable"],
+      ["0.1.0-dev.1", "beta"],
+    ];
+    for (const [currentVersion, currentChannel] of incompatible) {
+      expect(
+        () => new InertUpdateService({ currentVersion, currentChannel }),
+        `${currentVersion}/${currentChannel}`,
+      ).toThrow(UpdateServiceConfigurationError);
+    }
+    expect(() => new InertUpdateService({ currentVersion: "0.1.0", currentChannel: "beta" })).toThrowError(
+      /version_channel_mismatch/,
+    );
+    // The matching pairs are constructed successfully.
+    for (const [currentVersion, currentChannel] of [
+      ["0.1.0", "stable"],
+      ["0.1.0-beta.1", "beta"],
+      ["0.1.0-dev.1", "dev"],
+    ] as const) {
+      const service = new InertUpdateService({ currentVersion, currentChannel });
+      expect(service.currentVersion()).toBe(currentVersion);
+      expect(service.currentChannel()).toBe(currentChannel);
+      expect(evaluateStatus(service.status()).ok).toBe(true);
+    }
+  });
+
   it("reports the updater as unavailable in this slice", () => {
     const availability = new InertUpdateService({ currentVersion: "0.1.0" }).availability();
     expect(availability.available).toBe(false);
@@ -80,8 +114,11 @@ describe("UpdateService boundary", () => {
     const status = new InertUpdateService({ currentVersion: "0.1.0" }).status();
     expect(status.state).toBe("unavailable");
     expect(status.candidateVersion).toBeNull();
+    expect(status.authenticityProof).toBeNull();
     expect(status.error?.code).toBe("service_inert");
     expect(status.events).toEqual([]);
+    // The snapshot the service reports is one the contract accepts.
+    expect(evaluateStatus(status)).toMatchObject({ ok: true });
   });
 
   it("evaluates contract law without mutating anything", () => {
@@ -103,6 +140,13 @@ describe("UpdateService boundary", () => {
       ok: false,
       reason: "authenticity_proof_required",
     });
+    // The gate sits on the install-ready edge as well, so `ready` itself is
+    // unreachable through the service surface.
+    expect(service.evaluateTransition("verifying", "ready")).toEqual({
+      ok: false,
+      reason: "authenticity_proof_required",
+    });
+    expect(service.evaluateTransition("installing", "success")).toEqual({ ok: true, reason: "legal_transition" });
   });
 
   it("exposes no mutating, transport or installation member", () => {

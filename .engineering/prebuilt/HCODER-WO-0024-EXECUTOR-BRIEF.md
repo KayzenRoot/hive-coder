@@ -1,8 +1,9 @@
 # HCODER-WO-0024 — Executor Brief
 
-**Status:** PREBUILT / READY FOR COMPLETION-ORIENTED EXECUTION  
+**Status:** IMPLEMENTED / CORRECTION REVIEW PENDING  
 **Base:** `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
-**Issue:** `#77`
+**Issue:** `#77`  
+**Review of the prebuild head:** `5236275753` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`
 
 ## Start here
 Read, in order:

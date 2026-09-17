@@ -9,7 +9,7 @@
  * Pure contract logic only: no network, no installer, no side effect.
  */
 
-import { compareVersions, isStrictlyNewer } from "./version";
+import { compareVersions, isStrictlyNewer, parseVersion } from "./version";
 
 export const CHANNEL_CONTRACT = "hive-release-channel-v1" as const;
 
@@ -77,22 +77,21 @@ const REFUSED = (reason: Exclude<EligibilityReason, "same_channel_upgrade">): Ch
  * `stable` admits only fully released versions with no prerelease component.
  * `beta` and `dev` admit only versions whose first prerelease identifier equals
  * the channel's prefix. This is a *shape* test, not a promotion authorisation.
+ *
+ * The shape is derived exclusively from the canonical strict SemVer parser in
+ * `version.ts`. A second, looser pattern here would let a version that the strict
+ * contract refuses — an empty prerelease identifier such as `1.0.0-beta.`, for
+ * instance — satisfy the channel-prefix test, so this function has no parser of
+ * its own: malformed input never matches any channel.
  */
 export function versionMatchesChannel(version: unknown, channel: unknown): boolean {
   if (!isReleaseChannel(channel)) return false;
   const prefix = CHANNEL_PRERELEASE_PREFIX[channel];
-  // A malformed version never matches any channel.
-  const parsed = versionShape(version);
-  if (parsed === null) return false;
-  if (prefix === null) return parsed.prerelease === null;
-  return parsed.prerelease !== null && parsed.prerelease[0] === prefix;
-}
-
-function versionShape(version: unknown): { prerelease: readonly string[] | null } | null {
-  if (typeof version !== "string") return null;
-  const match = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-([^+]+))?(?:\+.+)?$/.exec(version);
-  if (match === null) return null;
-  return { prerelease: match[1] === undefined ? null : match[1].split(".") };
+  const parsed = parseVersion(version);
+  if (!parsed.ok) return false;
+  const prerelease = parsed.version.prerelease;
+  if (prefix === null) return prerelease === null;
+  return prerelease !== null && prerelease[0] === prefix;
 }
 
 /**

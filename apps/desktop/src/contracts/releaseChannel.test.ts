@@ -11,6 +11,7 @@ import {
   isReleaseChannel,
   versionMatchesChannel,
 } from "./releaseChannel";
+import { isValidVersion } from "./version";
 
 describe("release channel contract", () => {
   it("defines exactly the governed channels with stable as production default", () => {
@@ -36,12 +37,50 @@ describe("release channel contract", () => {
     expect(versionMatchesChannel("1.0.0", "stable")).toBe(true);
     expect(versionMatchesChannel("1.0.0-beta.1", "beta")).toBe(true);
     expect(versionMatchesChannel("1.0.0-dev.3", "dev")).toBe(true);
+    expect(versionMatchesChannel("1.0.0-beta.1+build.9", "beta")).toBe(true);
 
     expect(versionMatchesChannel("1.0.0-beta.1", "stable")).toBe(false);
     expect(versionMatchesChannel("1.0.0", "beta")).toBe(false);
     expect(versionMatchesChannel("1.0.0-beta.1", "dev")).toBe(false);
     expect(versionMatchesChannel("not-a-version", "stable")).toBe(false);
     expect(versionMatchesChannel("1.0.0", "nightly")).toBe(false);
+  });
+
+  it("derives channel shape from the canonical strict parser only", () => {
+    // Each of these carries a channel-looking prerelease prefix but is not valid
+    // SemVer. A second, looser shape parser in this module would accept them and
+    // report a malformed version as belonging to the beta channel.
+    const malformedBetaShaped = [
+      "1.0.0-beta.",
+      "1.0.0-beta..1",
+      "1.0.0-beta.01",
+      "1.0.0-beta.1.",
+      "1.0.0-beta+",
+      "1.0.0-",
+      "1.0.0-+x",
+      "01.0.0-beta.1",
+      "1.0-beta.1",
+      "1.0.0-beta.β",
+      "1.0.0 -beta.1",
+    ];
+    for (const version of malformedBetaShaped) {
+      expect(isValidVersion(version), version).toBe(false);
+      expect(versionMatchesChannel(version, "beta"), version).toBe(false);
+      expect(versionMatchesChannel(version, "dev"), version).toBe(false);
+      expect(versionMatchesChannel(version, "stable"), version).toBe(false);
+      expect(evaluateEligibility(version, "2.0.0-beta.1", "beta"), version).toEqual({
+        eligible: false,
+        reason: "malformed_version",
+      });
+    }
+    // The same check in the opposite direction: dev-shaped malformed versions.
+    expect(versionMatchesChannel("1.0.0-dev.1.", "dev")).toBe(false);
+    expect(versionMatchesChannel("1.0.0-dev..1", "dev")).toBe(false);
+    expect(isValidVersion("1.0.0-dev.1.")).toBe(false);
+    expect(isValidVersion("1.0.0-dev..1")).toBe(false);
+    // A valid version whose prefix differs only by case is not a channel match.
+    expect(isValidVersion("1.0.0-BETA.1")).toBe(true);
+    expect(versionMatchesChannel("1.0.0-BETA.1", "beta")).toBe(false);
   });
 
   it("allows only a strictly newer same-channel upgrade", () => {

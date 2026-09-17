@@ -15,6 +15,7 @@ import {
   DEFAULT_RELEASE_CHANNEL,
   evaluateEligibility,
   isReleaseChannel,
+  versionMatchesChannel,
   type ChannelEligibility,
   type ReleaseChannel,
 } from "../contracts/releaseChannel";
@@ -71,10 +72,15 @@ export interface UpdateServiceOptions {
   readonly currentChannel?: unknown;
 }
 
-export class UpdateServiceConfigurationError extends Error {
-  public readonly code: "malformed_version" | "unknown_channel";
+export type UpdateServiceConfigurationErrorCode =
+  | "malformed_version"
+  | "unknown_channel"
+  | "version_channel_mismatch";
 
-  public constructor(code: "malformed_version" | "unknown_channel") {
+export class UpdateServiceConfigurationError extends Error {
+  public readonly code: UpdateServiceConfigurationErrorCode;
+
+  public constructor(code: UpdateServiceConfigurationErrorCode) {
     super(`update service configuration rejected: ${code}`);
     this.name = "UpdateServiceConfigurationError";
     this.code = code;
@@ -87,6 +93,11 @@ export class UpdateServiceConfigurationError extends Error {
  * It reports immutable configuration, evaluates contract law, and exposes no
  * mutation, transport or installation path whatsoever. `availability()` always
  * reports unavailable in this slice.
+ *
+ * Configuration is a single identity, not two independent fields: a version that
+ * is individually valid but does not belong to the configured channel is
+ * rejected at construction, because a client that reports `beta` while running
+ * `0.1.0` would compute eligibility against the wrong release line.
  */
 export class InertUpdateService implements UpdateService {
   public readonly boundary = UPDATE_SERVICE_BOUNDARY;
@@ -100,6 +111,9 @@ export class InertUpdateService implements UpdateService {
     const channel = options.currentChannel ?? DEFAULT_RELEASE_CHANNEL;
     if (!isReleaseChannel(channel)) {
       throw new UpdateServiceConfigurationError("unknown_channel");
+    }
+    if (!versionMatchesChannel(options.currentVersion, channel)) {
+      throw new UpdateServiceConfigurationError("version_channel_mismatch");
     }
     this.#version = options.currentVersion;
     this.#channel = channel;
@@ -124,6 +138,7 @@ export class InertUpdateService implements UpdateService {
       channel: this.#channel,
       currentVersion: this.#version,
       candidateVersion: null,
+      authenticityProof: null,
       error: { code: "service_inert", detail: "updater is not enabled in this build" },
       events: [],
     };
@@ -132,7 +147,8 @@ export class InertUpdateService implements UpdateService {
       // A malformed snapshot must never reach product state.
       throw new UpdateServiceConfigurationError("malformed_version");
     }
-    return snapshot;
+    // The validated canonical object is returned, not the hand-built literal.
+    return verdict.status;
   }
 
   public evaluateCandidate(candidateVersion: unknown): ChannelEligibility {

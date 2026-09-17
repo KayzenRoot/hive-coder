@@ -10,7 +10,12 @@
  * and compatible with later UX/i18n work (Issue #71) without expanding into it.
  */
 
-import { CHANNEL_PRODUCT_LABEL, isReleaseChannel, type ReleaseChannel } from "./releaseChannel";
+import {
+  CHANNEL_PRODUCT_LABEL,
+  isReleaseChannel,
+  versionMatchesChannel,
+  type ReleaseChannel,
+} from "./releaseChannel";
 import { evaluateStatus, type UpdateState, type UpdateStatus } from "./updateState";
 import { isValidVersion } from "./version";
 
@@ -45,6 +50,11 @@ export interface AboutInput {
 /**
  * Build and validate the bounded read model. Every field is bounded; an unknown
  * channel or malformed version fails closed rather than being displayed.
+ *
+ * The model carries one identity, so its own version and channel must agree with
+ * each other *and* with the validated status snapshot. Displaying a version that
+ * does not belong to the displayed channel, or a version the update status
+ * contradicts, would misrepresent the installed product.
  */
 export function buildAboutReadModel(input: AboutInput): AboutVerdict {
   const { productName, version, channel, status } = input;
@@ -57,11 +67,17 @@ export function buildAboutReadModel(input: AboutInput): AboutVerdict {
   if (!isReleaseChannel(channel)) {
     return { ok: false, reason: "invalid_about_model" };
   }
+  if (!versionMatchesChannel(version, channel)) {
+    return { ok: false, reason: "invalid_about_model" };
+  }
   const statusVerdict = evaluateStatus(status);
   if (!statusVerdict.ok) {
     return { ok: false, reason: "invalid_about_model" };
   }
   const typedStatus: UpdateStatus = statusVerdict.status;
+  if (typedStatus.currentVersion !== version || typedStatus.channel !== channel) {
+    return { ok: false, reason: "invalid_about_model" };
+  }
   return {
     ok: true,
     model: {

@@ -82,6 +82,27 @@ describe("version contract", () => {
     expect(isStrictlyNewer("1.0", "0.9.0")).toBe(false);
   });
 
+  it("compares very large numeric prerelease identifiers exactly", () => {
+    // 2^53 is where JavaScript `Number()` stops distinguishing integers. These
+    // are three distinct SemVer identifiers that a float comparison collapses.
+    expect(compareVersions("1.0.0-beta.9007199254740993", "1.0.0-beta.9007199254740992")).toBe(1);
+    expect(compareVersions("1.0.0-beta.9007199254740992", "1.0.0-beta.9007199254740993")).toBe(-1);
+    expect(compareVersions("1.0.0-beta.9007199254740991", "1.0.0-beta.9007199254740992")).toBe(-1);
+    expect(compareVersions("1.0.0-beta.9007199254740992", "1.0.0-beta.9007199254740992")).toBe(0);
+    // A much longer identifier is a larger value, never a lexical accident.
+    const huge = "1".repeat(40);
+    expect(compareVersions(`1.0.0-beta.${huge}`, "1.0.0-beta.9007199254740991")).toBe(1);
+    expect(compareVersions("1.0.0-beta.9007199254740991", `1.0.0-beta.${huge}`)).toBe(-1);
+    // Equal-length huge identifiers still order exactly.
+    const lower = `1${"0".repeat(30)}`;
+    const higher = `1${"0".repeat(29)}1`;
+    expect(compareVersions(`1.0.0-beta.${lower}`, `1.0.0-beta.${higher}`)).toBe(-1);
+    expect(compareVersions(`1.0.0-beta.${higher}`, `1.0.0-beta.${lower}`)).toBe(1);
+    // The exact order survives the eligibility helper too.
+    expect(isStrictlyNewer("1.0.0-beta.9007199254740993", "1.0.0-beta.9007199254740992")).toBe(true);
+    expect(isStrictlyNewer("1.0.0-beta.9007199254740992", "1.0.0-beta.9007199254740993")).toBe(false);
+  });
+
   it("locks when canonical and mirrors agree exactly", () => {
     const verdict = evaluateVersionDrift("0.1.0", [
       { path: "a", version: "0.1.0" },

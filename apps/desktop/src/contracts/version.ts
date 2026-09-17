@@ -75,13 +75,27 @@ export function isValidVersion(value: unknown): value is string {
   return parseVersion(value).ok;
 }
 
+/**
+ * Exact numeric-identifier comparison.
+ *
+ * A SemVer numeric prerelease identifier is an arbitrary-precision unsigned
+ * integer. Converting it with `Number()` collapses every value above 2^53 onto
+ * the same double, so two distinct identifiers — for example `9007199254740993`
+ * and `9007199254740992` — would compare equal and silently corrupt same-channel
+ * upgrade/downgrade eligibility. The digit strings are therefore compared by
+ * length and then lexically, which is exact because parsing admits no leading
+ * zeros in a numeric identifier and therefore length is the value's magnitude.
+ */
+function compareNumericIdentifier(left: string, right: string): number {
+  if (left.length !== right.length) return left.length < right.length ? -1 : 1;
+  return left === right ? 0 : left < right ? -1 : 1;
+}
+
 function compareIdentifier(left: string, right: string): number {
   const leftNumeric = /^\d+$/.test(left);
   const rightNumeric = /^\d+$/.test(right);
   if (leftNumeric && rightNumeric) {
-    const a = Number(left);
-    const b = Number(right);
-    return a === b ? 0 : a < b ? -1 : 1;
+    return compareNumericIdentifier(left, right);
   }
   if (leftNumeric) return -1;
   if (rightNumeric) return 1;
