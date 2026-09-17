@@ -1,14 +1,16 @@
 # DEC-028 — Distribution Version And Release-Channel Contract
 
-**Status:** PROPOSED / NOT CANONICAL  
-**Work Order:** `HCODER-WO-0024`  
+**Status:** CANONICAL / SEALED under `HCODER-CP-0024` — **closeout branch candidate; effective only after the governed closeout merge and exact-main postvalidation**  
+**Work Order:** `HCODER-WO-0024` — product implementation MERGED / POSTVALIDATED  
 **Issue:** `#77`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **Canonical base:** `HCODER-CP-0023` / `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
-**Reviews of this proposal:** prior reviewed-head facts are historical and recorded once in the review-history section below and in `.engineering/evidence/HCODER-WO-0024.md`; they are not mirrored here as a current index. Mutable current review and gate state is external in PR #80 and Issue #30.  
+**Product merge (immutable lifecycle-stage fact):** `c7f2a5f21369fd92b3493bea0be0192bbd7298b4` — PR #80, squash with expected-head protection; merge tree `99151781a7cd4a886bf0ea43bb9e29ca44b16cb1` identical to the reviewed-head tree  
+**Promotion evidence:** `.engineering/evidence/HCODER-CP-0024-CANONICAL-CLOSEOUT.md`  
+**Reviews of this proposal:** prior reviewed-head facts are historical and recorded in the review-history section below and in `.engineering/evidence/HCODER-WO-0024.md`; they are not mirrored here as a current index. Mutable current review and gate state is external in PR and Issue pointers.  
 **Materialised under:** `HCODER-WO-0024` — the canonical append-only delta history for this Work Order lives in `.engineering/context-locks/HCODER-WO-0024.md`, and no terminal delta number or range is mirrored here.
 
-> **State record.** This ADR is a **proposal**. It records a durable law that `HCODER-WO-0024` is establishing and has no canonical standing. It grants no authority, admits no updater, and is not evidence that Hive Coder is installable, signed, auto-updatable or production-distributable. It becomes canonical only through the promotion gate below, and only with an independent review that reports unresolved HIGH/CRITICAL `0/0`.
+> **Branch-candidate note (must not be misread).** This file carries the promotion on the closeout branch, and that promotion becomes **effective only after** the exact closeout candidate head passes its exact-head gates, is independently approved with unresolved HIGH/CRITICAL `0/0`, is governed-merged with expected-head protection, and the resulting exact `main` SHA passes fresh Governance and Desktop Shell. Until then the canonical state of `DEC-028` remains PROPOSED / NOT CANONICAL and `HCODER-CP-0023` remains the sealed checkpoint. This ADR grants no authority, admits no updater, and is not evidence that Hive Coder is installable, signed, auto-updatable or production-distributable.
 
 ## Context
 
@@ -66,17 +68,17 @@ This ADR does not approve, and does not create authority for: a Tauri updater pl
 
 ## Promotion gate
 
-`DEC-028` is **PROPOSED / NOT CANONICAL**. Promotion is a durable gate, not a statement about any particular head: it requires all of the following, and evidence for each must be produced against whatever exact head the promotion decision names.
+`DEC-028` is proposed as **CANONICAL / SEALED** under `HCODER-CP-0024`, effective only after the governed closeout merge and exact-main postvalidation. Promotion is a durable gate rather than a statement about any particular head: it requires all of the following, and evidence for each must be produced against whatever exact head the promotion decision names.
 
-| Condition | Requirement |
-|---|---|
-| Contract law materialised | The law above exists in source as executable contract code, with tests that fail when a guard is removed |
-| Adversarial coverage | The negative and adversarial proofs listed in the Work Order's acceptance map are implemented and green |
-| Hosted exact-head gates | Governance and Desktop Shell are green on the exact promotion head |
-| Independent review | An independent HEDS review of that exact head reports unresolved HIGH/CRITICAL `0/0` |
-| Governed merge | The Work Order merges with expected-head protection |
+| Condition | Requirement | Product-stage status |
+|---|---|---|
+| Contract law materialised | The law above exists in source as executable contract code, with tests that fail when a guard is removed | MET at the reviewed product head |
+| Adversarial coverage | The negative and adversarial proofs listed in the Work Order's acceptance map are implemented and green | MET at the reviewed product head |
+| Hosted exact-head gates | Governance and Desktop Shell are green on the exact promotion head | MET at the reviewed product head and again on the exact product merge `main` |
+| Independent review | An independent HEDS review of that exact head reports unresolved HIGH/CRITICAL `0/0` | MET — `5239135676` APPROVED FOR GOVERNED MERGE, CRITICAL `0` / HIGH `0` / MEDIUM `0` |
+| Governed merge | The Work Order merges with expected-head protection | Product merge MET (`c7f2a5f21369fd92b3493bea0be0192bbd7298b4`, PR #80); the **closeout merge is what remains** |
 
-Mutable evidence for the last three conditions lives in PR #80 and Issue #30, where it can advance without falsifying this document; this ADR records the requirement and the historical reviewed-head record below. Until every condition is met, no promotion claim may be made for this decision, for `HCODER-WO-0024`, or for Hive Coder's distribution or update capability.
+Mutable evidence for these conditions lives in PR and Issue #30 pointers, where it can advance without falsifying this document; this ADR records the requirement and the historical reviewed-head record below. Until the closeout merge and its exact-main postvalidation succeed, no promotion claim with canonical force may be made for this decision, for `HCODER-WO-0024`, or for Hive Coder's distribution or update capability.
 
 ## Recorded review history
 

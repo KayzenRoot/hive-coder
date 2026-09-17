@@ -294,3 +294,41 @@ Unresolved severity at review time: **CRITICAL 0 / HIGH 0 / MEDIUM 1**. The revi
 
 ## STOP CONDITION (Delta 007)
 STOP if any technical/runtime/test/workflow/manifest/dependency change becomes necessary, if a proposed wording would still require editing multiple documents whenever a new delta or review occurs, if fresh exact-head Governance or Desktop Shell fails, if any HIGH or CRITICAL finding appears, or if any step would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.
+
+---
+
+# Context Lock Delta 008
+
+**Status:** SAME WORK ORDER — CANONICAL CLOSEOUT CANDIDATE (documentation/governance only)  
+**Authority granted:** none beyond canonical closeout source changes on a fresh closeout branch; no runtime, updater, packaging, network, install, signing, release, filesystem, Git, shell, Cua or credential authority of any kind  
+**Trigger:** product implementation merged and exact-main postvalidated, then approved for closeout preparation by PR comment `5718801331`
+
+## Immutable product lifecycle facts (recorded, not live pointers)
+
+| Stage | Fact |
+|---|---|
+| Independently reviewed product head | `81bdd283dfd299d5ad5035301d06501f6b953a56` |
+| Reviewed-head tree | `99151781a7cd4a886bf0ea43bb9e29ca44b16cb1` |
+| Independent product HEDS | `5239135676` — APPROVED FOR GOVERNED MERGE, CRITICAL `0` / HIGH `0` / MEDIUM `0` |
+| Product PR | `#80` — squash merged with expected-head protection |
+| Product merge SHA / canonical main at postvalidation | `c7f2a5f21369fd92b3493bea0be0192bbd7298b4` |
+| Merge tree | `99151781a7cd4a886bf0ea43bb9e29ca44b16cb1` — identical to the reviewed-head tree |
+| Post-merge Governance | `35252975365` SUCCESS on that exact main |
+| Post-merge Desktop Shell | `35252975322` SUCCESS on that exact main |
+| Post-merge review | PR comment `5718801331` — APPROVED for canonical closeout preparation |
+
+Pre-merge base `main` was `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`. These are immutable lifecycle-stage facts, not live repository pointers.
+
+## Authorised scope
+
+1. Canonical closeout source only: the closeout checkpoint delta, the `HCODER-CP-0024` closeout evidence package, the canonical checkpoint source, the Work Order's final-state wording, the `DEC-028` / Decisions Ledger promotion wording in this closeout candidate, and directly related evidence wording.
+2. **Forbidden:** every TypeScript, Python and Rust source or test file, `.github/workflows/*`, `tauri.conf.json`, Cargo/npm manifests and lockfiles, dependency files, runtime/control-plane/permission/capability code, release files, and any `HCODER-DIST-001B` implementation or issue activation.
+3. The already-reviewed contract law does not change: the version source and exact mirrors, the toolchain-compatible bounded SemVer profile, the channel law, the authenticity law, the persisted-event law, plain-own-data validation with the zero-getter rule, and the inert Hive-owned `UpdateService` boundary all remain exactly as reviewed. This delta advances lifecycle/canonical status only.
+4. Nothing in this delta admits installers, packages, signing/notarization, updater transport, download/install/restart, release or tag publication, or any production-distribution claim.
+
+## Anti-self-staling law (Delta 007) remains in force
+
+The closeout candidate records only facts already immutable before this branch existed. Future closeout review identifiers, future closeout CI receipts and the future closeout merge SHA stay **external** in PR and Issue pointers and must not be embedded into the pre-CI commit of this candidate. No moving `current main` field is created. Deltas `001`–`007` and all prior review history are preserved verbatim.
+
+## STOP CONDITION (Delta 008)
+STOP if any product, runtime, test, workflow, manifest, lockfile or dependency change becomes necessary; if any closeout edit would change the reviewed contract law rather than its lifecycle/canonical status; if any new updater, packaging, signing or release authority would be introduced; if fresh exact-head Governance or Desktop Shell is not fully green; or if any step would merge the closeout PR, close Issue #77, or begin `HCODER-DIST-001B`.

@@ -1,11 +1,13 @@
 # Evidence Bundle — HCODER-WO-0024
 
-**Status:** IMPLEMENTED IN SOURCE — EXTERNAL PROMOTION EVIDENCE REQUIRED  
+**Status:** PRODUCT IMPLEMENTATION MERGED / POSTVALIDATED — CANONICAL CLOSEOUT CANDIDATE PREPARED  
 **Canonical base:** `HCODER-CP-0023` / `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
-**Issue:** `#77`  
+**Issue:** `#77` — OPEN  
 **Parent epic:** `#72`  
-**PR:** `#80` (Draft, unmerged)  
-**Reviewed-head record:** historical only; the table further below records reviewed heads and is not the current review index. Mutable current review and gate state is external in PR #80 and Issue #30.  
+**Product PR:** `#80` — MERGED (squash, expected-head protected)  
+**Product merge / canonical main at postvalidation (immutable stage fact):** `c7f2a5f21369fd92b3493bea0be0192bbd7298b4`  
+**Closeout package:** `.engineering/checkpoint-deltas/HCODER-WO-0024.md`, `.engineering/evidence/HCODER-CP-0024-CANONICAL-CLOSEOUT.md`  
+**Reviewed-head record:** historical only; the table further below records reviewed heads and is not the current review index. Mutable current review and gate state is external in PR and Issue pointers.  
 **Correction authority:** `HCODER-WO-0024`; the canonical append-only delta history lives in `.engineering/context-locks/HCODER-WO-0024.md`, and no terminal delta number or range is mirrored here.
 
 ## Correction state 5 (documentation/source-truth only — no technical change)
@@ -62,7 +64,7 @@ The prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` passed Governance `
 - That Hive Coder is installable, signed, notarized, auto-updatable or production-distributable.
 - That any update, download, install, restart or release path exists or is authorised.
 - That cryptographic verification is implemented. **No scheme is admitted**, so no authenticity-dependent state can be entered, asserted as a current status, used as a persisted event source or claimed as successfully entered — while a bounded *refused* attempt toward `ready` remains recordable, because it asserts a refusal rather than an entry.
-- That `DEC-028` is canonical. It is PROPOSED / NOT CANONICAL.
+- That `DEC-028` carries canonical force yet. The closeout branch states the *intended* CANONICAL / SEALED status under `HCODER-CP-0024`, but it is effective only after that closeout is independently approved, governed-merged and exact-main postvalidated; until then the canonical state remains PROPOSED / NOT CANONICAL and `HCODER-CP-0023` remains the sealed checkpoint.
 - That any platform's native distribution behaviour is proven. Only the contract lane is exercised.
 - That the contracts are proven *by this document*. Exact-head gate and review satisfaction is mutable external state tracked in PR #80 and Issue #30; this bundle records the requirement and the historical reviewed-head record below. No statement here may be read as a current-head claim.
 
@@ -82,10 +84,11 @@ Re-read live files from the exact base before relying on these; repository sourc
 
 Durable statement of where this slice stands, written so that it cannot become false as CI or review advances:
 
-- Version/channel/update-state/about contracts, the version drift verifier and the inert `UpdateService` boundary are **IMPLEMENTED in source**, each with tests that fail when a guard is removed.
-- The three security properties that were previously over-broad are **implemented in source** with adversarial tests: authenticity-dependent current-state and source unreachability plus refusal of successful entry, while bounded refused attempts toward `ready` remain recordable; persisted event-outcome/edge coupling; and the toolchain-compatible core bound. They are not "pending" properties; they are laws whose independent confirmation is external.
-- **External promotion evidence is required and is not recorded here.** Green hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0`, and a governed expected-head merge must each be produced against the exact head a promotion decision names, and that mutable state is tracked in PR #80 and Issue #30.
-- Native Windows/Linux/macOS *distribution* behaviour, signing, notarization and release publication remain **UNPROVEN** and unauthorised; only the contract lane is exercised.
+- Version/channel/update-state/about contracts, the version drift verifier and the inert `UpdateService` boundary are **implemented in source and merged**, each with tests that fail when a guard is removed.
+- The three security properties that were previously over-broad are **implemented in source and merged** with adversarial tests: authenticity-dependent current-state and source unreachability plus refusal of successful entry, while bounded refused attempts toward `ready` remain recordable; persisted event-outcome/edge coupling; and the toolchain-compatible core bound.
+- **Product lifecycle stage (immutable facts):** reviewed head `81bdd283dfd299d5ad5035301d06501f6b953a56` (tree `99151781a7cd4a886bf0ea43bb9e29ca44b16cb1`); independent HEDS `5239135676` APPROVED FOR GOVERNED MERGE, CRITICAL `0` / HIGH `0` / MEDIUM `0`; product merge `c7f2a5f21369fd92b3493bea0be0192bbd7298b4` (PR #80, squash with expected-head protection, merge tree identical to the reviewed-head tree); post-merge Governance `35252975365` and Desktop Shell `35252975322` SUCCESS on that exact main. The product implementation is therefore **MERGED / POSTVALIDATED**.
+- **External promotion evidence for the closeout is required and is not recorded here.** Green hosted exact-head gates, an independent review with unresolved HIGH/CRITICAL `0/0` and a governed expected-head merge must each be produced against the exact closeout candidate head, and that mutable state is tracked in PR and Issue pointers.
+- Native Windows/Linux/macOS *distribution* behaviour, signing, notarization and release publication remain **UNPROVEN** and unauthorised; only the contract lane is exercised. `bundle.active` remains `false`.
 
 ## Reviewed-head record (historical)
 
