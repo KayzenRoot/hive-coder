@@ -83,6 +83,14 @@ Publication is atomic same-filesystem publication, explicitly **not** strict CAS
 ### Not claimed
 No merge, no squash, no branch deletion, no Work Order closure, no Issue #68 closure, no post-merge validation, and no canonical-on-main status. The executor prepared this approval-state evidence and does not self-issue the final merge approval.
 
+## Metadata/evidence correction note (Prompt 10)
+
+Prompt 09's approval-state mutation left two internal contradictions, corrected under Context Lock Delta 010 without any behavior change: the checkpoint delta still carried `still PROPOSED` / `remains OPEN / DRAFT` lines, a Purpose that disclaimed promoting `DEC-027`, and a `Not changed` section claiming the ADR status and checkpoint branch copy were untouched; and the PR body still declared `DEC-027: PROPOSED` and `No ready-for-review`.
+
+Both are corrected. This note is documentation only: no product behavior, runtime authority, dependency, workflow, test semantics or desktop behavior changed, and no Python source file changed.
+
+PR #69 was already in Draft at the start of this correction. The approval-state prompt marked it ready for review, and the repository owner account converted it back to draft at `2026-09-17T01:11:51Z`, before this correction began; the executor did not perform that reversion.
+
 ## FINAL TECHNICAL HEDS and promotion candidate (Prompt 06)
 
 **Last behavior-changing implementation head:** `b904b473416786e72c7e805e2e8c8b557d377166`  

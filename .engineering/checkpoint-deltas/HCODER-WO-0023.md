@@ -1,15 +1,17 @@
-# Checkpoint Delta / Promotion Candidate — HCODER-WO-0023
+# Checkpoint Delta / Approval & Readiness — HCODER-WO-0023
 
 **Status:** APPROVAL / READINESS DELTA — APPROVED ON THIS BRANCH, NOT MERGED  
 **Work Order:** `HCODER-WO-0023 — Governed Git Staging Capability`  
-**Decision:** `DEC-027` — promotion candidate, still PROPOSED  
+**Decision:** `DEC-027` — APPROVED on this branch; not canonical on main  
 **Issue:** `#68`  
-**PR:** `#69` — remains OPEN / DRAFT  
+**PR:** `#69` — OPEN / DRAFT; approval-state metadata correction pending independent review  
 **Technical head:** `b904b473416786e72c7e805e2e8c8b557d377166`  
 **Canonical main at promotion preflight:** `aaa75242826db33442cd96cdc1d550d69bd25faa`
 
 ## Purpose
-Record a bounded promotion **candidate** state for the first Hive-owned Git index-mutation authority, without mutating the canonical checkpoint, promoting `DEC-027`, or changing any product behavior. This delta creates no new authority and does not seal anything.
+Record the **approved branch-state / readiness mutation** for the first Hive-owned Git index-mutation authority. The independent A4/HEDS review `5229345968` at `b827cb2e` returned CRITICAL `0` / HIGH `0`, so `DEC-027` is APPROVED on this branch, the Work Order is APPROVED / READY FOR MERGE, and the branch copy of the canonical checkpoint records that state.
+
+This delta creates no new authority and **does not claim** merge, post-merge validation, release or closure. Canonical main has not received the PR.
 
 ## What is admitted at the technical head
 - Exactly one capability: `Capability.GIT_WRITE = "git.write"`, risk HIGH, materially sensitive, mandatory trusted approval, required target field `workspace`.
@@ -37,7 +39,9 @@ Commit, tag, ref, branch, remote, credential, reset, checkout, restore, clean, s
 Publication is an atomic same-filesystem **publication**, not strict CAS. An uncooperative external process may act between the last successful revalidation and the atomic call. This is stated in the ADR, the Context Lock, the implementation docstrings and this delta, and must never be represented as strict CAS.
 
 ## Not changed by this delta
-No product behavior, runtime authority, workflow behavior, dependency state, test semantics, canonical checkpoint, ADR status or release state was changed. The canonical checkpoint document is untouched.
+No product behavior, runtime authority, workflow behavior, dependency state or test semantics was changed. No Python source file changed in the approval-state or metadata-correction commits.
+
+This section deliberately does **not** claim that the ADR status or the checkpoint's branch copy were untouched: the approval-state mutation intentionally changed both, and claiming otherwise would be false. What remains unchanged is the release state and the canonical status on `main`.
 
 ## Approval / readiness state
 The independent A4/HEDS review `5229345968` at `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a` returned CRITICAL `0` / HIGH `0`. `DEC-027` is therefore **APPROVED** on this branch, the Work Order is APPROVED / READY FOR MERGE, and the branch copy of the canonical checkpoint records that state.

@@ -225,6 +225,23 @@ The promotion candidate was independently reviewed: HEDS review `5229345968` at 
 ### Explicit non-authorization
 No merge, no squash, no branch deletion, no Work Order closure, no Issue #68 closure, no post-merge validation claim, and no canonical main mutation. The executor may prepare approval-state evidence but may not self-issue the final merge approval; the approval-state head must still pass independent exact-head review.
 
+## Context Lock Delta 010 — post-approval metadata/evidence reconciliation
+Review verdict on Prompt 09 was CORRECTION_REQUIRED, **source-truth and metadata only**. The technical implementation and the approval-state carry-forward remain valid. This delta authorizes exactly the reconciliation of two internal contradictions left by the approval-state mutation. **It grants no authority, no capability, no scope and no behavior change.**
+
+### Corrected contradictions
+**M-09-01 — checkpoint-delta internal contradiction.** `.engineering/checkpoint-deltas/HCODER-WO-0023.md` declared an approval/readiness status at the top, yet its `Decision` and `PR` lines still read `still PROPOSED` and `remains OPEN / DRAFT`, its Purpose still said the delta does not promote `DEC-027` or mutate the checkpoint, and its `Not changed by this delta` section still claimed ADR status and the canonical checkpoint were untouched. Prompt 09 intentionally changed both, so those sentences had become false. They are corrected here; the historical promotion-candidate evidence chronology and the bounded-race statement are preserved, not erased.
+
+**M-09-02 — PR metadata contradiction.** PR #69's body still stated `DEC-027 remains PROPOSED`, `DEC-027: PROPOSED`, and `No ready-for-review`, contradicting the approved branch state. The title and body are reconciled to the truthful current state.
+
+### Authorized files / metadata
+- `.engineering/checkpoint-deltas/HCODER-WO-0023.md`
+- `.engineering/evidence/HCODER-WO-0023.md` (one short note recording this metadata correction)
+- this Context Lock (append-only)
+- PR #69 title/body and Draft state
+
+### State that must NOT change
+`DEC-027` is APPROVED on this branch and **not** canonical on main. The Work Order is APPROVED / READY FOR MERGE and **not** CLOSED. Canonical main has **not** received PR #69. Independent HEDS review `5229345968` at `b827cb2e` remains the technical approval artifact with CRITICAL `0` / HIGH `0`. No merge, post-merge validation, release or closure may be claimed. Publication remains atomic publication, explicitly not strict CAS.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 
