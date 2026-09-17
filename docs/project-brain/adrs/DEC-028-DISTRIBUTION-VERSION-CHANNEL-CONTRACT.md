@@ -37,7 +37,7 @@ One acceptance set means the product parser and the Python drift gate must agree
 
 Recorded history carries the same rule in the precise form the event shape allows: while no scheme is admitted, an authenticity-dependent state cannot be an event's **source**, and no event may claim **successful entry** into one. A *refused attempt* toward `ready` from a reachable source — `verifying -> ready` — remains recordable with the bounded proof-refusal outcomes, because it asserts only that an attempt was made and refused: naming an attempted destination is not a claim that the state was entered, or that it ever existed as a current state.
 
-Cryptographic schemes are admitted by an explicit allowlist that is **empty** in this slice, so no proof can be accepted and the entire install path is unreachable by construction rather than by convention. History that does not touch the gated path remains valid, so the rule restricts the claim without banning the record.
+Cryptographic schemes are admitted by an explicit allowlist that is **empty** in this slice, so no proof can be accepted and no authenticity-dependent state can actually be entered, rather than merely being discouraged by convention. Ordinary history that does not touch the gated path remains valid, and a refused attempt on it is recordable, so the rule restricts the claim without banning the record.
 
 **5. Status snapshots are closed, plain-data objects.** A status snapshot has an exact key set at the top level, inside its error object and inside every recorded event; unknown keys are refused rather than ignored, unknown states, channels, error codes and event outcomes are refused, events are validated individually by the persisted-event law below and by a maximum count, and the candidate version is constrained by state (`required`, `forbidden`, or either) and must be a strictly newer version belonging to the same channel.
 
@@ -59,7 +59,7 @@ This ADR does not approve, and does not create authority for: a Tauri updater pl
 4. Signing material never enters repository, logs, prompts or runtime state.
 5. Version, channel and state parsing fail closed on malformed or unknown input.
 6. No silent downgrade; no implicit cross-channel promotion or demotion.
-7. Every authenticity-dependent state requires an accepted authenticity proof, including in a status snapshot or a recorded history entry, and no scheme is admitted in this slice.
+7. An authenticity-dependent state requires an accepted authenticity proof to be **entered**, and no scheme is admitted in this slice. Concretely: a legal transition that would actually enter `ready`, `installing` or `success` requires accepted proof; such a state cannot be asserted as a current status; it cannot be a persisted event source; and a persisted event cannot claim successful entry into it. A *refused attempt* toward `ready` from a reachable source is recordable with the bounded refusal outcomes, and records a refusal rather than asserting that the state was entered.
 8. Diagnostic metadata is bounded and redaction-safe; credential-shaped detail is refused.
 9. The inert boundary exposes no mutating, transport or installation member.
 10. Validation reads only plain own-data records; no inherited field and no accessor is ever trusted, and no getter is ever executed by validation.

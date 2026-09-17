@@ -217,3 +217,40 @@ Unresolved severity at review time: **CRITICAL 0 / HIGH 0 / MEDIUM 2**. The revi
 
 ## STOP CONDITION (Delta 005)
 STOP if any technical/runtime/test/workflow/manifest/dependency change becomes necessary, if a correction would change the actual version, profile or event law rather than reconcile its documentation, if fresh exact-head Governance or Desktop Shell fails, if any HIGH or CRITICAL finding appears, or if any step would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.
+
+---
+
+# Context Lock Delta 006
+
+**Status:** SAME WORK ORDER — RESIDUAL DOCUMENTATION/SOURCE-TRUTH CORRECTION ONLY  
+**Authority granted:** none beyond documentation reconciliation of the paths named below  
+**Trigger:** independent HEDS review `5238504760`, verdict `CORRECTION_REQUIRED` on exact head `b12baf1650be23a28dda0b04f1cca40687a205ca`
+
+## Recorded finding (as returned by the independent review)
+
+Unresolved severity at review time: **CRITICAL 0 / HIGH 0 / MEDIUM 1**. The review accepted `M-24-01` as CLOSED, confirmed the count-based Evidence wording and the Work Order event-history wording are corrected, confirmed Delta 005 changed governance/document paths only, and confirmed the fresh exact-head gates.
+
+- **M-25-01 — one residual current-state source-truth contradiction.** `DEC-028` Security law item 7 still read "Every authenticity-dependent state requires an accepted authenticity proof, including in a status snapshot or a recorded history entry", which is broader than the ADR's own corrected persisted-event law: a `verifying -> ready` attempt may be recorded with a bounded refusal outcome, without accepted proof and without asserting that `ready` was entered. The Evidence Bundle also still described the implemented property as "whole-install-path unreachability across snapshots, sources and destinations", which can be read as prohibiting even an attempted destination.
+
+## Required durable law (to be stated identically wherever it is summarised)
+
+1. A legal **transition that would actually enter** `ready`, `installing` or `success` requires an accepted authenticity proof. Transition-time law is unchanged.
+2. An authenticity-dependent state cannot be asserted as a **current status** while no scheme is admitted.
+3. An authenticity-dependent state cannot be a **persisted event source**.
+4. A persisted event cannot claim **successful entry** into an authenticity-dependent state.
+5. A **refused attempt** toward `ready` from a reachable source (`verifying -> ready`) is recordable with the bounded refusal outcomes `authenticity_proof_required` or `malformed_authenticity_proof`. That records a refusal and does not assert that `ready` was entered, or that it ever existed as a current state.
+
+## Authorisation
+
+1. This delta authorises **documentation/source-truth correction only**, limited to:
+   - `.engineering/context-locks/HCODER-WO-0024.md` (this Delta 006 append);
+   - `docs/project-brain/adrs/DEC-028-DISTRIBUTION-VERSION-CHANNEL-CONTRACT.md` (Security law item 7);
+   - `.engineering/evidence/HCODER-WO-0024.md`;
+   - the Work Order, Implementation Pack, Executor Brief, Acceptance/Security Map and Decisions Ledger **only** if the scan finds the same current-state semantic overstatement.
+2. **Forbidden:** every TypeScript, Python and Rust source or test file, `.github/workflows/*`, `tauri.conf.json`, Cargo/npm manifests and lockfiles, dependency files, runtime/control-plane code, release files, and any `HCODER-DIST-001B` work.
+3. No behaviour changes: `evaluateTransition`, `evaluatePersistedEvent`, the state vocabularies, the outcome vocabularies and every test remain untouched. The transition-entry rule is not weakened, and no current-state document may imply that a persisted refusal attempt itself needs accepted proof, or that naming `ready` as an attempted destination means it was entered.
+4. Deltas `001`–`005` and all prior review history are preserved verbatim. Historical defect descriptions scoped to a reviewed head keep their original wording.
+5. `DEC-028` remains **PROPOSED / NOT CANONICAL**; the PR remains **Draft and unmerged**; mutable gate and review evidence stays external in PR #80 and Issue #30, and no future head SHA or run ID is embedded in the pre-CI commit.
+
+## STOP CONDITION (Delta 006)
+STOP if any technical/runtime/test/workflow/manifest/dependency change becomes necessary, if a correction would change behaviour rather than documentation, if fresh exact-head Governance or Desktop Shell fails, if any HIGH or CRITICAL finding appears, or if any step would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.

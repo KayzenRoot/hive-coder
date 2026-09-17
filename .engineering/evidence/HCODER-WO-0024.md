@@ -61,7 +61,7 @@ The prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` passed Governance `
 ## Claims explicitly NOT allowed
 - That Hive Coder is installable, signed, notarized, auto-updatable or production-distributable.
 - That any update, download, install, restart or release path exists or is authorised.
-- That cryptographic verification is implemented. **No scheme is admitted**, so the whole install path is structurally unreachable and unrecordable.
+- That cryptographic verification is implemented. **No scheme is admitted**, so no authenticity-dependent state can be entered, asserted as a current status, used as a persisted event source or claimed as successfully entered — while a bounded *refused* attempt toward `ready` remains recordable, because it asserts a refusal rather than an entry.
 - That `DEC-028` is canonical. It is PROPOSED / NOT CANONICAL.
 - That any platform's native distribution behaviour is proven. Only the contract lane is exercised.
 - That the contracts are proven *by this document*. Exact-head gate and review satisfaction is mutable external state tracked in PR #80 and Issue #30; this bundle records the requirement and the immutable prior reviewed-head facts below. No statement here may be read as a current-head claim.
@@ -83,7 +83,7 @@ Re-read live files from the exact base before relying on these; repository sourc
 Durable statement of where this slice stands, written so that it cannot become false as CI or review advances:
 
 - Version/channel/update-state/about contracts, the version drift verifier and the inert `UpdateService` boundary are **IMPLEMENTED in source**, each with tests that fail when a guard is removed.
-- The three security properties that were previously over-broad — whole-install-path unreachability across snapshots, sources and destinations; persisted event-outcome/edge coupling; and the toolchain-compatible core bound — are **implemented in source** with adversarial tests. They are not "pending" properties; they are laws whose independent confirmation is external.
+- The three security properties that were previously over-broad are **implemented in source** with adversarial tests: authenticity-dependent current-state and source unreachability plus refusal of successful entry, while bounded refused attempts toward `ready` remain recordable; persisted event-outcome/edge coupling; and the toolchain-compatible core bound. They are not "pending" properties; they are laws whose independent confirmation is external.
 - **External promotion evidence is required and is not recorded here.** Green hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0`, and a governed expected-head merge must each be produced against the exact head a promotion decision names, and that mutable state is tracked in PR #80 and Issue #30.
 - Native Windows/Linux/macOS *distribution* behaviour, signing, notarization and release publication remain **UNPROVEN** and unauthorised; only the contract lane is exercised.
 
