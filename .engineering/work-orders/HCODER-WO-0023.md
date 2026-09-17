@@ -1,6 +1,6 @@
 # HCODER-WO-0023 — Governed Git Staging Capability
 
-**Status:** APPROVED / READY FOR MERGE — independently reviewed (HEDS `5229345968` at `b827cb2e`: CRITICAL `0` / HIGH `0`); not merged, not closed, canonical main has not received it  
+**Status:** COMPLETE / CANONICAL candidate — product PR #69 merged and post-merge validated; closeout PR not yet merged, Issue #68 not yet closed  
 **Delivered authority:** exactly one bounded action, `git_stage_paths_v1`, under `Capability.GIT_WRITE` (HIGH, mandatory approval, request-bound single-use permit)  
 **Backend result:** route (1) selected — `dulwich==1.2.15`, pure-Python wheel, hash-pinned, provenance and import isolation closed  
 **Native proof:** Windows, Linux and macOS governed Git staging lanes pass independently at exact head  

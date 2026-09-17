@@ -65,6 +65,27 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 **Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)  
 **Authority head:** `52d8cc3195bd4f9c948b1327ed124042739b2530` (Prompt 03: dedicated `git.write` authority, publication and native E2E)
 
+## Closeout candidate (Prompt 11)
+
+**State:** PRODUCT MERGED AND POST-MERGE VALIDATED. **Closeout PR is not merged**, Issue #68 is not closed, and no post-closeout validation has occurred.
+
+### Canonical product merge
+- Product head at merge: `2dde9bb5690f22820ab9fe952aa2672e97c0f36f` (verified unchanged immediately before the merge).
+- Pre-merge canonical main: `aaa75242826db33442cd96cdc1d550d69bd25faa`.
+- Expected-head protection: enforced — the merge request was bound to that exact head SHA.
+- Merge method: squash. Canonical product merge SHA: `1f09520fbd92c7e65f9726b65a854f918507c895`.
+- `origin/main` after merge: `1f09520fbd92c7e65f9726b65a854f918507c895` — the same commit, so the squash SHA and canonical `main` identify one product state.
+
+### Post-merge exact-main validation
+- Governance run `35171215292` on `1f09520`: SUCCESS — source-pack, governed-runtime-linux, control-plane-windows and workspace-replace-macos.
+- Native governed Git staging proof on that exact `main` SHA: Linux SUCCESS, Windows HIGH_ASSURANCE SUCCESS, macOS SUCCESS, each independent.
+- Desktop Shell run `35171215429` on `1f09520`: SUCCESS — desktop-web, desktop-windows, desktop-linux, desktop-macos.
+
+### Closeout candidate
+Documentation and governance only, on branch `chore/HCODER-WO-0023-canonical-closeout` created from the validated merge SHA. Canonical checkpoint advanced to `HCODER-CP-0023` based on CP-0022; `DEC-027` recorded as CANONICAL on `main`; Work Order moved to COMPLETE / CANONICAL candidate; checkpoint delta converted to a closeout delta; closeout evidence recorded in `.engineering/evidence/HCODER-CP-0023-CANONICAL-CLOSEOUT.md`. No runtime, authority, dependency, workflow, test semantics or desktop behavior changed, and no Python source file changed.
+
+**Not claimed:** the closeout PR is not merged, Issue #68 is not closed, and HCODER-CP-0023 is not sealed. `workOrderClosed` remains false in the machine evidence.
+
 ## Approval state (Prompt 09)
 
 **State:** APPROVED / READY FOR GOVERNED MERGE on this branch. **Not merged**, canonical main has not received it, no post-merge validation has occurred, and the Work Order is not closed.

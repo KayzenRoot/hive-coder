@@ -44,9 +44,12 @@
   "decisions": [
     {
       "id": "DEC-027",
-      "status": "APPROVED",
-      "canonicalOnMain": false,
-      "scope": "Capability.GIT_WRITE / git_stage_paths_v1 only"
+      "status": "CANONICAL",
+      "canonicalOnMain": true,
+      "canonicalProductMergeSha": "1f09520fbd92c7e65f9726b65a854f918507c895",
+      "checkpoint": "HCODER-CP-0023",
+      "scope": "Capability.GIT_WRITE / git_stage_paths_v1 only",
+      "closeoutSealPending": true
     }
   ],
   "tests": [
@@ -161,31 +164,45 @@
   "hostedGates": [
     {
       "workflow": "Governance",
+      "runId": 35171215292,
+      "sha": "1f09520fbd92c7e65f9726b65a854f918507c895",
+      "conclusion": "SUCCESS",
+      "scope": "post-merge canonical main validation"
+    },
+    {
+      "workflow": "Desktop Shell",
+      "runId": 35171215429,
+      "sha": "1f09520fbd92c7e65f9726b65a854f918507c895",
+      "conclusion": "SUCCESS",
+      "scope": "post-merge canonical main validation"
+    },
+    {
+      "workflow": "Governance",
+      "runId": 35169861228,
+      "sha": "2dde9bb5690f22820ab9fe952aa2672e97c0f36f",
+      "conclusion": "SUCCESS",
+      "scope": "pre-merge product head"
+    },
+    {
+      "workflow": "Desktop Shell",
+      "runId": 35169861254,
+      "sha": "2dde9bb5690f22820ab9fe952aa2672e97c0f36f",
+      "conclusion": "SUCCESS",
+      "scope": "pre-merge product head"
+    },
+    {
+      "workflow": "Governance",
       "runId": 35161417857,
       "sha": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
       "conclusion": "SUCCESS",
-      "scope": "reviewed promotion-candidate head"
+      "scope": "independently reviewed head (historical)"
     },
     {
       "workflow": "Desktop Shell",
       "runId": 35161417859,
       "sha": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
       "conclusion": "SUCCESS",
-      "scope": "reviewed promotion-candidate head"
-    },
-    {
-      "workflow": "Governance",
-      "runId": 35159183327,
-      "sha": "b904b473416786e72c7e805e2e8c8b557d377166",
-      "conclusion": "SUCCESS",
-      "scope": "last behavior-changing head (historical, not the reviewed head)"
-    },
-    {
-      "workflow": "Desktop Shell",
-      "runId": 35159183326,
-      "sha": "b904b473416786e72c7e805e2e8c8b557d377166",
-      "conclusion": "SUCCESS",
-      "scope": "last behavior-changing head (historical, not the reviewed head)"
+      "scope": "independently reviewed head (historical)"
     }
   ],
   "resolvedFindings": [
@@ -210,7 +227,7 @@
   ],
   "checkpointDelta": ".engineering/checkpoint-deltas/HCODER-WO-0023.md",
   "canonicalCheckpointMutated": true,
-  "stopState": "APPROVAL_STATE_READY_FOR_REVIEW",
+  "stopState": "CLOSEOUT_CANDIDATE_READY_FOR_REVIEW",
   "lastBehaviorChangingHead": "b904b473416786e72c7e805e2e8c8b557d377166",
   "independentHedsReviewId": "5229345968",
   "independentHedsHead": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
@@ -259,14 +276,23 @@
     ]
   },
   "provenanceSemantics": "lastBehaviorChangingHead is behavior provenance: the last head at which product/runtime behavior changed. In this Work Order that is also the technical baseline the executor audited. It is NOT a HEDS head. independentHedsHead and independentHedsReviewId are the authoritative HEDS provenance. headSha is the reviewed evidence target this file describes.",
-  "decisionState": "APPROVED_READINESS_CANDIDATE",
-  "canonicalCheckpointMutationScope": "The branch copy of docs/project-brain/11-CHECKPOINT.md now records WO-0023 as APPROVED / READY FOR GOVERNED MERGE. Canonical main has not received this change; the PR is not merged and no post-merge validation has occurred.",
-  "approvalStateHead": "SELF_REFERENTIAL_SEE_NOTE",
-  "approvalStateHeadNote": "The approval-state commit carries this file, so it cannot contain its own SHA. The approval-state head is recorded externally by its own exact-head Governance and Desktop Shell receipts and in the corresponding Prompt return.",
+  "decisionState": "CANONICAL_ON_MAIN",
+  "canonicalCheckpointMutationScope": "The closeout branch advances docs/project-brain/11-CHECKPOINT.md to HCODER-CP-0023 and records WO-0023 as canonical on main. The closeout PR is NOT merged, so this is a closeout candidate state, not a sealed canonical closeout.",
   "mergeState": {
-    "merged": false,
-    "canonicalMainReceived": false,
-    "postMergeValidated": false,
-    "workOrderClosed": false
+    "merged": true,
+    "canonicalMainReceived": true,
+    "postMergeValidated": true,
+    "workOrderClosed": false,
+    "issue68Closed": false,
+    "canonicalProductMergeSha": "1f09520fbd92c7e65f9726b65a854f918507c895",
+    "preMergeMainSha": "aaa75242826db33442cd96cdc1d550d69bd25faa",
+    "squashMerge": true,
+    "expectedHeadProtection": true
+  },
+  "closeoutState": {
+    "branch": "chore/HCODER-WO-0023-canonical-closeout",
+    "closeoutPrMerged": false,
+    "candidateHead": "SELF_REFERENTIAL_SEE_NOTE",
+    "note": "The closeout candidate head carries this file and cannot contain its own SHA; it is recorded by its own exact-head receipts and the Prompt 11 return."
   }
 }

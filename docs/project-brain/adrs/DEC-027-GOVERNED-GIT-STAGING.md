@@ -1,6 +1,6 @@
 # DEC-027 — Governed Git Staging Boundary
 
-**Status:** APPROVED — READY FOR GOVERNED MERGE (not merged; canonical main has not received this decision)  
+**Status:** CANONICAL on `main` under `HCODER-CP-0023` (closeout seal pending this closeout PR)  
 **Work Order:** `HCODER-WO-0023`  
 **Issue:** `#68`  
 **Original source main:** `22b56b0f3111158cbf50789b1647c5a578a171c1`  
@@ -8,11 +8,13 @@
 **Last behavior-changing implementation head:** `b904b473416786e72c7e805e2e8c8b557d377166`  
 **Independently reviewed promotion-candidate head:** `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a`  
 **Independent A4/HEDS review artifact:** PR review `5229345968`  
-**Promotion candidate:** `.engineering/checkpoint-deltas/HCODER-WO-0023.md`
+**Canonical product merge:** `1f09520fbd92c7e65f9726b65a854f918507c895` (PR #69, squash, expected-head protected)  
+**Post-merge exact-main validation:** Governance `35171215292` SUCCESS; Desktop Shell `35171215429` SUCCESS  
+**Closeout candidate:** `.engineering/evidence/HCODER-CP-0023-CANONICAL-CLOSEOUT.md`
 
 > **State transition record (explicit and evidence-bound).** This ADR is **APPROVED** on this branch. Its original source main is preserved above and is not backdated or erased. Every condition in the promotion gate below was objectively satisfied at the independently reviewed head `b827cb2e`, and the independent A4/HEDS review `5229345968` returned CRITICAL `0` / HIGH `0`.
 >
-> Approval is a **branch-state** decision. Canonical main has not received this decision, the PR has not been merged, no post-merge validation has occurred, and the Work Order is not closed. Nothing here may be read as canonical until the governed merge and post-merge closeout actually occur.
+> The decision is **CANONICAL on `main`**: product PR #69 squash-merged as `1f09520fbd92c7e65f9726b65a854f918507c895` and that exact `main` SHA passed post-merge Governance `35171215292` and Desktop Shell `35171215429`. The documentation-only closeout PR is not yet merged and Issue #68 is not yet closed, so the canonical seal is pending; the admitted authority itself is unchanged and is not expanded by the promotion.
 
 ## Context
 Hive Coder can safely create and replace trusted-workspace regular files under the Permission & Control Plane, but practical coding also requires converting an approved worktree state into repository index state. Granting generic Git or shell execution would be a much larger authority boundary than staging itself.

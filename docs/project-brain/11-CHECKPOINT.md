@@ -1,14 +1,15 @@
 # Checkpoint — Hive Coder
 
-**Checkpoint:** `HCODER-CP-0022`  
-**Status:** APPROVED / CANONICAL  
+**Checkpoint:** `HCODER-CP-0023`  
+**Status:** CANONICAL (closeout seal pending this closeout PR)  
 **Date:** 2026-09-16  
 **Repository:** `KayzenRoot/hive-coder`  
-**Work Order:** `HCODER-WO-0022 — Governed Existing-File Replacement Capability` — COMPLETE / CANONICAL  
+**Work Order:** `HCODER-WO-0022 — Governed Existing-File Replacement Capability` — COMPLETE / CANONICAL
+**Canonicalized increment:** `HCODER-WO-0023 — Governed Git Staging Capability` — PRODUCT MERGED / POST-MERGE VALIDATED; closeout pending  
 **Issue:** `#61` — CLOSED / COMPLETED  
 **Product PR:** `#62` — SQUASH MERGED  
 **Correction PR:** `#64` — SQUASH MERGED  
-**Base checkpoint:** `HCODER-CP-0021` — APPROVED / CANONICAL  
+**Base checkpoint:** `HCODER-CP-0022` — APPROVED / CANONICAL  
 **Canonical base main SHA:** `9c2623f8b335cf29b63b5db5f43e694bfd77938e`  
 **CR-001 final exact head:** `12e38e98bb690e29494bab5e7a1c597a64b49765`  
 **Correction squash merge:** `35745aa56e203fa819751aee4b70cce57a9600e7`  
@@ -48,7 +49,7 @@ CP-0022 closeout exact head `a777ac207b42059a33ce9d73d8287122ff43c0a9` passed Go
 
 ## Downstream increments in flight
 - `HCODER-PLATFORM-001` (Issue #63) first-class native validation matrix is materialized on `main` at `22b56b0f3111158cbf50789b1647c5a578a171c1` and its evidence ledger reconciled at `ccfed1f960c80dc58e4f45cb627451e77c7d5a79`. Its evidence ledger remains **PREBUILT / NATIVE MATRIX INCOMPLETE**: Linux and macOS native desktop/Tauri exact-head evidence is still required. It is **not** a checkpoint and must not be represented as complete.
-- `HCODER-WO-0023` governed Git staging is **APPROVED / READY FOR GOVERNED MERGE** as a separately governed Work Order with its own Context Lock.
+- `HCODER-WO-0023` governed Git staging is **CANONICAL on `main`** under `HCODER-CP-0023`. Product PR #69 squash-merged with expected-head protection as `1f09520fbd92c7e65f9726b65a854f918507c895`, whose exact-`main` push validation passed Governance `35171215292` and Desktop Shell `35171215429`, including native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging proof. The closeout may be sealed only after the documentation-only closeout PR merges and post-closeout `main` is validated.
 
   Its admitted authority is exactly `Capability.GIT_WRITE` / `git_stage_paths_v1` (HIGH, materially sensitive, mandatory trusted approval, request-bound single-use permit) for explicit regular files in the already-proven ordinary local SHA-1 envelope. The independent A4/HEDS review `5229345968` at the reviewed head `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a` returned CRITICAL `0` / HIGH `0`, and native governed Git staging proof passed independently on Windows HIGH_ASSURANCE, Linux and macOS at that head.
 
