@@ -1,16 +1,24 @@
 # HCODER-CP-0024 — Canonical Closeout
 
-**Status:** CLOSEOUT CANDIDATE — NOT CANONICAL UNTIL INDEPENDENTLY APPROVED, GOVERNED-MERGED AND EXACT-MAIN POSTVALIDATED  
+**Status:** DURABLE CLOSEOUT DECLARATION — CONDITIONAL EFFECTIVENESS (`HCODER_CP_0024_EFFECTIVE`)  
 **Work Order:** `HCODER-WO-0024`  
-**Decision candidate:** `DEC-028`  
+**Decision:** `DEC-028`, CANONICAL / SEALED under `HCODER-CP-0024` while the predicate below is satisfied  
 **Canonical predecessor:** `HCODER-CP-0023`  
 **Product PR:** `#80` — SQUASH MERGED (expected-head protected)  
 **Product merge SHA:** `c7f2a5f21369fd92b3493bea0be0192bbd7298b4`  
-**Issue:** `#77` — OPEN (closeout not merged)
+**Issue:** `#77`
 
-> **Pre-merge candidate note.** On this branch this package states the *intended* canonical outcome. It carries canonical force only after this exact closeout candidate head is independently approved, squash-merged with expected-head protection, and the resulting exact `main` SHA passes fresh Governance and Desktop Shell. No future closeout merge SHA is embedded, because it does not exist yet.
+## Effectiveness predicate
 
-## Canonical candidate boundary
+`HCODER_CP_0024_EFFECTIVE` is satisfied if and only if all three hold for one and the same closeout revision:
+
+- (a) that exact closeout candidate revision was independently reviewed with unresolved HIGH/CRITICAL `0/0`;
+- (b) that exact revision was governed-merged with expected-head protection;
+- (c) the resulting exact `main` SHA passed fresh Governance and Desktop Shell.
+
+Before the predicate is satisfied, `HCODER-CP-0023` and the non-canonical `DEC-028` state remain authoritative. Once it is satisfied, `HCODER-CP-0024` and `DEC-028` are CANONICAL / SEALED under this declaration with no repository-document rewrite required. The predicate depends on no merge SHA, run ID, review ID, Issue state, PR state or moving `current main` field: evidence of whether it holds lives externally in the active closeout PR and Issues #30 and #77.
+
+## Canonical boundary
 
 `HCODER-CP-0024` closes the first governed slice of Hive Coder's distribution and version contract. It canonicalizes a **contract and seam** layer only: the product-version law, the release-channel law, the update-state and authenticity law, the persisted-event law, the bounded read-only About read model, and a Hive-owned inert `UpdateService` boundary.
 
@@ -45,22 +53,25 @@ No updater plugin, updater endpoint, HTTP client or network request; no artifact
 - Post-merge exact-main validation: Governance `35252975365` SUCCESS and Desktop Shell `35252975322` SUCCESS on that merge SHA, covering source-pack with the full Python suite and JSON contracts, native Linux governed runtime/version-drift/Git-staging, native Windows HIGH_ASSURANCE contract and staging proof, native macOS governed replacement and version-drift proofs, and desktop web/Windows/Linux/macOS.
 - Post-merge review: PR comment `5718801331` APPROVED for canonical closeout preparation.
 
-Full correction chronology and the reviewed-head record are preserved in the Work Order, the Context Lock, the Evidence Bundle and the `DEC-028` ADR; they are not restated here. The closeout stage's own review, gates and merge SHA are deliberately not recorded in this committed package — they do not exist yet, and per the Work Order's anti-self-staling law they belong in PR #80-adjacent and Issue #30 / #77 pointers.
+Full correction chronology and the reviewed-head record are preserved in the Work Order, the Context Lock, the Evidence Bundle and the `DEC-028` ADR; they are not restated here. The closeout stage's own review, gates and merge evidence are the mutable inputs to `HCODER_CP_0024_EFFECTIVE`; they are not recorded in this committed package and live externally in the active closeout PR and Issues #30 and #77, so this document remains true whether or not the predicate has been satisfied.
 
 ## Canonical decision
 
-`DEC-028 — Distribution Version And Release-Channel Contract` is proposed as **CANONICAL / SEALED** under `HCODER-CP-0024`, effective only after the governed closeout merge and exact-main postvalidation. This checkpoint canonicalizes the bounded version, channel, update-state, persisted-event and boundary law described above and nothing beyond it.
+`DEC-028 — Distribution Version And Release-Channel Contract` is declared **CANONICAL / SEALED** under `HCODER-CP-0024`, effective under `HCODER_CP_0024_EFFECTIVE` and non-canonical while that predicate is unsatisfied. This checkpoint canonicalizes the bounded version, channel, update-state, persisted-event and boundary law described above and nothing beyond it.
 
 ## Closeout promotion gates
 
-Before this closeout may merge:
-1. exact-head Governance on the closeout branch must be SUCCESS;
-2. exact-head Desktop Shell must be SUCCESS;
-3. an independent review of this exact closeout candidate head must report unresolved HIGH/CRITICAL `0/0`;
-4. the closeout changes must remain documentation/governance only and must not broaden runtime authority or alter the reviewed contract law.
+This declaration becomes effective only through the predicate above. Concretely, the promotion requires:
 
-After closeout merge and exact-main postvalidation, `HCODER-WO-0024` may be marked COMPLETE, Issue #77 may close, and `DEC-028` becomes CANONICAL with this checkpoint as its promotion evidence.
+1. exact-head Governance on the closeout revision to be SUCCESS;
+2. exact-head Desktop Shell on that revision to be SUCCESS;
+3. an independent review of that exact revision reporting unresolved HIGH/CRITICAL `0/0`;
+4. a governed merge of that exact revision with expected-head protection;
+5. the resulting exact `main` SHA to pass fresh Governance and Desktop Shell;
+6. every closeout change to remain documentation/governance only, without broadening runtime authority or altering the reviewed contract law.
+
+While the predicate holds, `HCODER-WO-0024` is complete, `DEC-028` is CANONICAL with this checkpoint as its promotion evidence, and Issue #77 may be closed. Whether each of those has happened is external state recorded in the active closeout PR and Issues #30 and #77, not in this document.
 
 ## STOP CONDITION
 
-Do not mark `HCODER-CP-0024` canonical before the closeout exact-head gates, independent closeout approval, governed closeout merge and post-merge exact-main validation succeed. Do not begin `HCODER-DIST-001B` from this candidate. Never represent this candidate state as sealed while it is unmerged.
+Do not assert that `HCODER-CP-0024` or `DEC-028` carry canonical force except while `HCODER_CP_0024_EFFECTIVE` is satisfied. Do not begin `HCODER-DIST-001B` from this declaration. This document never claims a phase: it states the predicate and the conditional outcome, so it remains true both before and after the closeout merge.

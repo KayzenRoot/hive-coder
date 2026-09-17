@@ -332,3 +332,40 @@ The closeout candidate records only facts already immutable before this branch e
 
 ## STOP CONDITION (Delta 008)
 STOP if any product, runtime, test, workflow, manifest, lockfile or dependency change becomes necessary; if any closeout edit would change the reviewed contract law rather than its lifecycle/canonical status; if any new updater, packaging, signing or release authority would be introduced; if fresh exact-head Governance or Desktop Shell is not fully green; or if any step would merge the closeout PR, close Issue #77, or begin `HCODER-DIST-001B`.
+
+---
+
+# Context Lock Delta 009
+
+**Status:** SAME WORK ORDER — DURABLE CLOSEOUT PREDICATE CORRECTION (documentation/source-truth only)  
+**Authority granted:** none beyond correcting lifecycle/source-truth wording in the existing closeout paths; no product, runtime, update, package, network, install, signing, release, filesystem, Git, shell, Cua or credential authority, and no successor-slice authority  
+**Trigger:** independent closeout review `5239665954`, verdict `CORRECTION_REQUIRED` on exact head `734bbc84ca9947c4408a72cfb0f3e5d646a22e63`
+
+## Recorded finding (as returned by the independent review)
+
+Unresolved severity at review time: **CRITICAL 0 / HIGH 0 / MEDIUM 1**. The review accepted the source match, the eight-file documentation-only scope, the exact-head gates and the product lifecycle evidence.
+
+- **M-29-01 — the closeout source contained self-staling phase assertions.** Several durable files encoded mutable pre-merge state as if it were part of the canonical source package: `NOT YET MERGED, NOT YET SEALED` and a live `Issue #77 — OPEN` field; a claim that the closeout review, gates and merge "do not exist yet"; `Current sealed canonical checkpoint (until the above is merged)`; `the closeout merge is what remains`; and a Work Order line naming the closeout PR as `Draft, unmerged`. Each of those is true on the branch now and becomes **false on canonical `main`** the moment this exact head is merged, without any source change — recreating precisely the self-staling loop Delta 007 was created to eliminate, and forcing another documentation mutation merely to convert candidate wording into final wording.
+
+## Durable conditional-effectiveness law (binding from Delta 009)
+
+**`HCODER_CP_0024_EFFECTIVE`** — the closeout promotion predicate. It is satisfied if and only if all three hold for one and the same closeout revision:
+
+- (a) that exact closeout candidate revision was independently reviewed with unresolved HIGH/CRITICAL `0/0`;
+- (b) that exact revision was governed-merged with expected-head protection;
+- (c) the resulting exact `main` SHA passed fresh Governance and Desktop Shell.
+
+1. **Before the predicate is satisfied**, `HCODER-CP-0023` and the non-canonical `DEC-028` state remain authoritative.
+2. **Once the predicate is satisfied**, `HCODER-CP-0024` and `DEC-028` become CANONICAL / SEALED automatically under the declarations already present in source. **No repository-document rewrite is required merely to flip phase or status wording.**
+3. The predicate must not depend on an invented future merge SHA, run ID or review ID, on Issue open/closed state, on PR draft/open/merged state, or on a moving `current main` field. Mutable evidence proving whether the predicate is satisfied lives externally in the active closeout PR and Issues #30 and #77.
+4. Durable documents therefore state the **predicate and the conditional outcome**, never a phase-relative fact. Where a document needs to point at mutable closeout review or gate state, it points to "the active closeout PR, identified externally by Issues #30 and #77" rather than to the product PR.
+5. Immutable product-stage facts remain recorded as history: reviewed head `81bdd283dfd299d5ad5035301d06501f6b953a56`, HEDS `5239135676` (CRITICAL `0` / HIGH `0` / MEDIUM `0`), product merge `c7f2a5f21369fd92b3493bea0be0192bbd7298b4` with tree identity `99151781a7cd4a886bf0ea43bb9e29ca44b16cb1`, post-merge Governance `35252975365` and Desktop Shell `35252975322`.
+6. The reviewed contract law is unchanged by this delta: canonical version source and exact mirrors, the bounded SemVer profile and shared TS/Python acceptance vectors, exact decimal-string comparison, channel identity and the no-cross-channel/no-silent-downgrade law, authenticity-dependent state and refused-attempt semantics, the persisted-event law, closed plain-own-data validation with the zero-getter rule, the bounded About model, and the inert Hive-owned `UpdateService` boundary.
+7. Deltas `001`–`008` are preserved; Delta 008's statements describing the pre-merge phase were true at Delta 008 creation and are retained as explicitly historical. This delta supplies the corrected durable law.
+
+## Anti-staleness test applied by this delta
+
+The corrected source must satisfy both thought experiments simultaneously: **after** this exact head is merged and postvalidated without changing a byte, every repository statement must still be true and CP-0024 / DEC-028 effectiveness must be determinable from the external predicate evidence; and **before** merge, the same source must not claim that CP-0024 or `DEC-028` already carry canonical force.
+
+## STOP CONDITION (Delta 009)
+STOP if any product, runtime, test, workflow, manifest, lockfile or dependency change becomes necessary; if a correction would change the reviewed contract law rather than lifecycle/source-truth wording; if a durable file would still become false solely because PR, Issue, review, gate or merge phase advances; if fresh exact-head Governance or Desktop Shell is not fully green; or if any step would merge the closeout PR, close Issue #77, or begin `HCODER-DIST-001B`.
