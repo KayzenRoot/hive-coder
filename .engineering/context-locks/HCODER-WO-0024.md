@@ -7,6 +7,8 @@
 **Risk:** HIGH_ASSURANCE (supply-chain-adjacent)  
 **Authority delta:** none — contracts and inert seams only
 
+> **Historical scope of the delta record.** This file is the canonical **append-only** authority and delta history for this Work Order. Every delta below records what was authorised, required or true **at its own stage**; any phase, PR-state, review, gate or merge wording inside a delta therefore describes that stage and is not a current-state field. Current mutable state — the latest review and gate receipts, the active PR's state, and whether `HCODER_CP_0024_EFFECTIVE` is satisfied — lives externally in the active PR and Issues #30 and #77. Only the deltas' *law* (allowed files, prohibitions, predicates) carries forward; their phase wording does not.
+
 ## Source check
 - Current desktop Git observation is read-only and does not execute Git.
 - `tauri.conf.json` declares `productName="Hive Coder"`, `version="0.1.0"`, `bundle.active=false`.
@@ -369,3 +371,31 @@ The corrected source must satisfy both thought experiments simultaneously: **aft
 
 ## STOP CONDITION (Delta 009)
 STOP if any product, runtime, test, workflow, manifest, lockfile or dependency change becomes necessary; if a correction would change the reviewed contract law rather than lifecycle/source-truth wording; if a durable file would still become false solely because PR, Issue, review, gate or merge phase advances; if fresh exact-head Governance or Desktop Shell is not fully green; or if any step would merge the closeout PR, close Issue #77, or begin `HCODER-DIST-001B`.
+
+---
+
+# Context Lock Delta 010
+
+**Status:** SAME WORK ORDER — RESIDUAL CLOSEOUT SOURCE-TRUTH CORRECTION (documentation only)  
+**Authority granted:** none beyond correcting phase-relative wording in the existing closeout paths; no product, runtime, update, package, network, install, signing, release, filesystem, Git, shell, Cua or credential authority, and no successor-slice authority  
+**Trigger:** independent closeout review `5240093725`, verdict `CORRECTION_REQUIRED` on exact head `387b421be7c1fa222ffb38ecf7b538ef4d3ecd5b`
+
+## Recorded finding (as returned by the independent review)
+
+Unresolved severity at review time: **CRITICAL 0 / HIGH 0 / MEDIUM 1**. The review **accepted the `HCODER_CP_0024_EFFECTIVE` predicate design as materially closing the primary M-29-01 architecture defect**, confirmed the eight-file documentation-only scope and the exact-head gates, and found only residual wording:
+
+- **M-30-01 — residual phase-relative source truth.** `docs/project-brain/11-CHECKPOINT.md` still carried a live `Issue: #77 — OPEN` field under the declared CP-0024 section even though Issue state is explicitly external and mutable. `.engineering/evidence/HCODER-WO-0024.md` still said that "`DEC-028` carries canonical force yet" is not allowed, used "until then … CP-0023 remains the sealed checkpoint", and ended with a STOP saying "Do not merge, do not declare the decision canonical". If this exact source later merges and exact-main postvalidation satisfies `HCODER_CP_0024_EFFECTIVE`, those lines become false or self-contradictory without a source change.
+
+## Authorised correction
+
+1. Remove the live state suffix from the checkpoint source's Issue field, keeping only the durable issue identity. It must not be replaced by `CLOSED`, `ACTIVE`, `current`, `pending`, `merged` or any other mutable lifecycle state.
+2. Rewrite the Evidence Bundle so canonical force is stated conditionally: `DEC-028` carries canonical force **if and only if** `HCODER_CP_0024_EFFECTIVE` is satisfied, with `HCODER-CP-0023` authoritative while it is unsatisfied and `HCODER-CP-0024` / `DEC-028` authoritative while it is satisfied — with no `yet`, `until then` or `currently` phrasing.
+3. Replace the Evidence Bundle's terminal STOP with a durable evidence rule: the predicate may not be treated as satisfied without exact external evidence for every condition, and `HCODER-DIST-001B` may not begin until the governed closeout lifecycle has actually satisfied the predicate and the external continuation pointers admit the successor. `UNKNOWN never becomes PASS` and exact-head evidence semantics are preserved.
+4. Scan all eight PR #81 documentation paths for live phase-relative wording: `Issue #77 OPEN`, `not yet`, `yet`, `until then`, `Draft`/`unmerged`, `do not merge`, `do not declare canonical`, `current checkpoint until`, `closeout merge is what remains`, `review/gates do not exist yet`. A match may remain only where it is explicitly historical and names the historical stage or head it applied to.
+
+## Preserved unchanged
+
+`HCODER_CP_0024_EFFECTIVE` is not altered. The canonical version source and mirror law, the bounded SemVer profile and TS/Python parity law, channel identity and the no-cross-channel/no-silent-downgrade law, the authenticity law, the persisted-event law, plain-own-data and zero-getter rules, the About model and the inert `UpdateService` boundary are unchanged. Immutable product-stage facts are preserved: reviewed head `81bdd283dfd299d5ad5035301d06501f6b953a56`, HEDS `5239135676`, product merge `c7f2a5f21369fd92b3493bea0be0192bbd7298b4`, tree `99151781a7cd4a886bf0ea43bb9e29ca44b16cb1`, post-merge Governance `35252975365` and Desktop Shell `35252975322`. No future head SHA, CI ID, review ID or closeout merge SHA is added to repository documents; mutable exact-head receipts are posted externally in PR #81 and the Issues.
+
+## STOP CONDITION (Delta 010)
+STOP if any technical, runtime, test, workflow, manifest, lockfile or dependency change becomes necessary; if a correction would change the reviewed contract law rather than source-truth wording; if any new authority is introduced; if a durable file would still become false solely because closeout review, merge or postvalidation state advances; if fresh exact-head Governance or Desktop Shell is not fully green; or if any step would merge PR #81, close Issue #77 or begin `HCODER-DIST-001B`.

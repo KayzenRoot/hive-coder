@@ -64,7 +64,7 @@ The prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` passed Governance `
 - That Hive Coder is installable, signed, notarized, auto-updatable or production-distributable.
 - That any update, download, install, restart or release path exists or is authorised.
 - That cryptographic verification is implemented. **No scheme is admitted**, so no authenticity-dependent state can be entered, asserted as a current status, used as a persisted event source or claimed as successfully entered — while a bounded *refused* attempt toward `ready` remains recordable, because it asserts a refusal rather than an entry.
-- That `DEC-028` carries canonical force yet. The closeout branch states the *intended* CANONICAL / SEALED status under `HCODER-CP-0024`, but it is effective only after that closeout is independently approved, governed-merged and exact-main postvalidated; until then the canonical state remains PROPOSED / NOT CANONICAL and `HCODER-CP-0023` remains the sealed checkpoint.
+- That `DEC-028` carries canonical force unconditionally. No repository statement may claim canonical force outside the predicate: `DEC-028` carries canonical force **if and only if** `HCODER_CP_0024_EFFECTIVE` is satisfied, meaning that for one and the same closeout revision the exact revision was independently reviewed with unresolved HIGH/CRITICAL `0/0`, was governed-merged with expected-head protection, and the resulting exact `main` SHA passed fresh Governance and Desktop Shell. While the predicate is unsatisfied, `HCODER-CP-0023` is authoritative and `DEC-028` is non-canonical; while it is satisfied, `HCODER-CP-0024` and `DEC-028` are authoritative. Whether it is satisfied is external state, evidenced in the active closeout PR and Issues #30 and #77.
 - That any platform's native distribution behaviour is proven. Only the contract lane is exercised.
 - That the contracts are proven *by this document*. Exact-head gate and review satisfaction is mutable external state tracked in the active closeout PR and Issues #30 and #77; this bundle records the requirement and the historical reviewed-head record below. No statement here may be read as a current-head claim.
 
@@ -119,4 +119,4 @@ For each exact technical head record:
 - HEDS HIGH/CRITICAL counts.
 
 ## STOP
-`UNKNOWN` never becomes `PASS`. Exact-head evidence proves only the exact SHA it names. Do not merge, do not declare the decision canonical, and do not begin HCODER-DIST-001B from this ledger.
+`UNKNOWN` never becomes `PASS`. Exact-head evidence proves only the exact SHA it names. `HCODER_CP_0024_EFFECTIVE` may not be treated as satisfied without exact external evidence for every one of its conditions, and `HCODER-DIST-001B` may not begin until the governed closeout lifecycle has actually satisfied the predicate and the external continuation pointers in Issues #30 and #77 admit the successor. Mutable exact-head receipts are recorded externally, never in this bundle.

@@ -10,7 +10,7 @@
 ## Declared checkpoint: `HCODER-CP-0024` — Distribution version, channel and update boundaries
 
 **Work Order:** `HCODER-WO-0024` — product implementation MERGED / POSTVALIDATED (immutable product-stage fact)  
-**Issue:** `#77` — OPEN  
+**Issue:** `#77`  
 **Decision:** `DEC-028` — CANONICAL / SEALED under `HCODER-CP-0024` while `HCODER_CP_0024_EFFECTIVE` is satisfied, non-canonical while it is unsatisfied  
 **Product PR:** `#80` — SQUASH MERGED (expected-head protected)  
 **Canonical product merge:** `c7f2a5f21369fd92b3493bea0be0192bbd7298b4`  
