@@ -148,3 +148,40 @@ Unresolved severity at review time: **CRITICAL 0 / HIGH 1 / MEDIUM 1**. The revi
 
 ## STOP CONDITION (Delta 003)
 In addition to the two STOP conditions above: STOP if closing either finding would require supporting historical records from another contract version (STOP for a separately versioned migration design), if any accepted Prompt-22 correction regresses, or if any step would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.
+
+---
+
+# Context Lock Delta 004
+
+**Status:** SAME WORK ORDER — FOURTH CORRECTION AUTHORISED  
+**Authority granted:** none beyond the pre-existing allowed-file set; no new tracked file path is required  
+**Trigger:** independent HEDS review `5237592683` with remediation-bound addendum comment `5716617080`, verdict `CORRECTION_REQUIRED` on exact head `a3e585823695f889dae92acc7cc5b57a17ba617d`
+
+## Recorded findings (as returned by the independent review)
+
+Unresolved severity at review time: **CRITICAL 0 / HIGH 1 / MEDIUM 1**. The review accepted H-22-01 (event source reachability) and M-22-02 (outcome/edge coupling) as materially closed and confirmed that the Prompt-22 parity, snapshot rejection, plain-own-data hardening, identity binding and closed reconstruction all remain intact.
+
+- **H-23-01 — the declared shared version acceptance profile is broader than the actual mirror/build surface.** The contract, the drift gate and the shared parity fixture accepted arbitrary-precision core `major`/`minor`/`patch` identifiers, but the Work Order declares `Cargo.toml` an exact mirror, and the real consumers bound core components: Cargo/Rust SemVer uses `u64`, and npm's `node-semver` rejects core components above `Number.MAX_SAFE_INTEGER`. The gate could therefore report `LOCKED` for a canonical/mirrored version that a declared build surface cannot parse.
+- **M-23-02 — self-staling governance prose.** DEC-028's promotion table named a moving correction round as the current promotion state; the Evidence Bundle claimed the corrected head "has not yet been gated or independently reviewed" while exact-head gates were complete, and separately claimed `HEDS: NOT YET RUN on any head` while listing three HEDS reviews in the same file; the terminal STOP block is duplicated.
+- **Addendum `5716617080` (supersedes only the remediation bound).** The correct bound is **not** `u64::MAX`. The profile must be the intersection of every real consumer of the mirrored version: Cargo's `u64` is wider than npm's `Number.MAX_SAFE_INTEGER`, so the npm bound is the binding one: core `major`/`minor`/`patch` are bounded to `9007199254740991`. Exact decimal-string ordering must be preserved (no floating-point comparison), and arbitrary-length *prerelease* numeric identifiers remain admissible because no consuming surface imposes a lower bound there.
+
+## Toolchain constraint check performed before authorisation
+
+Both declared consumers were checked against repository-pinned tooling rather than assumed:
+
+- **npm / node-semver** — the `node-semver` bundled with the repository's npm toolchain (version 7.8.1, shipped by npm 11.16.0) accepts core `9007199254740991`, rejects `9007199254740992`, `9007199254740993`, a 30-digit core and `u64::MAX`, and keeps an oversized numeric prerelease identifier as a string.
+- **Cargo / semver crate** — the crate pinned in `apps/desktop/src-tauri/Cargo.lock` (semver 1.0.28) accepts core values up to `u64::MAX` and rejects `u64::MAX + 1` ("exceeds u64::MAX"), and accepts arbitrary-length numeric prerelease identifiers.
+
+The intersection is `Number.MAX_SAFE_INTEGER`, so the review's addendum bound is confirmed and no STOP for a narrower-than-expected consumer is triggered. A persistent CI change is not required for this proof and none is authorised.
+
+## Authorisation
+
+1. This delta authorises correction of exactly `H-23-01` and `M-23-02`, plus directly related tests, evidence and documentation, inside the existing allowed-file set. **No manifest or lockfile version change, no new dependency, no new authority, no checkpoint mutation and no DEC promotion** are authorised.
+2. Deltas `001`, `002` and `003` and all earlier review history are preserved verbatim as historical evidence. No earlier finding, review record or defective-head record may be erased, softened or rewritten.
+3. The correction must strengthen the contract. Bounding the core identifier range narrows acceptance deliberately and requires removing the now-invalid oversized-core vectors; that is a correction of an over-broad law, not a weakening. No HIGH_ASSURANCE gate or security rule may be relaxed and no previously accepted security correction may regress.
+4. Exact decimal-string comparison must be preserved for accepted values, and numeric prerelease identifiers remain exact within the overall version-length bound.
+5. Self-staling wording must be replaced with stage-bound requirements; mutable exact-head receipts belong in PR #80, Issue #30 and the Prompt return, never inside the pre-CI commit.
+6. The PR remains **Draft and unmerged**. No promotion claim, no `DEC-028` canonicalisation and no `HCODER-DIST-001B` work is authorised by this delta.
+
+## STOP CONDITION (Delta 004)
+In addition to the three STOP conditions above: STOP if the pinned toolchain proves a bound narrower than `Number.MAX_SAFE_INTEGER` that cannot be reconciled without architecture review, if closing either finding requires a manifest version change, a new dependency or a weakened HIGH_ASSURANCE gate, if any Prompt-23 event-history or security correction regresses, or if any step would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.

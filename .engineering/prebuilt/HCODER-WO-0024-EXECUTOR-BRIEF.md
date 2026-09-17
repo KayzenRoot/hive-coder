@@ -1,11 +1,10 @@
 # HCODER-WO-0024 — Executor Brief
 
-**Status:** IMPLEMENTED / THIRD CORRECTION REVIEW PENDING  
+**Status:** IMPLEMENTED IN SOURCE — EXTERNAL PROMOTION EVIDENCE REQUIRED  
+**Promotion evidence:** hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0` and a governed expected-head merge are required against the exact promotion head and are tracked in PR #80 and Issue #30  
 **Base:** `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
 **Issue:** `#77`  
-**Review of the prebuild head:** `5236275753` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`  
-**Review of the first correction head:** `5236688350` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at `97c533de73c9d8f007b6dfc4eaf73804fb1de220`  
-**Review of the second correction head:** `5237206705` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`
+**Immutable review history:** `5236275753` (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`; `5237592683` + addendum `5716617080` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `a3e585823695f889dae92acc7cc5b57a17ba617d`
 
 ## Start here
 Read, in order:
@@ -28,7 +27,7 @@ The contract surfaces are materialised and tested. Complete them; do not redesig
 
 ## Mandatory order for any completion work
 A. Keep the canonical version source fixed at `tauri.conf.json`. Do not switch it without a governed decision.
-B. Keep one bounded SemVer 2.0.0 acceptance set shared by the product parser and the Python gate. Never coerce, trim, default or partially accept a version, and never let one implementation accept what the other rejects — the shared vector file is the executable statement of that equality.
+B. Keep one toolchain-compatible bounded SemVer acceptance set shared by the product parser and the Python gate. Never coerce, trim, default or partially accept a version, never let one implementation accept what the other rejects — the shared vector file is the executable statement of that equality — and never let a core identifier exceed the narrowest declared mirror consumer's bound (`0..9007199254740991`). The bound is enforced on decimal strings; ordering stays exact and never uses floating point.
 C. Keep the channel vocabulary closed and stable the default. Never add an implicit cross-channel path.
 D. Keep the transition table explicit, and keep every edge entering an authenticity-dependent state (`ready`, `installing`, `success`) gated. Every undeclared transition must fail closed.
 E. Keep `ADMITTED_AUTHENTICITY_SCHEMES` empty until a governed cryptographic-verification slice admits a scheme. Never invent, fake or bypass verification, and never let a snapshot assert a proof-gated state or a history entry assert a proof-gated traversal or source.

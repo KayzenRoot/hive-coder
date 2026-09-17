@@ -1,6 +1,7 @@
 # HCODER-WO-0024 — Distribution Contracts, Version Model and UpdateService Boundary
 
-**Status:** IMPLEMENTED / THIRD CORRECTION REVIEW PENDING  
+**Status:** IMPLEMENTED IN SOURCE — EXTERNAL PROMOTION EVIDENCE REQUIRED  
+**Promotion evidence:** hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0` and a governed expected-head merge are each required against the exact promotion head and are tracked in PR #80 and Issue #30, not in this document  
 **Risk:** HIGH_ASSURANCE (supply-chain-adjacent)  
 **Task class:** T3  
 **Context radius:** C4  
@@ -9,8 +10,8 @@
 **Issue:** `#77`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **PR:** `#80` (Draft, unmerged)  
-**Review history:** `5236275753` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at correction head `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at correction head `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`  
-**Context Lock Deltas:** `001` (first correction), `002` (second correction), `003` (third correction)
+**Review history (immutable):** `5236275753` (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`; `5237592683` + addendum `5716617080` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `a3e585823695f889dae92acc7cc5b57a17ba617d`  
+**Context Lock Deltas:** `001`–`004` (bounded corrections)
 
 ## Objective
 Establish the first governed slice of distribution: the canonical version/channel model and a Hive-owned `UpdateService` boundary, so that later distribution work is completion-oriented rather than architecture discovery.
@@ -48,8 +49,19 @@ No `bundle.active=true`; no updater plugin; no updater endpoint; no HTTP client 
 8. Diagnostic metadata is bounded and redaction-safe; credential-shaped detail is refused.
 9. One current version and one current channel form a single identity. A pair that is individually valid but mutually incompatible fails closed at service configuration, at status validation and at the read-model boundary.
 10. A status snapshot is a closed object: exact key sets at the top level, inside the error object and inside every event; unknown keys, unknown vocabularies and incoherent candidates are refused, and a validated snapshot is reconstructed from validated fields rather than returned as the caller's object. Validation reads plain own-data records only and never executes an accessor.
-11. One bounded SemVer 2.0.0 acceptance set: the product TypeScript parser and the Python drift gate accept exactly the same version strings (the SemVer grammar restricted to 128 characters), pinned by a shared cross-language vector file, with exact numeric comparison for core and prerelease identifiers.
+11. One toolchain-compatible bounded SemVer 2.0.0 acceptance set: the product TypeScript parser and the Python drift gate accept exactly the same version strings, pinned by a shared cross-language vector file. Each core identifier is bounded to `0..9007199254740991` — the intersection of the declared mirror consumers, since npm's `node-semver` rejects core components above `Number.MAX_SAFE_INTEGER` while Cargo's `u64` range is wider — and the whole string is bounded to 128 characters. Numeric identifiers are compared exactly as decimal strings at every position, with no floating-point conversion and no platform-dependent integer coercion; numeric prerelease identifiers are not core-bounded.
 12. A persisted history entry must be an assertion this contract could actually have produced: declared states, a source state that current v1 can reach, a declared legal edge, and an outcome that edge could actually yield. A recorded entry may never assert an authenticity-dependent source state or an outcome that is impossible for its edge.
+
+## Correction record 4 (Context Lock Delta 004)
+
+Independent review `5237592683` (with remediation-bound addendum `5716617080`) accepted the event-history closures of H-22-01 and M-22-02 and returned `CORRECTION_REQUIRED` with CRITICAL `0` / HIGH `1` / MEDIUM `1`:
+
+| Finding | Defect | Correction |
+|---|---|---|
+| `H-23-01` | The declared profile accepted core `major`/`minor`/`patch` identifiers of any length, but `Cargo.toml` is a declared exact mirror and the real consumers bound core components: npm's `node-semver` rejects a core component above `Number.MAX_SAFE_INTEGER`. The drift gate could report `LOCKED` for a canonical and mirrored version that a declared build surface cannot parse. | The profile is now the **intersection** of the declared consumers: each core identifier is bounded to `0..9007199254740991` (npm's `Number.MAX_SAFE_INTEGER`, which is narrower than Cargo's `u64`), while the whole string stays bounded to 128 characters. The bound is applied to the digit strings with exact string logic in both implementations — no float conversion, no platform-dependent integer coercion — so accepted values keep full exactness in ordering. Numeric *prerelease* identifiers remain exact at any length, because no declared consumer imposes a bound there. Oversized-core vectors moved to the rejection set and the 128-character boundary case was rebuilt from legal non-core content. |
+| `M-23-02` | Governance prose carried moving current-state claims: DEC-028's promotion table named a specific correction round as the current promotion state, and the Evidence Bundle claimed the head "has not yet been gated or independently reviewed" and `HEDS: NOT YET RUN on any head` while listing completed reviews in the same file; the terminal STOP block was duplicated. | Promotion is stated as a durable requirement (implementation materialised, adversarial coverage, hosted exact-head gates, independent HEDS `0/0`, governed expected-head merge) rather than a round-named status; mutable exact-head evidence is delegated to PR #80 and Issue #30; reviewed heads are recorded as an append-only table of immutable facts; the duplicate STOP block is removed; acceptance rows use durable implementation/evidence semantics. |
+
+The profile narrowing is a deliberate strengthening of an over-broad law, not a weakening: acceptance shrinks and no guard is relaxed. Both declared consumers were re-verified against repository-pinned tooling before the bound was chosen.
 
 ## Correction record 3 (Context Lock Delta 003)
 

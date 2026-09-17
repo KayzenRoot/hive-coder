@@ -1,13 +1,21 @@
 # Evidence Bundle — HCODER-WO-0024
 
-**Status:** IMPLEMENTED / THIRD CORRECTION REVIEW PENDING — NO PROMOTION CLAIM  
+**Status:** IMPLEMENTED IN SOURCE — EXTERNAL PROMOTION EVIDENCE REQUIRED  
 **Canonical base:** `HCODER-CP-0023` / `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
 **Issue:** `#77`  
 **Parent epic:** `#72`  
 **PR:** `#80` (Draft, unmerged)  
-**Reviewed heads:** prebuild `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; first correction `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; second correction `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`  
-**Independent reviews:** `5236275753` — CORRECTION_REQUIRED, CRITICAL `0` / HIGH `4` / MEDIUM `2`; `5236688350` — CORRECTION_REQUIRED, CRITICAL `0` / HIGH `2` / MEDIUM `1`; `5237206705` — CORRECTION_REQUIRED, CRITICAL `0` / HIGH `1` / MEDIUM `1`  
-**Correction authority:** Context Lock Delta `001`, Delta `002` and Delta `003`
+**Immutable review history:** see "Immutable prior reviewed-head facts" below  
+**Correction authority:** Context Lock Deltas `001`–`004`
+
+## Correction state 4 (why the version-profile claim was withdrawn)
+
+The third correction head `a3e585823695f889dae92acc7cc5b57a17ba617d` passed Governance `35236042240` and Desktop Shell `35236042371`, and independent review `5237592683` accepted the event-history closures while returning one HIGH and one MEDIUM finding. The following claim was therefore **false at that head** and is withdrawn:
+
+- "one canonical version law, uniformly enforced" — the declared profile accepted core identifiers of any length, but the Work Order declares `Cargo.toml` an exact mirror and the real consumers bound core components: npm's `node-semver` rejects a core component above `Number.MAX_SAFE_INTEGER`. The drift gate could therefore report `LOCKED` for a canonical and mirrored version that a declared build surface cannot parse (`H-23-01`). The review's addendum `5716617080` fixed the correct bound as the *intersection* of the declared consumers, which is npm's, not Cargo's.
+- Governance prose in this bundle and in DEC-028 also carried moving current-state claims ("has not yet been gated", "HEDS: NOT YET RUN on any head", round-named promotion status) that had already become false (`M-23-02`).
+
+The correction is carried in the same Work Order under Context Lock Delta 004. Both declared consumers were re-checked against repository-pinned tooling before the bound was chosen, and the result is recorded in that delta.
 
 ## Correction state 3 (why the second-correction claims were also withdrawn)
 
@@ -47,7 +55,7 @@ The prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` passed Governance `
 - That cryptographic verification is implemented. **No scheme is admitted**, so the whole install path is structurally unreachable and unrecordable.
 - That `DEC-028` is canonical. It is PROPOSED / NOT CANONICAL.
 - That any platform's native distribution behaviour is proven. Only the contract lane is exercised.
-- That the corrected contracts are *proven*: the corrected head has not yet been gated or independently reviewed.
+- That the contracts are proven *by this document*. Exact-head gate and review satisfaction is mutable external state tracked in PR #80 and Issue #30; this bundle records the requirement and the immutable prior reviewed-head facts below. No statement here may be read as a current-head claim.
 
 ## Persisted-history contract (current v1)
 - `ready`, `installing` and `success` are authenticity-dependent. They cannot be entered while no scheme is admitted, so they may not be a status snapshot's current state, may not be a recorded event's source, and may not be a recorded event's destination under a success outcome.
@@ -61,15 +69,27 @@ Re-read live files from the exact base before relying on these; repository sourc
 - `Cargo.toml`: package version `0.1.0`, Tauri `=2.11.5`.
 - `package.json`: version `0.1.0`, `@tauri-apps/api` `2.11.1`, `@tauri-apps/cli` `2.11.4`.
 
-## Acceptance state at the reviewed second-correction head
-- Version/channel/update-state/about contracts: MATERIALISED, with two findings open.
-- Version drift verifier: MATERIALISED, reports `LOCKED` at base.
-- `UpdateService` boundary + inert adapter: MATERIALISED.
-- Negative proofs carried from the first two rounds: MATERIALISED.
-- Whole-install-path unreachability across snapshots, sources and destinations, and event-outcome/edge coupling: **NOT PROVEN** at the reviewed head; corrected in source, exact-head proof pending.
-- Native Windows/Linux/macOS distribution behaviour: **UNPROVEN**.
-- Signing/notarization/release publication: **UNPROVEN** and unauthorised.
-- HEDS: NOT YET RUN on any head.
+## Implementation state and external promotion evidence
+
+Durable statement of where this slice stands, written so that it cannot become false as CI or review advances:
+
+- Version/channel/update-state/about contracts, the version drift verifier and the inert `UpdateService` boundary are **IMPLEMENTED in source**, each with tests that fail when a guard is removed.
+- The three security properties that were previously over-broad — whole-install-path unreachability across snapshots, sources and destinations; persisted event-outcome/edge coupling; and the toolchain-compatible core bound — are **implemented in source** with adversarial tests. They are not "pending" properties; they are laws whose independent confirmation is external.
+- **External promotion evidence is required and is not recorded here.** Green hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0`, and a governed expected-head merge must each be produced against the exact head a promotion decision names, and that mutable state is tracked in PR #80 and Issue #30.
+- Native Windows/Linux/macOS *distribution* behaviour, signing, notarization and release publication remain **UNPROVEN** and unauthorised; only the contract lane is exercised.
+
+## Immutable prior reviewed-head facts
+
+Each reviewed head, its review, and that review's verdict. These are history and do not change:
+
+| Reviewed head | Review | Verdict |
+|---|---|---|
+| `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` (prebuild) | `5236275753` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `4` / MEDIUM `2` |
+| `97c533de73c9d8f007b6dfc4eaf73804fb1de220` | `5236688350` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `2` / MEDIUM `1` |
+| `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0` | `5237206705` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `1` / MEDIUM `1` |
+| `a3e585823695f889dae92acc7cc5b57a17ba617d` | `5237592683` + addendum `5716617080` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `1` / MEDIUM `1` |
+
+Hosted gates were green on every one of those heads. A green gate is not a property proof, which is why every finding above is preserved rather than superseded. The narrative sections "Correction state N" record what was corrected and why; the table above is the authoritative history.
 
 ## Promotion evidence template
 For each exact technical head record:
@@ -83,9 +103,6 @@ For each exact technical head record:
 - explicit confirmation that no updater plugin, HTTP client, download, install, restart, signing, release or credential path exists;
 - explicit confirmation that `bundle.active` remains `false`;
 - HEDS HIGH/CRITICAL counts.
-
-## STOP
-`UNKNOWN` never becomes `PASS`. Exact-head evidence proves only the exact SHA it names. Do not merge, do not declare the decision canonical, and do not begin HCODER-DIST-001B from this ledger.
 
 ## STOP
 `UNKNOWN` never becomes `PASS`. Exact-head evidence proves only the exact SHA it names. Do not merge, do not declare the decision canonical, and do not begin HCODER-DIST-001B from this ledger.

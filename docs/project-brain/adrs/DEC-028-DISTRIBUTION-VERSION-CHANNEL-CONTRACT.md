@@ -5,8 +5,8 @@
 **Issue:** `#77`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **Canonical base:** `HCODER-CP-0023` / `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
-**Reviews of this proposal:** `5236275753` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at correction head `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at correction head `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`  
-**Materialised under:** `HCODER-WO-0024` Context Lock Delta 001 (proposal), Delta 002 (second correction) and Delta 003 (third correction)
+**Reviews of this proposal (immutable prior reviewed-head facts):** `5236275753` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at correction head `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at correction head `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`; `5237592683` with addendum `5716617080` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at correction head `a3e585823695f889dae92acc7cc5b57a17ba617d`  
+**Materialised under:** `HCODER-WO-0024` Context Lock Deltas `001`–`004` (proposal, then three bounded corrections)
 
 > **State record.** This ADR is a **proposal**. It records a durable law that `HCODER-WO-0024` is establishing and has no canonical standing. It grants no authority, admits no updater, and is not evidence that Hive Coder is installable, signed, auto-updatable or production-distributable. It becomes canonical only through the promotion gate below, and only with an independent review that reports unresolved HIGH/CRITICAL `0/0`.
 
@@ -20,9 +20,14 @@ A distribution/update capability cannot be reasoned about safely on top of that:
 
 **1. One canonical version source.** The shipped product version has exactly one source of truth: `apps/desktop/src-tauri/tauri.conf.json` → `version`. The Tauri application version identifies the shipped artifact and is the value a future updater compares against. The Rust package version and the npm package version are *mirrors*: they must equal the canonical value exactly and must never be edited independently. A tool-enforced drift gate fails the build when a mirror is missing, malformed or divergent.
 
-**2. One bounded SemVer 2.0.0 acceptance set, shared by every implementation.** Versions are parsed by one strict parser that fails closed on anything it cannot accept; nothing is trimmed, coerced or partially accepted. Because there is no single SemVer library that both the product TypeScript and the Python build gates can share, the law is stated as a **bounded SemVer 2.0.0 profile**: exactly the SemVer 2.0.0 grammar, restricted to version strings of at most 128 characters. The bound is part of the law rather than an implementation detail, and both implementations enforce it identically.
+**2. One toolchain-compatible bounded SemVer 2.0.0 acceptance set, shared by every implementation.** Versions are parsed by one strict parser that fails closed on anything it cannot accept; nothing is trimmed, coerced or partially accepted. Because there is no single SemVer library that both the product TypeScript and the Python build gates can share, the law is stated as a **bounded SemVer 2.0.0 profile** with two explicit project bounds:
 
-Precedence follows SemVer 2.0.0 exactly, including the rule that numeric identifiers compare by value. A SemVer numeric identifier — whether a core `major`/`minor`/`patch` value or a numeric prerelease identifier — is an arbitrary-precision integer, not a machine integer. Numeric comparison is therefore performed exactly, by digit-length and lexicographic comparison, and never through floating-point conversion: `Number()` / `parseFloat` would collapse distinct identifiers above `2^53` into one value and produce a wrong "newer" answer, and a safe-integer rejection would silently split the acceptance set in two.
+- each core identifier (`major`, `minor`, `patch`) must lie in `0..9007199254740991`, and
+- the whole version string must be at most 128 characters.
+
+The core bound is a real toolchain constraint rather than a stylistic choice. The canonical version is mirrored into `Cargo.toml` and `package.json`, and the two consumers do not agree on range: Cargo's Rust SemVer accepts core values up to `u64::MAX`, while npm's `node-semver` rejects a core component above JavaScript's `Number.MAX_SAFE_INTEGER`. The profile is the **intersection** of every declared consumer, so it follows the narrower one — a version this product accepts must be a version every mirror can parse. Both bounds are part of the law, are enforced identically by both implementations, and are pinned by a shared vector file.
+
+Precedence follows SemVer 2.0.0 exactly, including the rule that numeric identifiers compare by value. Numeric identifiers are carried as exact decimal strings and compared by digit-length and lexicographic comparison — never through floating-point conversion, which would collapse distinct identifiers above `2^53` into one value, and never through platform integer coercion, which would make the bound platform-dependent. The core bound is applied to the digit strings themselves, so accepted values keep full exactness. Numeric *prerelease* identifiers are deliberately not subject to the core bound: no declared consumer imposes a lower bound there, so they remain exact at any length within the overall string bound.
 
 One acceptance set means the product parser and the Python drift gate must agree on every input, so acceptance is pinned by a deterministic vector file consumed by both test suites. The drift gate may never report `LOCKED` for a version the product parser rejects, and the product parser may never accept a version the gate rejects — including trailing line terminators, which a naive end-anchored match on the Python side would accept, and Unicode decimal digits, which Python's `\d` matches and JavaScript's does not.
 
@@ -59,17 +64,17 @@ This ADR does not approve, and does not create authority for: a Tauri updater pl
 
 ## Promotion gate
 
-`DEC-028` remains **PROPOSED / NOT CANONICAL**. It may be promoted only when all of the following hold and are recorded against an exact head:
+`DEC-028` is **PROPOSED / NOT CANONICAL**. Promotion is a durable gate, not a statement about any particular head: it requires all of the following, and evidence for each must be produced against whatever exact head the promotion decision names.
 
-| Condition | Status |
+| Condition | Requirement |
 |---|---|
-| Contract law implemented and materialised | PENDING independent review of the second corrected head |
-| Executable contract/security tests prove every property above, including the adversarial cases and the cross-language parity vectors | PENDING independent review of the second corrected head |
-| Exact-head Governance and Desktop Shell green on the promotion head | PENDING |
-| Independent HEDS with unresolved HIGH/CRITICAL `0/0` | PENDING |
-| Governed merge with expected-head protection | PENDING |
+| Contract law materialised | The law above exists in source as executable contract code, with tests that fail when a guard is removed |
+| Adversarial coverage | The negative and adversarial proofs listed in the Work Order's acceptance map are implemented and green |
+| Hosted exact-head gates | Governance and Desktop Shell are green on the exact promotion head |
+| Independent review | An independent HEDS review of that exact head reports unresolved HIGH/CRITICAL `0/0` |
+| Governed merge | The Work Order merges with expected-head protection |
 
-Until every condition is met, no promotion claim may be made for this decision, for `HCODER-WO-0024`, or for Hive Coder's distribution or update capability.
+Mutable evidence for the last three conditions lives in PR #80 and Issue #30, where it can advance without falsifying this document; this ADR records the requirement and the immutable prior reviewed-head facts below. Until every condition is met, no promotion claim may be made for this decision, for `HCODER-WO-0024`, or for Hive Coder's distribution or update capability.
 
 ## Recorded review history
 
@@ -79,4 +84,6 @@ The correction head `97c533de73c9d8f007b6dfc4eaf73804fb1de220` (Governance `3522
 
 The second correction head `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0` (Governance `35232341418` SUCCESS, Desktop Shell `35232341386` SUCCESS) was independently reviewed as `5237206705` and returned `CORRECTION_REQUIRED` with CRITICAL `0` / HIGH `1` / MEDIUM `1`: history could still assert an authenticity-dependent *source* state — `ready -> idle` and `installing -> failure` were accepted and asserted as valid — and an event's reason was not proven possible for its edge, so an ordinary legal edge could carry a refusal or live-evaluation reason. The corrections are carried in the same Work Order under Context Lock Delta 003.
 
-All three review histories are preserved here rather than rewritten: those heads were real, their gates were green, and green gates did not mean the properties held.
+The third correction head `a3e585823695f889dae92acc7cc5b57a17ba617d` (Governance `35236042240` SUCCESS, Desktop Shell `35236042371` SUCCESS) was independently reviewed as `5237592683`, returning `CORRECTION_REQUIRED` with CRITICAL `0` / HIGH `1` / MEDIUM `1`: the declared profile accepted core identifiers that npm's `node-semver` refuses, so the gate could report `LOCKED` for a canonical/mirrored version a declared build surface cannot parse, and governance prose still contained moving current-state claims. The review's remediation-bound addendum `5716617080` refined the required bound from `u64::MAX` to `Number.MAX_SAFE_INTEGER`, the narrower of the two declared consumers. The correction is carried in the same Work Order under Context Lock Delta 004.
+
+All four review histories are preserved here rather than rewritten: those heads were real, their gates were green, and green gates did not mean the properties held.

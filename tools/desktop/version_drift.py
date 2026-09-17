@@ -34,10 +34,22 @@ VERSION_CONTRACT = "hive-version-v1"
 VERIFIER_SCHEMA = "hive-version-drift-doctor-v1"
 MAX_VERSION_CHARS = 128
 
+# Largest core identifier this profile accepts, as an exact decimal string.
+# Equal to JavaScript's ``Number.MAX_SAFE_INTEGER``.
+#
+# The bound is a real toolchain constraint, not a stylistic choice. The canonical
+# version is mirrored into ``Cargo.toml`` and ``package.json``; the npm surface
+# (``node-semver``) rejects a core component above this value, while Cargo's
+# ``u64`` range is wider. npm is therefore the narrowest declared consumer and
+# fixes the profile: a version this gate reports as LOCKED must be a version every
+# mirror consumer can parse.
+MAX_CORE_IDENTIFIER = "9007199254740991"
+
 # Official SemVer 2.0.0 pattern under the declared bounded profile: the SemVer
-# grammar restricted to version strings of at most MAX_VERSION_CHARS characters.
-# The bound is part of the shared law and is asserted identically by the product
-# TypeScript parser, by this gate and by the shared vector file
+# grammar restricted by two project bounds — each core identifier within
+# ``0..MAX_CORE_IDENTIFIER`` and the whole string at most ``MAX_VERSION_CHARS``
+# characters. Both bounds are enforced identically by this gate, by the product
+# TypeScript parser and by the shared vector file
 # `apps/desktop/src/contracts/semverParityVectors.json`.
 #
 # Two properties are deliberate and load-bearing for cross-language parity:
@@ -56,6 +68,19 @@ SEMVER_PATTERN = re.compile(
 )
 
 
+def _within_core_bound(identifier: str) -> bool:
+    """Exact decimal-string comparison against the toolchain core bound.
+
+    No integer or float coercion: the digit strings are compared by length and
+    then lexically, which is exact at any magnitude and cannot depend on platform
+    integer width. Numeric prerelease identifiers are deliberately *not* subject
+    to this bound.
+    """
+    if len(identifier) != len(MAX_CORE_IDENTIFIER):
+        return len(identifier) < len(MAX_CORE_IDENTIFIER)
+    return identifier <= MAX_CORE_IDENTIFIER
+
+
 def is_valid_version(value: object) -> bool:
     """Strict SemVer 2.0.0 acceptance under the bounded profile.
 
@@ -66,7 +91,10 @@ def is_valid_version(value: object) -> bool:
     """
     if not isinstance(value, str) or not value or len(value) > MAX_VERSION_CHARS:
         return False
-    return SEMVER_PATTERN.fullmatch(value) is not None
+    match = SEMVER_PATTERN.fullmatch(value)
+    if match is None:
+        return False
+    return all(_within_core_bound(group) for group in match.group(1, 2, 3))
 
 
 @dataclass(frozen=True)

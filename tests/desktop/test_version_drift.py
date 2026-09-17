@@ -13,6 +13,7 @@ from pathlib import Path
 
 from tools.desktop.version_drift import (
     CANONICAL_SOURCE,
+    MAX_CORE_IDENTIFIER,
     MAX_VERSION_CHARS,
     VERSION_CONTRACT,
     MirrorObservation,
@@ -69,15 +70,65 @@ class SemVerLawTests(unittest.TestCase):
             with self.subTest(value=type(value).__name__):
                 self.assertFalse(is_valid_version(value))  # type: ignore[arg-type]
 
-    def test_accepts_core_identifiers_beyond_safe_integer_range(self) -> None:
-        """A core numeric identifier is arbitrary precision, not a machine int."""
+    def test_accepts_core_identifiers_up_to_the_toolchain_bound(self) -> None:
+        """Core identifiers are bounded by the narrowest declared mirror consumer.
+
+        Cargo's Rust SemVer accepts up to u64::MAX, but npm's node-semver rejects a
+        core component above ``Number.MAX_SAFE_INTEGER``, so the profile follows
+        npm: every accepted version must be parseable by every mirror.
+        """
         for value in (
+            "9007199254740990.0.0",
             "9007199254740991.0.0",
+            "0.9007199254740991.0",
+            "0.0.9007199254740991",
+            "9007199254740991.9007199254740991.9007199254740991",
+        ):
+            with self.subTest(version=value):
+                self.assertTrue(is_valid_version(value))
+
+    def test_rejects_core_identifiers_past_the_toolchain_bound(self) -> None:
+        for value in (
             "9007199254740992.0.0",
             "9007199254740993.0.0",
-            "1.9007199254740993.0",
-            "1.0.9007199254740993",
+            "0.9007199254740992.0",
+            "0.0.9007199254740992",
+            "9007199254740992.9007199254740992.9007199254740992",
+        ):
+            with self.subTest(version=value):
+                self.assertFalse(is_valid_version(value))
+
+    def test_rejects_core_values_only_a_wider_consumer_would_accept(self) -> None:
+        """The u64 range is wider than the profile, so it is not the bound."""
+        for value in (
+            "18446744073709551615.0.0",
+            "18446744073709551616.0.0",
             "123456789012345678901234567890.0.0",
+            "1.123456789012345678901234567890.0",
+            "1.0.123456789012345678901234567890",
+            "1" + "0" * 123 + ".0.0",
+        ):
+            with self.subTest(version=value[:32]):
+                self.assertFalse(is_valid_version(value))
+
+    def test_core_bound_is_exact_string_logic_without_integer_width_dependence(self) -> None:
+        """No int/float coercion: the bound holds regardless of platform width."""
+        bound = int(MAX_CORE_IDENTIFIER)
+        for candidate in ("0", "1", "9007199254740990", MAX_CORE_IDENTIFIER, str(bound - 1)):
+            with self.subTest(version=candidate):
+                self.assertTrue(is_valid_version(f"{candidate}.0.0"))
+        for candidate in (str(bound + 1), str(bound + 2), str(bound + 10**20), str(2**64)):
+            with self.subTest(version=candidate):
+                self.assertFalse(is_valid_version(f"{candidate}.0.0"))
+        # A core identifier with a leading zero is malformed regardless of value.
+        self.assertFalse(is_valid_version("09007199254740991.0.0"))
+
+    def test_numeric_prerelease_identifiers_are_not_core_bounded(self) -> None:
+        """No consuming surface imposes a lower bound on prerelease identifiers."""
+        for value in (
+            "1.0.0-9007199254740993",
+            "1.0.0-beta.9007199254740993",
+            "1.0.0-123456789012345678901234567890",
         ):
             with self.subTest(version=value):
                 self.assertTrue(is_valid_version(value))
@@ -111,13 +162,18 @@ class SemVerLawTests(unittest.TestCase):
             with self.subTest(version=repr(value)):
                 self.assertFalse(is_valid_version(value))
 
-    def test_enforces_the_declared_profile_boundary(self) -> None:
-        at_boundary = "1" + "0" * 123 + ".0.0"
-        over_boundary = "1" + "0" * 124 + ".0.0"
+    def test_enforces_the_declared_profile_boundaries(self) -> None:
+        # Length boundary, built from legal non-core content.
+        prefix = "1.0.0-alpha."
+        at_boundary = prefix + "b" * (MAX_VERSION_CHARS - len(prefix))
+        over_boundary = prefix + "b" * (MAX_VERSION_CHARS + 1 - len(prefix))
         self.assertEqual(len(at_boundary), MAX_VERSION_CHARS)
         self.assertEqual(len(over_boundary), MAX_VERSION_CHARS + 1)
         self.assertTrue(is_valid_version(at_boundary))
         self.assertFalse(is_valid_version(over_boundary))
+        # Core bound, at and past the toolchain limit.
+        self.assertTrue(is_valid_version(f"{MAX_CORE_IDENTIFIER}.0.0"))
+        self.assertFalse(is_valid_version(f"{int(MAX_CORE_IDENTIFIER) + 1}.0.0"))
 
     def test_agrees_with_the_shared_cross_language_parity_vectors(self) -> None:
         """The single executable statement of TypeScript/Python acceptance parity.
@@ -127,7 +183,8 @@ class SemVerLawTests(unittest.TestCase):
         """
         self.assertEqual(PARITY_VECTORS["contract"], VERSION_CONTRACT)
         self.assertEqual(PARITY_VECTORS["profile"]["maxVersionChars"], MAX_VERSION_CHARS)
-        self.assertEqual(PARITY_VECTORS["profile"]["law"], "bounded SemVer 2.0.0")
+        self.assertEqual(PARITY_VECTORS["profile"]["coreMax"], MAX_CORE_IDENTIFIER)
+        self.assertEqual(PARITY_VECTORS["profile"]["law"], "toolchain-compatible bounded SemVer 2.0.0")
         accepted = PARITY_VECTORS["accepted"]
         rejected = PARITY_VECTORS["rejected"]
         self.assertGreater(len(accepted), 0)

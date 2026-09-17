@@ -23,13 +23,31 @@ export const VERSION_MIRRORS = ["apps/desktop/src-tauri/Cargo.toml", "apps/deskt
 export const MAX_VERSION_CHARS = 128;
 
 /**
- * Declared acceptance profile: **bounded SemVer 2.0.0**.
+ * Largest core identifier this profile accepts, as an exact decimal string.
+ * Equal to JavaScript's `Number.MAX_SAFE_INTEGER`.
  *
- * The accepted set is exactly the SemVer 2.0.0 grammar, restricted to version
- * strings of at most `MAX_VERSION_CHARS` characters. The bound is part of the
- * law, not an implementation detail: it is enforced identically by this parser
- * and by the Python drift gate, and it is stated as a bounded profile so that
- * neither implementation can drift into claiming unqualified acceptance.
+ * The bound is a real toolchain constraint, not a stylistic choice: the canonical
+ * version is mirrored into `Cargo.toml` and `package.json`, and the npm surface
+ * (`node-semver`) rejects a core component above this value. Cargo's `u64` range
+ * is wider, so npm is the narrowest declared consumer and therefore fixes the
+ * profile. A version this product accepts must be a version every mirror
+ * consumer can parse.
+ */
+export const MAX_CORE_IDENTIFIER = "9007199254740991";
+
+/**
+ * Declared acceptance profile: **toolchain-compatible bounded SemVer 2.0.0**.
+ *
+ * The accepted set is the SemVer 2.0.0 grammar restricted by two project bounds:
+ * each core identifier must lie in `0..MAX_CORE_IDENTIFIER`, and the whole
+ * version string must be at most `MAX_VERSION_CHARS` characters. Both bounds are
+ * part of the law rather than implementation details; they are enforced
+ * identically by this parser, by the Python drift gate and by the shared parity
+ * vector file, and they are stated as a bounded profile so that no implementation
+ * drifts into claiming unqualified SemVer acceptance.
+ *
+ * Numeric prerelease identifiers are *not* subject to the core bound: they are
+ * compared and carried exactly, at any length, within the overall string bound.
  *
  * Official SemVer 2.0.0 pattern, anchored, ASCII digits only.
  */
@@ -38,16 +56,15 @@ const SEMVER_PATTERN =
 
 export interface ParsedVersion {
   /**
-   * Major identifier as an exact decimal string. Core identifiers are kept as
-   * strings on purpose: a SemVer core identifier is an arbitrary-precision
-   * unsigned integer, so `Number()` would both round values above 2^53 and
-   * reject versions that a conformant reader — including this repository's
-   * Python drift gate — accepts as valid.
+   * Major identifier as an exact decimal string, already proven to lie within
+   * `0..MAX_CORE_IDENTIFIER`. Core identifiers are kept as strings on purpose: a
+   * core identifier is a decimal integer, and `Number()` would both round values
+   * above 2^53 and blur the bound check into a platform-dependent coercion.
    */
   readonly major: string;
-  /** Minor identifier as an exact decimal string. */
+  /** Minor identifier as an exact decimal string, within the same bound. */
   readonly minor: string;
-  /** Patch identifier as an exact decimal string. */
+  /** Patch identifier as an exact decimal string, within the same bound. */
   readonly patch: string;
   /** Prerelease identifiers, or `null` when the version has no prerelease. */
   readonly prerelease: readonly string[] | null;
@@ -62,7 +79,8 @@ export type VersionParseResult =
 /**
  * Strict SemVer 2.0.0 parse under the declared bounded profile. Malformed input
  * fails closed; it is never coerced, trimmed, defaulted or partially accepted.
- * No numeric conversion takes place, so no precision is lost.
+ * The core bound is applied on the digit strings themselves, so no numeric
+ * conversion and no platform-dependent integer coercion is involved.
  */
 export function parseVersion(value: unknown): VersionParseResult {
   if (typeof value !== "string" || value.length === 0 || value.length > MAX_VERSION_CHARS) {
@@ -70,6 +88,9 @@ export function parseVersion(value: unknown): VersionParseResult {
   }
   const match = SEMVER_PATTERN.exec(value);
   if (match === null) {
+    return { ok: false, reason: "malformed_version" };
+  }
+  if (!isWithinCoreBound(match[1]) || !isWithinCoreBound(match[2]) || !isWithinCoreBound(match[3])) {
     return { ok: false, reason: "malformed_version" };
   }
   return {
@@ -93,17 +114,25 @@ export function isValidVersion(value: unknown): value is string {
  * Exact numeric-identifier comparison, used for both core identifiers
  * (`major`/`minor`/`patch`) and numeric prerelease identifiers.
  *
- * A SemVer numeric identifier is an arbitrary-precision unsigned integer.
- * Converting it with `Number()` collapses every value above 2^53 onto the same
- * double, so two distinct identifiers — for example `9007199254740993` and
- * `9007199254740992` — would compare equal and silently corrupt same-channel
- * upgrade/downgrade eligibility. The digit strings are therefore compared by
- * length and then lexically, which is exact because parsing admits no leading
- * zeros in a numeric identifier and therefore length is the value's magnitude.
+ * A SemVer numeric identifier is a decimal integer with no leading zeros. It is
+ * compared on the digit strings themselves — first by length, then
+ * lexicographically — which is exact at any magnitude and involves no
+ * floating-point conversion. `Number()` would collapse distinct identifiers above
+ * 2^53 onto the same double and silently corrupt ordering, and it would blur the
+ * core bound check into a platform-dependent coercion.
  */
 function compareNumericIdentifier(left: string, right: string): number {
   if (left.length !== right.length) return left.length < right.length ? -1 : 1;
   return left === right ? 0 : left < right ? -1 : 1;
+}
+
+/**
+ * Core-bound check on the digit string, without numeric conversion. Parsing has
+ * already rejected leading zeros, so a shorter digit string is always a smaller
+ * value and equal-length strings compare lexically.
+ */
+function isWithinCoreBound(identifier: string): boolean {
+  return compareNumericIdentifier(identifier, MAX_CORE_IDENTIFIER) <= 0;
 }
 
 function compareIdentifier(left: string, right: string): number {
