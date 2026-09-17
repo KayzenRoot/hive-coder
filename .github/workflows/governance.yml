@@ -78,6 +78,10 @@ jobs:
           PYTHONWARNINGS: error::ResourceWarning
         run: |
           python -m unittest tests.runtime.test_workspace_files tests.runtime.test_workspace_file_path_security tests.runtime.test_workspace_file_replace_contract tests.runtime.test_workspace_file_replace_security
+      - name: Native Linux product version drift contract proof
+        env:
+          PYTHONWARNINGS: error::ResourceWarning
+        run: python -m unittest tests.desktop.test_version_drift
       - name: Native Linux governed Git staging proof (codec, object, authority, E2E)
         env:
           PYTHONWARNINGS: error::ResourceWarning
@@ -106,7 +110,7 @@ jobs:
       - name: HIGH_ASSURANCE control-plane, executor, real-harness, workspace-file and status-sidecar contract tests
         env:
           PYTHONWARNINGS: error::ResourceWarning
-        run: python -m unittest tests.control_plane.test_control_plane tests.control_plane.test_surface tests.runtime.test_cua_executor tests.runtime.test_cua_real_harness tests.runtime.test_workspace_files tests.runtime.test_workspace_file_path_security tests.runtime.test_workspace_files_windows tests.runtime.test_workspace_file_replace_windows_contract tests.runtime.test_runtime_status_sidecar
+        run: python -m unittest tests.control_plane.test_control_plane tests.control_plane.test_surface tests.runtime.test_cua_executor tests.runtime.test_cua_real_harness tests.runtime.test_workspace_files tests.runtime.test_workspace_file_path_security tests.runtime.test_workspace_files_windows tests.runtime.test_workspace_file_replace_windows_contract tests.runtime.test_runtime_status_sidecar tests.desktop.test_version_drift
       - name: Native Windows HIGH_ASSURANCE governed Git staging proof (codec, object, authority, E2E)
         env:
           PYTHONWARNINGS: error::ResourceWarning
@@ -138,6 +142,10 @@ jobs:
         env:
           PYTHONWARNINGS: error::ResourceWarning
         run: python -m unittest tests.runtime.test_workspace_file_replace_contract tests.runtime.test_workspace_file_replace_security
+      - name: Native macOS product version drift contract proof
+        env:
+          PYTHONWARNINGS: error::ResourceWarning
+        run: python -m unittest tests.desktop.test_version_drift
       - name: Native macOS governed Git staging proof (codec, object, authority, E2E)
         env:
           PYTHONWARNINGS: error::ResourceWarning

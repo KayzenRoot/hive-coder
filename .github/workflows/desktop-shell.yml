@@ -25,6 +25,8 @@ jobs:
           node-version: 24.21.0
       - name: Desktop security gate
         run: python tools/desktop/security_gate.py
+      - name: Product version drift gate
+        run: python tools/desktop/version_drift.py
       - name: Install exact npm graph
         working-directory: apps/desktop
         run: npm ci --ignore-scripts --no-audit
