@@ -6,7 +6,16 @@
 **Parent epic:** `#72`  
 **PR:** `#80` (Draft, unmerged)  
 **Immutable review history:** see "Immutable prior reviewed-head facts" below  
-**Correction authority:** Context Lock Deltas `001`–`004`
+**Correction authority:** Context Lock Deltas `001`–`005`
+
+## Correction state 5 (documentation/source-truth only — no technical change)
+
+The fourth correction head `0ec09d7e0d67018d51ee791a2bbca9f39f41c131` passed Governance `35239741188` and Desktop Shell `35239741225`, and independent review `5238290797` accepted `H-23-01` as closed (CRITICAL `0` / HIGH `0` / MEDIUM `2`) while returning two documentary findings. No product, test, workflow, manifest or dependency file was changed in this round:
+
+- The Decisions Ledger `DEC-028` entry still contradicted the corrected proposal: it named only Deltas 002/003, described the profile as arbitrary-precision core identifiers, and tied promotion to a moving round (`M-24-01`).
+- Count-based prose in this bundle and destination-semantics prose in the Work Order and ADR overstated what a recorded refusal asserts (`M-24-02`).
+
+The corrections are carried under Context Lock Delta 005 and are documentation-only: the version, profile and event law are unchanged, and `evaluatePersistedEvent` behaviour is untouched.
 
 ## Correction state 4 (why the version-profile claim was withdrawn)
 
@@ -43,11 +52,11 @@ The prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` passed Governance `
 ## Claims allowed now
 - A canonical product-version source of truth is **declared**: `apps/desktop/src-tauri/tauri.conf.json` → `version`, with `Cargo.toml` and `package.json` as exact mirrors.
 - A deterministic, offline drift verifier exists (`tools/desktop/version_drift.py`) and reports `LOCKED` against the live manifests at the base.
-- Version parsing, the release-channel contract, the update-state model, the authenticity gate, the persisted-event law and the bounded redaction-safe error metadata are implemented as pure contract law, with the reviewed defects of all three rounds corrected in source.
+- Version parsing, the release-channel contract, the update-state model, the authenticity gate, the persisted-event law and the bounded redaction-safe error metadata are implemented as pure contract law, with every previously reviewed finding represented in the immutable review history having a corresponding source correction.
 - The product parser and the Python drift gate share one bounded SemVer 2.0.0 acceptance set, pinned by a deterministic cross-language vector file.
 - A Hive-owned `UpdateService` boundary exists whose production implementation is inert and exposes no mutating, transport or installation member.
 - A bounded, read-only Settings/About read model exists.
-- Contract tests, including the required negative proofs and the adversarial regression cases for all eleven recorded findings, exist in source.
+- Contract tests, including the required negative proofs and an adversarial regression case for every finding recorded in the immutable review history, exist in source.
 
 ## Claims explicitly NOT allowed
 - That Hive Coder is installable, signed, notarized, auto-updatable or production-distributable.
@@ -88,6 +97,7 @@ Each reviewed head, its review, and that review's verdict. These are history and
 | `97c533de73c9d8f007b6dfc4eaf73804fb1de220` | `5236688350` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `2` / MEDIUM `1` |
 | `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0` | `5237206705` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `1` / MEDIUM `1` |
 | `a3e585823695f889dae92acc7cc5b57a17ba617d` | `5237592683` + addendum `5716617080` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `1` / MEDIUM `1` |
+| `0ec09d7e0d67018d51ee791a2bbca9f39f41c131` | `5238290797` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `0` / MEDIUM `2` |
 
 Hosted gates were green on every one of those heads. A green gate is not a property proof, which is why every finding above is preserved rather than superseded. The narrative sections "Correction state N" record what was corrected and why; the table above is the authoritative history.
 

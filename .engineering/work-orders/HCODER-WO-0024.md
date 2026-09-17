@@ -10,8 +10,8 @@
 **Issue:** `#77`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **PR:** `#80` (Draft, unmerged)  
-**Review history (immutable):** `5236275753` (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`; `5237592683` + addendum `5716617080` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `a3e585823695f889dae92acc7cc5b57a17ba617d`  
-**Context Lock Deltas:** `001`–`004` (bounded corrections)
+**Review history (immutable):** `5236275753` (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`; `5237592683` + addendum `5716617080` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `a3e585823695f889dae92acc7cc5b57a17ba617d`; `5238290797` (CRITICAL `0` / HIGH `0` / MEDIUM `2`, documentation-only) at `0ec09d7e0d67018d51ee791a2bbca9f39f41c131`  
+**Context Lock Deltas:** `001`–`005` (bounded corrections; `005` is documentation-only)
 
 ## Objective
 Establish the first governed slice of distribution: the canonical version/channel model and a Hive-owned `UpdateService` boundary, so that later distribution work is completion-oriented rather than architecture discovery.
@@ -45,12 +45,21 @@ No `bundle.active=true`; no updater plugin; no updater endpoint; no HTTP client 
 4. Signing material must never appear in repository, logs, prompts or runtime state.
 5. Version, channel and update-state parsing fails closed on malformed or unknown input.
 6. No silent downgrade and no implicit cross-channel promotion or demotion.
-7. Every authenticity-dependent state (`ready`, `installing`, `success`) structurally requires an accepted authenticity/integrity proof — as a transition destination, as a status snapshot and as a source or destination of a recorded history entry. This slice admits **no** cryptographic scheme, so the whole install path is unreachable by construction, cannot be asserted as a current state, and cannot be recorded as having existed or been entered.
+7. Every authenticity-dependent state (`ready`, `installing`, `success`) structurally requires an accepted authenticity/integrity proof: entering one as a transition destination and asserting one as a status snapshot both require it, and in recorded history such a state can neither be a **source** nor be claimed as **successfully entered**. This slice admits **no** cryptographic scheme, so the whole install path is unreachable by construction, cannot be asserted as a current state, and cannot be recorded as having existed or been entered. A refused attempt *toward* `ready` from a reachable source — `verifying -> ready` — remains recordable with the bounded refusal outcomes, and naming an attempted destination is not a claim that the state was entered.
 8. Diagnostic metadata is bounded and redaction-safe; credential-shaped detail is refused.
 9. One current version and one current channel form a single identity. A pair that is individually valid but mutually incompatible fails closed at service configuration, at status validation and at the read-model boundary.
 10. A status snapshot is a closed object: exact key sets at the top level, inside the error object and inside every event; unknown keys, unknown vocabularies and incoherent candidates are refused, and a validated snapshot is reconstructed from validated fields rather than returned as the caller's object. Validation reads plain own-data records only and never executes an accessor.
 11. One toolchain-compatible bounded SemVer 2.0.0 acceptance set: the product TypeScript parser and the Python drift gate accept exactly the same version strings, pinned by a shared cross-language vector file. Each core identifier is bounded to `0..9007199254740991` — the intersection of the declared mirror consumers, since npm's `node-semver` rejects core components above `Number.MAX_SAFE_INTEGER` while Cargo's `u64` range is wider — and the whole string is bounded to 128 characters. Numeric identifiers are compared exactly as decimal strings at every position, with no floating-point conversion and no platform-dependent integer coercion; numeric prerelease identifiers are not core-bounded.
 12. A persisted history entry must be an assertion this contract could actually have produced: declared states, a source state that current v1 can reach, a declared legal edge, and an outcome that edge could actually yield. A recorded entry may never assert an authenticity-dependent source state or an outcome that is impossible for its edge.
+
+## Documentation reconciliation (Context Lock Delta 005)
+
+Independent review `5238290797` accepted `H-23-01` as closed and returned two documentary findings only. Under Delta 005 — documentation-only, with no product, test, workflow, manifest or dependency change:
+
+- the Decisions Ledger `DEC-028` entry was reconciled with the corrected proposal (Deltas 002–004 represented, the toolchain-compatible bounded profile described accurately, and the promotion gate restated as durable requirements rather than a named round) (`M-24-01`);
+- count-based prose in the Evidence Bundle was replaced with durable wording, and the Work Order security-law wording was tightened so a *refused attempt* toward an authenticity-dependent state is not confused with asserting that the state was entered (`M-24-02`).
+
+`evaluatePersistedEvent` behaviour, the version/profile law and every other contract are unchanged by this round.
 
 ## Correction record 4 (Context Lock Delta 004)
 

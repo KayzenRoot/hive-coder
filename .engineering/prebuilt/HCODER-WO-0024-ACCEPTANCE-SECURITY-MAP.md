@@ -39,6 +39,7 @@ gates, which is exactly why each finding is preserved rather than superseded):
 | `97c533de73c9d8f007b6dfc4eaf73804fb1de220` | `5236688350` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `2` / MEDIUM `1` |
 | `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0` | `5237206705` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `1` / MEDIUM `1` |
 | `a3e585823695f889dae92acc7cc5b57a17ba617d` | `5237592683` + addendum `5716617080` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `1` / MEDIUM `1` |
+| `0ec09d7e0d67018d51ee791a2bbca9f39f41c131` | `5238290797` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `0` / MEDIUM `2` (documentation-only) |
 
 | # | Property | Test location | Implementation |
 |---|---|---|---|

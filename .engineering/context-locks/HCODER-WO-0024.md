@@ -185,3 +185,35 @@ The intersection is `Number.MAX_SAFE_INTEGER`, so the review's addendum bound is
 
 ## STOP CONDITION (Delta 004)
 In addition to the three STOP conditions above: STOP if the pinned toolchain proves a bound narrower than `Number.MAX_SAFE_INTEGER` that cannot be reconciled without architecture review, if closing either finding requires a manifest version change, a new dependency or a weakened HIGH_ASSURANCE gate, if any Prompt-23 event-history or security correction regresses, or if any step would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.
+
+---
+
+# Context Lock Delta 005
+
+**Status:** SAME WORK ORDER — DOCUMENTATION/SOURCE-TRUTH CORRECTION ONLY  
+**Authority granted:** none beyond documentation reconciliation of the governance documents named below  
+**Trigger:** independent HEDS review `5238290797`, verdict `CORRECTION_REQUIRED` on exact head `0ec09d7e0d67018d51ee791a2bbca9f39f41c131`
+
+## Recorded findings (as returned by the independent review)
+
+Unresolved severity at review time: **CRITICAL 0 / HIGH 0 / MEDIUM 2**. The review accepted `H-23-01` as CLOSED (one toolchain-compatible bounded profile with core identifiers bounded to `9007199254740991`, exact decimal-string comparison, shared parity vectors, u64-boundary rejection, legal 128-character boundary coverage and exact large-prerelease ordering), confirmed the Prompt-23 persisted-event law remains closed, and found no authority, dependency, manifest, lockfile or DEC promotion change.
+
+- **M-24-01 — the Decisions Ledger still contradicts the corrected proposal.** The `DEC-028` entry says the proposal was corrected only under Deltas 002/003 (omitting Delta 004), still describes the profile as arbitrary-precision core identifiers, and ties promotion to a moving "third corrected exact head".
+- **M-24-02 — residual durable-prose inconsistencies.** The Evidence Bundle still carries count-based claims (`all three rounds`, `all eleven recorded findings`) although a fourth bounded correction exists, and the Work Order / ADR security wording overstates recorded-history destination semantics by implying that an authenticity-dependent state requires proof merely because it is named as a *recorded event destination* — while the law deliberately permits a refused `verifying -> ready` attempt that names `ready` as the attempted destination without asserting that it was entered.
+
+## Authorisation
+
+1. This delta authorises **documentation/source-truth correction only**, limited to:
+   - `.engineering/context-locks/HCODER-WO-0024.md` (this Delta 005 append);
+   - `docs/project-brain/10-DECISIONS-LEDGER.md` (the `DEC-028` entry);
+   - `docs/project-brain/adrs/DEC-028-DISTRIBUTION-VERSION-CHANNEL-CONTRACT.md`;
+   - `.engineering/work-orders/HCODER-WO-0024.md`;
+   - `.engineering/evidence/HCODER-WO-0024.md`;
+   - the Implementation Pack, Executor Brief and Acceptance/Security Map **only** where a stale current-state phrase is actually present.
+2. **Forbidden without a new delta:** every TypeScript, Python and Rust source or test file, `.github/workflows/*`, `tauri.conf.json`, Cargo/npm manifests and lockfiles, runtime/control-plane files, dependencies, release files, and any `HCODER-DIST-001B` work. The technical files at this correction head must be byte-identical to the start head `0ec09d7e0d67018d51ee791a2bbca9f39f41c131` except for the documentation paths listed above.
+3. No product/runtime authority is granted, `evaluatePersistedEvent` behaviour is unchanged, and no version/profile/event law changes — only its documentation.
+4. Deltas `001`–`004` and all prior review history are preserved verbatim as historical evidence. Historical finding and reviewed-head descriptions are not rewritten; only current-state summary prose is made durable.
+5. `DEC-028` remains **PROPOSED / NOT CANONICAL**; the PR remains **Draft and unmerged**; no promotion claim may be made on the basis of this correction.
+
+## STOP CONDITION (Delta 005)
+STOP if any technical/runtime/test/workflow/manifest/dependency change becomes necessary, if a correction would change the actual version, profile or event law rather than reconcile its documentation, if fresh exact-head Governance or Desktop Shell fails, if any HIGH or CRITICAL finding appears, or if any step would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.
