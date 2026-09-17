@@ -47,8 +47,8 @@ DEC-027 remains PROPOSED until the backend/dependency decision is proven, execut
 | Condition | Status | Evidence |
 |---|---|---|
 | Backend/dependency decision proven | MET | `foundations/python-dependencies.lock.json`, `foundations/python-dependencies.requirements.txt`, `tools/foundations/verify_python_dependencies.py`; pure-Python wheel hash-pinned; import isolation asserted |
-| Executable contract/security tests pass natively on all three target OSes | MET | Governance run `35159183327`: native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging lanes each SUCCESS |
-| Exact-head CI green | MET | Governance `35159183327` SUCCESS; Desktop Shell `35159183326` SUCCESS |
+| Executable contract/security tests pass natively on all three target OSes | MET | At the same reviewed head `b827cb2e`: Governance run `35161417857` with the native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging lanes all SUCCESS, each independent of the others |
+| Exact-head CI green | MET | At the reviewed head `b827cb2e`: Governance `35161417857` SUCCESS; Desktop Shell `35161417859` SUCCESS |
 | HEDS HIGH/CRITICAL `0/0` | MET | Independent A4/HEDS review `5229345968` at `b827cb2e`: CRITICAL `0`, HIGH `0`. The executor's prepared audit additionally recorded MEDIUM `0`, LOW `3`; all three LOW were source-accuracy prose corrections carried in `b827cb2e` and documentation-only |
 
 The gate is therefore satisfied as a **promotion candidate**. Declaring DEC-027 canonical remains the governing review's decision and is explicitly **not** done here.

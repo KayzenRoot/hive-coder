@@ -5,7 +5,6 @@
   "branch": "feat/HCODER-WO-0023-git-stage-capability",
   "baseSha": "aaa75242826db33442cd96cdc1d550d69bd25faa",
   "headSha": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
-  "technicalHedsHead": "b904b473416786e72c7e805e2e8c8b557d377166",
   "taskClass": "T3",
   "contextRadius": "C4",
   "risk": "HIGH_ASSURANCE",
@@ -257,5 +256,6 @@
       "hive_runtime/git_stage.py module banner reconciled from pre-authority wording",
       "hive_runtime/git_object_private_prep.py module banner reconciled from 'a later governed phase'"
     ]
-  }
+  },
+  "provenanceSemantics": "lastBehaviorChangingHead is behavior provenance: the last head at which product/runtime behavior changed. In this Work Order that is also the technical baseline the executor audited. It is NOT a HEDS head. independentHedsHead and independentHedsReviewId are the authoritative HEDS provenance. headSha is the reviewed evidence target this file describes."
 }
