@@ -1,6 +1,6 @@
 # Checkpoint Delta / Promotion Candidate — HCODER-WO-0023
 
-**Status:** PROMOTION CANDIDATE — NOT CANONICAL  
+**Status:** APPROVAL / READINESS DELTA — APPROVED ON THIS BRANCH, NOT MERGED  
 **Work Order:** `HCODER-WO-0023 — Governed Git Staging Capability`  
 **Decision:** `DEC-027` — promotion candidate, still PROPOSED  
 **Issue:** `#68`  
@@ -39,8 +39,10 @@ Publication is an atomic same-filesystem **publication**, not strict CAS. An unc
 ## Not changed by this delta
 No product behavior, runtime authority, workflow behavior, dependency state, test semantics, canonical checkpoint, ADR status or release state was changed. The canonical checkpoint document is untouched.
 
-## Promotion gate
-This candidate itself must pass exact-head Governance + Desktop Shell on the promotion-candidate head and an independent review before any promotion mutation. Only after that review may the canonical checkpoint be advanced, `DEC-027` be promoted and PR #69 leave Draft. This delta does not perform any of those.
+## Approval / readiness state
+The independent A4/HEDS review `5229345968` at `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a` returned CRITICAL `0` / HIGH `0`. `DEC-027` is therefore **APPROVED** on this branch, the Work Order is APPROVED / READY FOR MERGE, and the branch copy of the canonical checkpoint records that state.
+
+**Canonical main has not received the PR.** Nothing here is merged, no post-merge validation has occurred, and the Work Order is not closed. The approval-state head must still pass its own exact-head Governance + Desktop Shell and an independent exact-head review before any governed merge.
 
 ## STOP CONDITION
-Do not treat this delta as acceptance, approval or canonical promotion. Do not merge PR #69, do not mark it ready, and do not promote `DEC-027` on the strength of this file.
+Do not treat this delta as a merge, a post-merge validation or a canonical closure. Do not merge PR #69 in the prompt that produced it, do not close the Work Order or Issue #68, and do not claim the decision is canonical on main until the governed merge and post-merge closeout actually occur.

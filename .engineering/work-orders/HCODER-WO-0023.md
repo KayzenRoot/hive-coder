@@ -1,6 +1,6 @@
 # HCODER-WO-0023 — Governed Git Staging Capability
 
-**Status:** IMPLEMENTED / PROMOTION PENDING — independent A4/HEDS review `5229345968` at `b827cb2e`: CRITICAL `0` / HIGH `0`; promotion-candidate state; not canonical, PR #69 still Draft  
+**Status:** APPROVED / READY FOR MERGE — independently reviewed (HEDS `5229345968` at `b827cb2e`: CRITICAL `0` / HIGH `0`); not merged, not closed, canonical main has not received it  
 **Delivered authority:** exactly one bounded action, `git_stage_paths_v1`, under `Capability.GIT_WRITE` (HIGH, mandatory approval, request-bound single-use permit)  
 **Backend result:** route (1) selected — `dulwich==1.2.15`, pure-Python wheel, hash-pinned, provenance and import isolation closed  
 **Native proof:** Windows, Linux and macOS governed Git staging lanes pass independently at exact head  
@@ -50,4 +50,6 @@ No commit/ref/branch/tag mutation; no checkout/reset/restore/clean/stash; no mer
 ## STOP CONDITION
 If exact-path staging cannot be implemented without one of the excluded authorities or without a dependency/provenance expansion, stop at the backend gate and create the smallest explicit governed delta. Do not smuggle the broader authority into this WO.
 
-That condition did not trigger: exact-path staging was implemented within the excluded-authority boundaries, and no broader authority was smuggled in. The preserved exclusions below still hold at the independently reviewed head.
+That condition did not trigger: exact-path staging was implemented within the excluded-authority boundaries, and no broader authority was smuggled in. The preserved exclusions below still hold at the approved head.
+
+**Approval state.** This Work Order is APPROVED / READY FOR MERGE on this branch. It is not merged, not closed, canonical main has not received it, and no post-merge validation has occurred. The executor may prepare approval-state evidence but does not self-issue the final merge approval; the approval-state head still requires independent exact-head review. Historical backend-gate and correction chronology above is preserved and is not rewritten.

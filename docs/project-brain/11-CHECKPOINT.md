@@ -48,7 +48,11 @@ CP-0022 closeout exact head `a777ac207b42059a33ce9d73d8287122ff43c0a9` passed Go
 
 ## Downstream increments in flight
 - `HCODER-PLATFORM-001` (Issue #63) first-class native validation matrix is materialized on `main` at `22b56b0f3111158cbf50789b1647c5a578a171c1` and its evidence ledger reconciled at `ccfed1f960c80dc58e4f45cb627451e77c7d5a79`. Its evidence ledger remains **PREBUILT / NATIVE MATRIX INCOMPLETE**: Linux and macOS native desktop/Tauri exact-head evidence is still required. It is **not** a checkpoint and must not be represented as complete.
-- `HCODER-WO-0023` governed Git staging remains an active, separately governed Work Order with its own Context Lock; it is not promoted by this checkpoint and grants no Git mutation authority.
+- `HCODER-WO-0023` governed Git staging is **APPROVED / READY FOR GOVERNED MERGE** as a separately governed Work Order with its own Context Lock.
+
+  Its admitted authority is exactly `Capability.GIT_WRITE` / `git_stage_paths_v1` (HIGH, materially sensitive, mandatory trusted approval, request-bound single-use permit) for explicit regular files in the already-proven ordinary local SHA-1 envelope. The independent A4/HEDS review `5229345968` at the reviewed head `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a` returned CRITICAL `0` / HIGH `0`, and native governed Git staging proof passed independently on Windows HIGH_ASSURANCE, Linux and macOS at that head.
+
+  This checkpoint records an **approval on this branch only**. The Work Order is **not merged**, canonical main has **not** received it, no post-merge validation has occurred, and the Work Order is **not closed**. Publication is atomic publication, explicitly not strict CAS. No commit, ref, branch, remote, credential, shell, generic Git argv or arbitrary `.git` write authority is approved by it.
 
 ## Preserved downstream lanes
 Distribution/update: Issue #72.

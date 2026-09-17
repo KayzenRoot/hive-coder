@@ -1,6 +1,6 @@
 # DEC-027 — Governed Git Staging Boundary
 
-**Status:** PROPOSED — PROMOTION CANDIDATE PREPARED, NOT CANONICAL  
+**Status:** APPROVED — READY FOR GOVERNED MERGE (not merged; canonical main has not received this decision)  
 **Work Order:** `HCODER-WO-0023`  
 **Issue:** `#68`  
 **Original source main:** `22b56b0f3111158cbf50789b1647c5a578a171c1`  
@@ -10,7 +10,9 @@
 **Independent A4/HEDS review artifact:** PR review `5229345968`  
 **Promotion candidate:** `.engineering/checkpoint-deltas/HCODER-WO-0023.md`
 
-> **State transition record (explicit and evidence-bound).** This ADR remains **PROPOSED**. Its original source main is preserved above and is not backdated or erased. The promotion-candidate preparation records that every condition in the promotion gate below is now objectively satisfied at the independently reviewed head; the canonical status itself has **not** been declared, and cannot be until the governing review and promotion mutation occur. Nothing in this record may be read as a canonical decision.
+> **State transition record (explicit and evidence-bound).** This ADR is **APPROVED** on this branch. Its original source main is preserved above and is not backdated or erased. Every condition in the promotion gate below was objectively satisfied at the independently reviewed head `b827cb2e`, and the independent A4/HEDS review `5229345968` returned CRITICAL `0` / HIGH `0`.
+>
+> Approval is a **branch-state** decision. Canonical main has not received this decision, the PR has not been merged, no post-merge validation has occurred, and the Work Order is not closed. Nothing here may be read as canonical until the governed merge and post-merge closeout actually occur.
 
 ## Context
 Hive Coder can safely create and replace trusted-workspace regular files under the Permission & Control Plane, but practical coding also requires converting an approved worktree state into repository index state. Granting generic Git or shell execution would be a much larger authority boundary than staging itself.
@@ -51,4 +53,6 @@ DEC-027 remains PROPOSED until the backend/dependency decision is proven, execut
 | Exact-head CI green | MET | At the reviewed head `b827cb2e`: Governance `35161417857` SUCCESS; Desktop Shell `35161417859` SUCCESS |
 | HEDS HIGH/CRITICAL `0/0` | MET | Independent A4/HEDS review `5229345968` at `b827cb2e`: CRITICAL `0`, HIGH `0`. The executor's prepared audit additionally recorded MEDIUM `0`, LOW `3`; all three LOW were source-accuracy prose corrections carried in `b827cb2e` and documentation-only |
 
-The gate is therefore satisfied as a **promotion candidate**. Declaring DEC-027 canonical remains the governing review's decision and is explicitly **not** done here.
+The gate is satisfied and this decision is **APPROVED** for governed merge on this branch.
+
+**Non-decision (unchanged and still binding).** This ADR does not approve commit, ref/branch/tag mutation, checkout/reset/restore/clean/stash, merge/rebase/cherry-pick, remotes/network, credentials, hooks, external filters, generic process execution, terminal/shell authority, arbitrary `.git` filesystem writes or desktop/Tauri mutation authority. The admitted surface remains exactly `Capability.GIT_WRITE` / `git_stage_paths_v1` for explicit regular files in the proven ordinary local SHA-1 envelope. Publication is atomic publication, explicitly **not** strict CAS.

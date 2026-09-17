@@ -65,6 +65,24 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 **Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)  
 **Authority head:** `52d8cc3195bd4f9c948b1327ed124042739b2530` (Prompt 03: dedicated `git.write` authority, publication and native E2E)
 
+## Approval state (Prompt 09)
+
+**State:** APPROVED / READY FOR GOVERNED MERGE on this branch. **Not merged**, canonical main has not received it, no post-merge validation has occurred, and the Work Order is not closed.
+
+The approval-state commit is **documentation and governance only**. It changes no product or runtime behavior, no authority, no dependency, no workflow, no security or contract test, and no desktop behavior. No Python source file changed.
+
+### Independent technical HEDS carried forward conditionally
+- Review artifact: PR review `5229345968`.
+- Reviewed head: `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a`.
+- Result: CRITICAL `0` / HIGH `0`.
+- **Carry-forward condition:** this carry-forward is valid only while every input the review depended on is unchanged. The interval from the last behavior-changing head `b904b473416786e72c7e805e2e8c8b557d377166` to the approval-state head contains only documentation, evidence and governance edits. The two Python files touched in that interval changed their module banner only: with all string constants stripped, their executable structure is identical, so no behavior input changed. Any runtime, authority, dependency, workflow, security-test, contract-test or desktop behavior change immediately invalidates this carry-forward and requires a new technical review cycle.
+
+### Residual bound (unchanged)
+Publication is atomic same-filesystem publication, explicitly **not** strict CAS. An uncooperative external process may act between the last successful revalidation and the atomic call. A crash after blob publication but before index publication may leave an unreachable content-addressed blob; that is never reported as success and is never rolled back.
+
+### Not claimed
+No merge, no squash, no branch deletion, no Work Order closure, no Issue #68 closure, no post-merge validation, and no canonical-on-main status. The executor prepared this approval-state evidence and does not self-issue the final merge approval.
+
 ## FINAL TECHNICAL HEDS and promotion candidate (Prompt 06)
 
 **Last behavior-changing implementation head:** `b904b473416786e72c7e805e2e8c8b557d377166`  

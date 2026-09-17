@@ -44,8 +44,9 @@
   "decisions": [
     {
       "id": "DEC-027",
-      "status": "PROMOTION_CANDIDATE",
-      "canonical": false
+      "status": "APPROVED",
+      "canonicalOnMain": false,
+      "scope": "Capability.GIT_WRITE / git_stage_paths_v1 only"
     }
   ],
   "tests": [
@@ -208,8 +209,8 @@
     "Published objects keep the private temporary's owner-only mode rather than Git's conventional 0444, because a read-only file cannot be unlinked on Windows."
   ],
   "checkpointDelta": ".engineering/checkpoint-deltas/HCODER-WO-0023.md",
-  "canonicalCheckpointMutated": false,
-  "stopState": "PROMOTION_CANDIDATE_READY_FOR_REVIEW",
+  "canonicalCheckpointMutated": true,
+  "stopState": "APPROVAL_STATE_READY_FOR_REVIEW",
   "lastBehaviorChangingHead": "b904b473416786e72c7e805e2e8c8b557d377166",
   "independentHedsReviewId": "5229345968",
   "independentHedsHead": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
@@ -257,5 +258,15 @@
       "hive_runtime/git_object_private_prep.py module banner reconciled from 'a later governed phase'"
     ]
   },
-  "provenanceSemantics": "lastBehaviorChangingHead is behavior provenance: the last head at which product/runtime behavior changed. In this Work Order that is also the technical baseline the executor audited. It is NOT a HEDS head. independentHedsHead and independentHedsReviewId are the authoritative HEDS provenance. headSha is the reviewed evidence target this file describes."
+  "provenanceSemantics": "lastBehaviorChangingHead is behavior provenance: the last head at which product/runtime behavior changed. In this Work Order that is also the technical baseline the executor audited. It is NOT a HEDS head. independentHedsHead and independentHedsReviewId are the authoritative HEDS provenance. headSha is the reviewed evidence target this file describes.",
+  "decisionState": "APPROVED_READINESS_CANDIDATE",
+  "canonicalCheckpointMutationScope": "The branch copy of docs/project-brain/11-CHECKPOINT.md now records WO-0023 as APPROVED / READY FOR GOVERNED MERGE. Canonical main has not received this change; the PR is not merged and no post-merge validation has occurred.",
+  "approvalStateHead": "SELF_REFERENTIAL_SEE_NOTE",
+  "approvalStateHeadNote": "The approval-state commit carries this file, so it cannot contain its own SHA. The approval-state head is recorded externally by its own exact-head Governance and Desktop Shell receipts and in the corresponding Prompt return.",
+  "mergeState": {
+    "merged": false,
+    "canonicalMainReceived": false,
+    "postMergeValidated": false,
+    "workOrderClosed": false
+  }
 }

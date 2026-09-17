@@ -206,6 +206,25 @@ Runtime logic, control plane, object/index publication logic, dependency locks, 
 ### Proof carry-forward
 Technical HEDS review `5229345968` at `b827cb2e`, and the CR-05-A/CR-05-B proofs, are carried forward **only** because this correction is strictly evidence/metadata-only and no runtime, authority, dependency, workflow or test-semantics input changed. Any such change invalidates the carry-forward immediately and requires a new technical correction and HEDS cycle.
 
+## Context Lock Delta 009 — final approval-state mutation and PR readiness preflight
+The promotion candidate was independently reviewed: HEDS review `5229345968` at `b827cb2e` reported CRITICAL `0` / HIGH `0`, and the Prompt 08 evidence correction was approved. This delta authorizes the bounded **approval-state mutation** that converts the reviewed candidate into an evidence-bound `APPROVED` / ready-for-governed-merge state on this branch, plus the PR readiness metadata.
+
+**It grants no authority, no capability, no scope and no behavior change.** The only admitted authority remains `Capability.GIT_WRITE` / `git_stage_paths_v1`, unchanged. Product/runtime behavior, dependencies, workflows, tests and desktop behavior are untouched.
+
+### Authorized files
+- `docs/project-brain/adrs/DEC-027-GOVERNED-GIT-STAGING.md` — status to the repository convention `APPROVED`, preserving original source main, reviewed head, review ID, receipts, envelope, exclusions and bounded-race statement.
+- `docs/project-brain/10-DECISIONS-LEDGER.md` — add the DEC-027 ledger entry recording the approved decision.
+- `docs/project-brain/11-CHECKPOINT.md` — advance the WO-0023 state to APPROVED / READY FOR GOVERNED MERGE. It must **not** claim merged, post-merge validated, closed or released.
+- `.engineering/work-orders/HCODER-WO-0023.md` — status to APPROVED / READY FOR MERGE, not CLOSED; historical backend-gate and correction chronology preserved.
+- `.engineering/evidence/HCODER-WO-0023.md` — approval-state section carrying the independent technical HEDS conditionally.
+- `.engineering/checkpoint-deltas/HCODER-WO-0023.md` — from promotion candidate to approval/readiness delta, stating that canonical main has not received the PR.
+- `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json` — decision state APPROVED/readiness candidate and `stopState` `APPROVAL_STATE_READY_FOR_REVIEW`; `canonicalCheckpointMutated` kept truthful for the branch copy; no fabricated merge/main/post-merge facts.
+- this Context Lock (append-only)
+- PR #69 readiness metadata and title/body
+
+### Explicit non-authorization
+No merge, no squash, no branch deletion, no Work Order closure, no Issue #68 closure, no post-merge validation claim, and no canonical main mutation. The executor may prepare approval-state evidence but may not self-issue the final merge approval; the approval-state head must still pass independent exact-head review.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 
