@@ -65,6 +65,12 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 **Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)  
 **Authority head:** `52d8cc3195bd4f9c948b1327ed124042739b2530` (Prompt 03: dedicated `git.write` authority, publication and native E2E)
 
+## Closeout source-truth correction (Prompt 12)
+
+The checkpoint delta was only partially converted to closeout state at Prompt 11: it carried a closeout header while still asserting in the present tense that canonical `main` had not received the PR, that nothing was merged, and that PR #69 must not be merged. It also still labelled pre-merge receipts as promotion-candidate evidence and duplicated one pre-merge block. Corrected under Context Lock Delta 011, with the prior approval/readiness chronology preserved under an explicitly labelled historical subsection rather than deleted.
+
+Documentation only: no product behavior, runtime authority, dependency, workflow, test semantics or desktop behavior changed, and no Python source file changed. The product merge, the post-merge exact-main validation and independent technical HEDS `5229345968` are unaffected.
+
 ## Closeout candidate (Prompt 11)
 
 **State:** PRODUCT MERGED AND POST-MERGE VALIDATED. **Closeout PR is not merged**, Issue #68 is not closed, and no post-closeout validation has occurred.

@@ -242,6 +242,28 @@ Review verdict on Prompt 09 was CORRECTION_REQUIRED, **source-truth and metadata
 ### State that must NOT change
 `DEC-027` is APPROVED on this branch and **not** canonical on main. The Work Order is APPROVED / READY FOR MERGE and **not** CLOSED. Canonical main has **not** received PR #69. Independent HEDS review `5229345968` at `b827cb2e` remains the technical approval artifact with CRITICAL `0` / HIGH `0`. No merge, post-merge validation, release or closure may be claimed. Publication remains atomic publication, explicitly not strict CAS.
 
+## Context Lock Delta 011 — closeout source-truth correction
+Review verdict on Prompt 11 was CORRECTION_REQUIRED, **source-truth only**. The product merge and the independent technical HEDS remain accepted. This delta authorizes the correction of the one blocking inconsistency in the closeout candidate and records the closeout state transition. **It grants no authority, no capability, no scope and no behavior change.**
+
+### Corrected defect C-11-01
+`.engineering/checkpoint-deltas/HCODER-WO-0023.md` had been only partially converted from approval/readiness state to closeout state. It carried a closeout header while still asserting, in the present tense, that canonical main had not received the PR, that nothing was merged, and that PR #69 must not be merged; it also still labelled pre-merge receipts as "promotion evidence carried to the candidate" and kept a duplicate pre-merge evidence block.
+
+It is rewritten so every current-state statement agrees with the completed product merge and its post-merge validation. Prior approval/readiness chronology is preserved under an explicitly labelled **Historical pre-merge state** subsection rather than being deleted. The stale current-tense claims are removed, and the STOP condition now forbids merging the closeout PR, closing Issue #68, deleting branches, and claiming a sealed `HCODER-CP-0023` or post-closeout validation before those events occur.
+
+### Recorded closeout state (this branch)
+- Product PR `#69` is MERGED by squash with expected-head protection; canonical product merge and current `main` are `1f09520fbd92c7e65f9726b65a854f918507c895`.
+- Post-merge exact-main validation passed: Governance `35171215292` and Desktop Shell `35171215429`, including independent native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging proof.
+- Closeout PR `#75` is OPEN / DRAFT and **unmerged**. Issue `#68` remains **OPEN**. No post-closeout `main` validation has occurred and `HCODER-CP-0023` is **not** sealed.
+- Independent technical HEDS `5229345968` remains valid with CRITICAL `0` / HIGH `0`, carried explicitly on the basis that no behavior input changed.
+
+### Authorized files
+- `.engineering/checkpoint-deltas/HCODER-WO-0023.md`
+- `.engineering/evidence/HCODER-WO-0023.md` (one short note recording the correction head)
+- this Context Lock (append-only)
+
+### Explicit non-authorization
+No merge of the closeout PR, no Issue #68 closure, no branch deletion, no post-closeout validation claim, and no sealed-closeout claim. No runtime, authority, dependency, workflow, test semantics or desktop behavior change, and no Python source file change.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 
