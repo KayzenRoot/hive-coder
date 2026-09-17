@@ -1,18 +1,19 @@
 # Checkpoint Delta / Closeout — HCODER-WO-0023
 
-**Status:** CLOSEOUT CANDIDATE — PRODUCT MERGED AND POST-MERGE VALIDATED; THIS CLOSEOUT PR IS NOT MERGED  
+**Status:** SEALED CLOSEOUT — PRODUCT MERGE AND CLOSEOUT MERGE BOTH COMPLETE AND POST-MERGE VALIDATED  
 **Work Order:** `HCODER-WO-0023 — Governed Git Staging Capability`  
-**Decision:** `DEC-027` — product merge is canonical on `main`; `DEC-027` / `HCODER-CP-0023` closeout sealing is **pending this closeout PR #75**  
-**Issue:** `#68` — **OPEN**; closure ready only after the closeout merge  
+**Decision:** `DEC-027` — CANONICAL / SEALED under `HCODER-CP-0023`  
+**Issue:** `#68` — **OPEN**; closure pending the final-seal PR  
 **Product PR:** `#69` — **MERGED** by squash with expected-head protection  
-**Closeout PR:** `#75` — OPEN / DRAFT, unmerged  
-**Canonical product merge / current main:** `1f09520fbd92c7e65f9726b65a854f918507c895`  
+**Closeout PR:** `#75` — **MERGED** (squash `1b83666699acc8fdbd5270d811f1bf263d55ef47`); final-seal PR unmerged  
+**Canonical product merge:** `1f09520fbd92c7e65f9726b65a854f918507c895`  
+**Closeout merge / current canonical main:** `1b83666699acc8fdbd5270d811f1bf263d55ef47`  
 **Pre-merge canonical main:** `aaa75242826db33442cd96cdc1d550d69bd25faa`
 
 ## Purpose
-Record the canonical outcome of the first Hive-owned Git index-mutation authority. **Product PR #69 has already merged and the exact canonical `main` SHA has already passed post-merge validation.**
+Record the sealed canonical outcome of the first Hive-owned Git index-mutation authority. **The product merge and the documentation-only closeout merge have both completed, and their exact canonical `main` SHAs have both passed post-merge validation.**
 
-This delta is the documentation and governance closeout candidate for that merge. It creates no new authority and changes no behavior. It **does not claim** that HCODER-CP-0023 is sealed: the closeout PR is unmerged, Issue #68 is open, and no post-closeout `main` validation has occurred.
+This delta creates no new authority and changes no behavior. It records the sealed lifecycle state. Issue #68 remains open and is closed only after the final-seal PR merges and post-seal `main` is validated.
 
 ## What is admitted
 - Exactly one capability: `Capability.GIT_WRITE = "git.write"`, risk HIGH, materially sensitive, mandatory trusted approval, required target field `workspace`.
@@ -24,14 +25,19 @@ Commit, tag, ref, branch, remote, credential, reset, checkout, restore, clean, s
 
 `FILESYSTEM_WRITE` and `SHELL_EXECUTE` are not reused and cannot satisfy a `git.write` rule.
 
-## Current closeout evidence
-- Product head at merge: `2dde9bb5690f22820ab9fe952aa2672e97c0f36f`, verified unchanged immediately before the merge.
-- Expected-head protection: enforced — the merge request was bound to that exact head SHA.
-- Merge method: squash. Canonical product merge SHA and current `origin/main`: `1f09520fbd92c7e65f9726b65a854f918507c895` — the same commit, so the squash SHA and canonical `main` identify one product state.
-- Post-merge exact-main validation on `1f09520`: Governance `35171215292` SUCCESS and Desktop Shell `35171215429` SUCCESS.
-- Native governed Git staging proof on that exact `main` SHA: Linux SUCCESS, Windows HIGH_ASSURANCE SUCCESS, macOS SUCCESS — each independent, none inferred from another.
-- Closeout candidate head at first submission: `5a04d0f97847a94aa39581cd788861ff0a82bca7`, exact-head Governance `35171690953` SUCCESS and Desktop Shell `35171690898` SUCCESS.
-- Independent technical HEDS `5229345968`: CRITICAL `0` / HIGH `0`.
+## Sealed lifecycle evidence
+Both merges used squash with expected-head protection: the merge request was bound to the exact verified head SHA in each case.
+
+| Stage | Head | Merge SHA | Post-merge exact-main validation |
+|---|---|---|---|
+| Product (PR #69) | `2dde9bb5690f22820ab9fe952aa2672e97c0f36f` | `1f09520fbd92c7e65f9726b65a854f918507c895` | Governance `35171215292` SUCCESS; Desktop Shell `35171215429` SUCCESS |
+| Closeout (PR #75) | `204aa32ac26003082366588bc9e5d5399473c3b6` | `1b83666699acc8fdbd5270d811f1bf263d55ef47` | Governance `35204919678` SUCCESS; Desktop Shell `35204919616` SUCCESS |
+
+Current canonical `main` is `1b83666699acc8fdbd5270d811f1bf263d55ef47`. In both stages the squash SHA and the resulting `origin/main` were the same commit, so each pair identifies one product state.
+
+Native governed Git staging proof passed on each exact `main`: Linux SUCCESS, Windows HIGH_ASSURANCE SUCCESS, macOS SUCCESS — each independent, none inferred from another. Desktop web, Windows, Linux and macOS jobs passed on each.
+
+Independent technical HEDS `5229345968`: CRITICAL `0` / HIGH `0`.
 
 ## Historical pre-merge state (preserved; not current)
 This subsection records the pre-merge chronology so it is not lost. None of it describes the current state.
@@ -54,4 +60,4 @@ No product behavior, runtime authority, workflow behavior, dependency state or t
 This section deliberately does not claim that `DEC-027` status or the checkpoint were untouched: the closeout candidate intentionally advances them to the canonical state recorded above, and claiming otherwise would be false. What remains unchanged is the admitted authority and the release state.
 
 ## STOP CONDITION
-Do not merge this closeout PR in the prompt that produced it. Do not close Issue #68. Do not delete any branch. Do not claim that `HCODER-CP-0023` is sealed, and do not claim post-closeout `main` validation, until the closeout PR has merged with expected-head protection and the resulting `main` SHA has passed its own exact-head Governance and Desktop Shell.
+Do not close Issue #68 and do not merge the final-seal PR in the prompt that produced it. The sealed state recorded above describes merges and validations that have actually occurred; it does not authorize any further authority, capability or behavior change.

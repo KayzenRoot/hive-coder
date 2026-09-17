@@ -264,6 +264,30 @@ It is rewritten so every current-state statement agrees with the completed produ
 ### Explicit non-authorization
 No merge of the closeout PR, no Issue #68 closure, no branch deletion, no post-closeout validation claim, and no sealed-closeout claim. No runtime, authority, dependency, workflow, test semantics or desktop behavior change, and no Python source file change.
 
+## Context Lock Delta 012 — final seal
+The closeout merge has completed and the sealed lifecycle state is documented. This delta authorizes the final documentation/state seal and records it. **It grants no authority, no capability, no scope and no behavior change.**
+
+### Recorded final state
+- Product PR `#69` squash-merged with expected-head protection as `1f09520fbd92c7e65f9726b65a854f918507c895`; that exact `main` passed Governance `35171215292` and Desktop Shell `35171215429`.
+- Documentation-only closeout PR `#75` squash-merged with expected-head protection as `1b83666699acc8fdbd5270d811f1bf263d55ef47`; that exact `main` passed Governance `35204919678` and Desktop Shell `35204919616`. It is the current canonical `main`.
+- Native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging proof passed on each exact `main`; desktop web/Windows/Linux/macOS jobs passed on each.
+- `DEC-027` is CANONICAL / SEALED under `HCODER-CP-0023`. The admitted authority is unchanged: exactly `Capability.GIT_WRITE` / `git_stage_paths_v1` for explicit regular files in the proven ordinary local SHA-1 envelope, mandatory trusted approval and request-bound single-use permit. Publication remains atomic publication, explicitly not strict CAS.
+- Issue `#68` remains **OPEN**. It is closed only after the final-seal PR merges and post-seal `main` is validated.
+
+### Authorized files
+- `docs/project-brain/11-CHECKPOINT.md`
+- `docs/project-brain/10-DECISIONS-LEDGER.md`
+- `docs/project-brain/adrs/DEC-027-GOVERNED-GIT-STAGING.md`
+- `.engineering/work-orders/HCODER-WO-0023.md`
+- `.engineering/checkpoint-deltas/HCODER-WO-0023.md`
+- `.engineering/evidence/HCODER-WO-0023.md`
+- `.engineering/evidence/HCODER-CP-0023-CANONICAL-CLOSEOUT.md`
+- `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json`
+- this Context Lock (append-only)
+
+### Explicit non-authorization
+No Issue #68 closure, no branch deletion, no final-seal PR merge, and no post-seal validation claim. No runtime, authority, dependency, workflow, test semantics or desktop behavior change, and no Python source file change. No future SHA is fabricated; the final-seal head is recorded externally by its own exact-head receipts.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 

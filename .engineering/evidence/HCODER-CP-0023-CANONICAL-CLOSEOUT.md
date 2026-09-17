@@ -1,12 +1,13 @@
-# HCODER-CP-0023 — Canonical Closeout (candidate)
+# HCODER-CP-0023 — Canonical Closeout
 
-**Status:** CLOSEOUT CANDIDATE — DOCUMENTATION ONLY; THIS CLOSEOUT PR IS NOT MERGED  
+**Status:** SEALED / CANONICAL — closeout PR #75 merged and post-closeout exact-main validated  
 **Work Order:** `HCODER-WO-0023 — Governed Git Staging Capability`  
 **Decision:** `DEC-027 — Governed Git Staging Boundary`  
-**Issue:** `#68` — remains OPEN; closure ready only after this closeout merges  
+**Issue:** `#68` — OPEN; closure pending the final-seal PR  
 **Product PR:** `#69` — MERGED  
 **Base checkpoint:** `HCODER-CP-0022`  
-**Canonical product merge SHA:** `1f09520fbd92c7e65f9726b65a854f918507c895`
+**Canonical product merge SHA:** `1f09520fbd92c7e65f9726b65a854f918507c895`  
+**Closeout merge SHA:** `1b83666699acc8fdbd5270d811f1bf263d55ef47`
 
 ## Canonical bounded authority
 HCODER-CP-0023 canonicalizes exactly one repository-mutation action: `Capability.GIT_WRITE` / `git_stage_paths_v1`, target state `index_update`, for explicit regular files in the already-proven ordinary local SHA-1 repository envelope, maximum 128 paths. The capability is HIGH risk, materially sensitive, mandatory trusted approval, and consumes a request-bound single-use permit at the final safe boundary.
@@ -41,8 +42,13 @@ Commit, tag, ref, branch, remote, credential, reset, checkout, restore, clean, s
 ## Residual bounded-race law
 Publication is atomic same-filesystem **publication**, explicitly **not** strict CAS. An uncooperative external process may act between the last successful revalidation and the atomic call. A crash after blob publication but before index publication may leave an unreachable content-addressed blob; that is never reported as success, is never rolled back, and leaves no partial bytes at a canonical OID pathname.
 
-## Closeout promotion gates
-This closeout candidate is documentation and governance only. It must pass its own exact-head Governance and Desktop Shell, then independent review, before merge. Only after this closeout PR merges and post-closeout `main` is validated may Issue #68 be closed and HCODER-CP-0023 be sealed.
+## Seal evidence
+- Closeout head `204aa32ac26003082366588bc9e5d5399473c3b6`: Governance `35174158942` SUCCESS, Desktop Shell `35174158986` SUCCESS.
+- Closeout PR #75 squash-merged with expected-head protection as `1b83666699acc8fdbd5270d811f1bf263d55ef47`.
+- Post-closeout exact-main validation on `1b83666699acc8fdbd5270d811f1bf263d55ef47`: Governance `35204919678` SUCCESS (source-pack plus native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging proof), Desktop Shell `35204919616` SUCCESS (desktop web, Windows, Linux, macOS). That SHA is the current canonical `main`.
+
+## Remaining step
+Issue #68 remains open. It is closed only after this final-seal PR merges and post-seal `main` is validated.
 
 ## STOP CONDITION
-Do not treat this candidate as a sealed canonical closeout. The closeout PR is not merged, Issue #68 is not closed, and no post-closeout validation has occurred.
+Do not close Issue #68 and do not merge the final-seal PR in the prompt that produced it. The sealed state recorded here describes the product and closeout merges that have actually occurred; it does not authorize any further authority or behavior change.

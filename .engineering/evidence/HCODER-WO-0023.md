@@ -65,15 +65,28 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 **Correction head:** `ceb6cda42c3a6b3864b39a75afb27fb1982053ba` (Prompt 02 same-WO correction: TREE cache-tree semantics, main reconciliation, cleanup-hardening review)  
 **Authority head:** `52d8cc3195bd4f9c948b1327ed124042739b2530` (Prompt 03: dedicated `git.write` authority, publication and native E2E)
 
+## Final seal (Prompt 13)
+
+**State:** SEALED / CANONICAL. Issue #68 remains OPEN pending this final-seal PR.
+
+- Product PR #69 squash-merged with expected-head protection as `1f09520fbd92c7e65f9726b65a854f918507c895`; validated on that exact `main` by Governance `35171215292` and Desktop Shell `35171215429`.
+- Documentation-only closeout PR #75 squash-merged with expected-head protection as `1b83666699acc8fdbd5270d811f1bf263d55ef47`; validated on that exact `main` by Governance `35204919678` and Desktop Shell `35204919616`. That SHA is the current canonical `main`.
+- Native governed Git staging proof passed on each exact `main` (Linux, Windows HIGH_ASSURANCE, macOS), and desktop web/Windows/Linux/macOS jobs passed on each.
+- `DEC-027` is CANONICAL / SEALED under `HCODER-CP-0023`. Admitted authority unchanged; publication remains atomic publication, not strict CAS.
+
+This final-seal delta is documentation/state only: no runtime, authority, dependency, workflow, test semantics or desktop behavior changed, and no Python source file changed. Independent technical HEDS `5229345968` remains valid at CRITICAL `0` / HIGH `0` on that basis.
+
+**Not claimed:** Issue #68 is not closed, the final-seal PR is not merged, and no post-seal `main` validation has occurred.
+
 ## Closeout source-truth correction (Prompt 12)
 
 The checkpoint delta was only partially converted to closeout state at Prompt 11: it carried a closeout header while still asserting in the present tense that canonical `main` had not received the PR, that nothing was merged, and that PR #69 must not be merged. It also still labelled pre-merge receipts as promotion-candidate evidence and duplicated one pre-merge block. Corrected under Context Lock Delta 011, with the prior approval/readiness chronology preserved under an explicitly labelled historical subsection rather than deleted.
 
 Documentation only: no product behavior, runtime authority, dependency, workflow, test semantics or desktop behavior changed, and no Python source file changed. The product merge, the post-merge exact-main validation and independent technical HEDS `5229345968` are unaffected.
 
-## Closeout candidate (Prompt 11)
+## Closeout candidate (Prompt 11) — HISTORICAL PHASE RECORD
 
-**State:** PRODUCT MERGED AND POST-MERGE VALIDATED. **Closeout PR is not merged**, Issue #68 is not closed, and no post-closeout validation has occurred.
+**State at that phase:** product merged and post-merge validated; the closeout PR was still unmerged at that time. Superseded by the final seal recorded above; preserved as the phase record.
 
 ### Canonical product merge
 - Product head at merge: `2dde9bb5690f22820ab9fe952aa2672e97c0f36f` (verified unchanged immediately before the merge).
@@ -87,10 +100,10 @@ Documentation only: no product behavior, runtime authority, dependency, workflow
 - Native governed Git staging proof on that exact `main` SHA: Linux SUCCESS, Windows HIGH_ASSURANCE SUCCESS, macOS SUCCESS, each independent.
 - Desktop Shell run `35171215429` on `1f09520`: SUCCESS — desktop-web, desktop-windows, desktop-linux, desktop-macos.
 
-### Closeout candidate
+### Closeout candidate (as prepared at that phase)
 Documentation and governance only, on branch `chore/HCODER-WO-0023-canonical-closeout` created from the validated merge SHA. Canonical checkpoint advanced to `HCODER-CP-0023` based on CP-0022; `DEC-027` recorded as CANONICAL on `main`; Work Order moved to COMPLETE / CANONICAL candidate; checkpoint delta converted to a closeout delta; closeout evidence recorded in `.engineering/evidence/HCODER-CP-0023-CANONICAL-CLOSEOUT.md`. No runtime, authority, dependency, workflow, test semantics or desktop behavior changed, and no Python source file changed.
 
-**Not claimed:** the closeout PR is not merged, Issue #68 is not closed, and HCODER-CP-0023 is not sealed. `workOrderClosed` remains false in the machine evidence.
+**At that phase, not claimed:** the closeout PR was not yet merged, Issue #68 was not closed, and HCODER-CP-0023 was not yet sealed. That phase has since been superseded — the closeout PR merged as `1b83666699acc8fdbd5270d811f1bf263d55ef47` and CP-0023 is now SEALED. Issue #68 remains open pending the final-seal PR.
 
 ## Approval state (Prompt 09)
 

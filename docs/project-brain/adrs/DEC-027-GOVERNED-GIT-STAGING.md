@@ -1,6 +1,6 @@
 # DEC-027 — Governed Git Staging Boundary
 
-**Status:** CANONICAL on `main` under `HCODER-CP-0023` (closeout seal pending this closeout PR)  
+**Status:** CANONICAL / SEALED under `HCODER-CP-0023`  
 **Work Order:** `HCODER-WO-0023`  
 **Issue:** `#68`  
 **Original source main:** `22b56b0f3111158cbf50789b1647c5a578a171c1`  
@@ -10,11 +10,13 @@
 **Independent A4/HEDS review artifact:** PR review `5229345968`  
 **Canonical product merge:** `1f09520fbd92c7e65f9726b65a854f918507c895` (PR #69, squash, expected-head protected)  
 **Post-merge exact-main validation:** Governance `35171215292` SUCCESS; Desktop Shell `35171215429` SUCCESS  
-**Closeout candidate:** `.engineering/evidence/HCODER-CP-0023-CANONICAL-CLOSEOUT.md`
+**Closeout merge:** `1b83666699acc8fdbd5270d811f1bf263d55ef47` (PR #75, squash, expected-head protected)  
+**Post-closeout exact-main validation:** Governance `35204919678` SUCCESS; Desktop Shell `35204919616` SUCCESS  
+**Closeout evidence:** `.engineering/evidence/HCODER-CP-0023-CANONICAL-CLOSEOUT.md`
 
 > **State transition record (explicit and evidence-bound).** This ADR is **APPROVED** on this branch. Its original source main is preserved above and is not backdated or erased. Every condition in the promotion gate below was objectively satisfied at the independently reviewed head `b827cb2e`, and the independent A4/HEDS review `5229345968` returned CRITICAL `0` / HIGH `0`.
 >
-> The decision is **CANONICAL on `main`**: product PR #69 squash-merged as `1f09520fbd92c7e65f9726b65a854f918507c895` and that exact `main` SHA passed post-merge Governance `35171215292` and Desktop Shell `35171215429`. The documentation-only closeout PR is not yet merged and Issue #68 is not yet closed, so the canonical seal is pending; the admitted authority itself is unchanged and is not expanded by the promotion.
+> The decision is **CANONICAL on `main`**: product PR #69 squash-merged as `1f09520fbd92c7e65f9726b65a854f918507c895` and that exact `main` SHA passed post-merge Governance `35171215292` and Desktop Shell `35171215429`. The documentation-only closeout PR #75 has since squash-merged as `1b83666699acc8fdbd5270d811f1bf263d55ef47`, whose exact-`main` push validation passed Governance `35204919678` and Desktop Shell `35204919616`. Issue #68 remains open pending this final-seal PR. The admitted authority is unchanged and is not expanded by promotion or seal.
 
 ## Context
 Hive Coder can safely create and replace trusted-workspace regular files under the Permission & Control Plane, but practical coding also requires converting an approved worktree state into repository index state. Granting generic Git or shell execution would be a much larger authority boundary than staging itself.
