@@ -111,3 +111,94 @@ The WO-0017 safe CLI is a disconnected diagnostic exporter, not a runtime host. 
 `HCODER-WO-0017-CR-001` MEDIUM is resolved. Technical head `63abc6349421ed4c83c52c5f03d305cbb0f1f3ef` passed Governance #225 (`35015244682`) and Desktop Shell #61 (`35015244727`); HEDS technical review `5215028501` approved promotion with unresolved HIGH/CRITICAL findings 0. Promotion head `e2ae69e1be2f152eb9ce37b9b05f674dd072f5b5` passed Governance #234 (`35016227601`), Desktop Shell #70 (`35016227612`) and HEDS promotion review `5215216401`. Final exact product head `51a61a8ebdf8b50efcada02ba73c9ef406f27605` passed Governance #235 (`35017995721`), Desktop Shell #71 (`35017995616`) and HEDS final review `5215281964` with unresolved HIGH/CRITICAL findings **0**.
 
 Product PR #42 squash-merged as GitHub-signed commit `00bcb87251772cba0eb385d9628448374e9dd612`. On that exact merge SHA, post-merge Governance #236 (`35018459649`) and Desktop Shell #72 (`35018459732`) both completed **SUCCESS**, including Windows Tauri release build and launch smoke. `DEC-021` is therefore approved/canonical through CP-0017. This canonical closeout adds no execution authority and leaves cross-runtime IPC/process lifecycle to the next separately governed increment.
+
+## DEC-022 — Cross-Runtime Status IPC Contract
+**Status:** APPROVED / CANONICAL  
+**Work Order:** `HCODER-WO-0018`  
+**Canonicalized by:** `HCODER-CP-0018`
+
+Hive Coder freezes `hive-runtime-status-ipc-v1` as a presentation-only cross-runtime status protocol with exactly one operation, `status.snapshot`. The protocol carries only the canonical `RuntimeStatusSnapshot v1` presentation schema established by CP-0017. It does not create an execution channel, generic RPC namespace, authorization path, provider/model interface or desktop process-lifecycle authority.
+
+Technical head `9df7202835a47f2c18af77bbefa665afa5358b38` passed Governance #241 (**283/283 Python**, **56/56 HIGH_ASSURANCE**) and Desktop Shell #77 (**23/23 frontend**, npm audit 0, **11/11 Rust**, locked checks/audits, Windows release build and launch smoke). HEDS technical review `5215646309` reports unresolved HIGH/CRITICAL findings **0**. `HCODER-WO-0018-CR-001` MEDIUM is resolved. Promotion head `6545346943b94fd90b7e8cbc293c2c1afb511d52` passed Governance #242 and Desktop Shell #78; HEDS promotion review `5215758695` reports unresolved HIGH/CRITICAL findings **0**. Final product head `d67be2d5e99100db7457dc0efdebd3042d135ed9` passed Governance #243 and Desktop Shell #79; HEDS final review `5215823771` approved squash merge with unresolved HIGH/CRITICAL findings **0**.
+
+Product PR #45 was squash-merged as GitHub-signed SHA `9987b13f67f4c33b87acb2f03b87c6437e7a61ca`. On that exact merge SHA, post-merge Governance #244 (`35024443028`) and Desktop Shell #80 (`35024442899`) both completed **SUCCESS**, including Windows release build and launch smoke.
+
+`DEC-022` is **APPROVED / CANONICAL** as the decision recorded by the CP-0018 closeout. CP-0018 canonicalizes only the frozen presentation wire described here; runtime sidecar/helper identity, process lifecycle, desktop supervision and any authority-bearing process bridge remain later governed work.
+
+## DEC-023 — Runtime Status Sidecar Helper Boundary
+**Status:** APPROVED / CANONICAL  
+**Work Order:** `HCODER-WO-0019`  
+**Canonicalized by:** `HCODER-CP-0019`
+
+Hive Coder canonicalizes a fixed, single-purpose Python runtime-status sidecar helper that exposes only the already-canonical CP-0018 `hive-runtime-status-ipc-v1` one-shot presentation protocol over stdio. The helper is not a daemon, runtime host, generic process bridge, provider/model execution channel or authorization boundary. Its sole admitted mode is `--stdio-status-v1`.
+
+Technical exact head `ba10ba72f76316806cd820dc0d205e68105f61bb` passed Governance #250 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #86; HEDS `5216093993` approved promotion with H/C 0. Promotion exact head `55975e7e97eb33d2b695d02e36ab6994fa7ae7b5` passed Governance #251 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #87; HEDS `5216180277` approved the final approval mutation with H/C 0. Final product head `abe7b29cf59d3fd2e464e3ea69a7e585ba75e6dd` passed Governance #252 and Desktop Shell #88; HEDS final review `5216313496` approved squash merge with H/C 0.
+
+Product PR #48 was squash-merged using expected-head protection as GitHub-signed SHA `2ed4222556916cf524e31f65c4c417d27b7e6fd9`. That exact merge SHA passed push Governance #253 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #89 including Windows release build and launch smoke.
+
+`DEC-023` is **APPROVED / CANONICAL** as the decision recorded by CP-0019. The decision canonicalizes no desktop supervisor, generic process dispatch or mutation authority.
+
+## DEC-024 — Desktop Runtime Status Supervisor Boundary
+**Status:** APPROVED / CANONICAL  
+**Work Order:** `HCODER-WO-0020`  
+**Canonicalized by:** `HCODER-CP-0020`
+
+Hive Coder may introduce exactly one audited desktop child-process observation boundary for runtime status. The process is not a generic executor. It is a fixed supervisor whose only admitted target is the CP-0019 status helper adjacent to the current Hive desktop executable.
+
+This decision does not grant generic process/shell execution, provider/model execution, credential access, task/permission mutation, filesystem/Git/terminal/computer-use mutation, remote control, automatic skill activation or billing/purchase authority. The canonical Permission & Control Plane remains the mutation choke point.
+
+Technical exact head `86c6e956985e0b51e0f56b3568a3fe9db61fef90` passed Governance #263 (**288/288 Ubuntu**, **61/61 Windows HIGH_ASSURANCE**) and Desktop Shell #99 (security gate PASS, frontend **26/26**, Rust **13/13**, locked audits/checks, Windows release build + launch smoke). HEDS `5216871217` approved promotion with unresolved HIGH/CRITICAL `0`. Promotion head `bf76c2a451763d7bc361437028e819d2df5f97ba` changed only 7 documentation/evidence/governance files, then passed Governance #264 and Desktop Shell #100; HEDS `5216925860` approved the final state mutation with unresolved HIGH/CRITICAL `0`. Final head `344130199536e33a656d49a365e746610f89e245` changed only 5 state/evidence/governance files after promotion and passed Governance #265 and Desktop Shell #101; HEDS final `5217039528` approved squash merge with unresolved HIGH/CRITICAL `0`.
+
+PR #54 was squash-merged with expected-head protection as GitHub-signed product commit `621732c00ba1f3325272dfa1631fddbbabf3dfc4`. Post-merge Governance #266 and Desktop Shell #102 both passed on that exact SHA, including release build and launch smoke.
+
+DEC-024 is **APPROVED / CANONICAL**. Canonicalization covers the fixed read-only runtime-status supervisor and System Truth observation boundary only. No generic execution or mutation authority is implied or inherited.
+
+## DEC-025 — Trusted Workspace File Capability & Permit-Gated Mutation Boundary
+**Status:** APPROVED / CANONICAL  
+**Work Order:** `HCODER-WO-0021`  
+**Canonicalized by:** `HCODER-CP-0021`
+
+Hive Coder may introduce its first privileged Hive-owned workspace file mutation adapter behind the canonical Permission & Control Plane. The admitted authority is deliberately narrow: create exactly one previously absent regular file inside the trusted workspace using atomic no-clobber publication.
+
+Authority is exactly `FILESYSTEM_WRITE` action `write_file_v1`, remains HIGH and mandatory trusted-approval gated, and cannot be approved or permit-minted by a model, tool, task or file content. The approved request binds workspace identity, normalized target, live parent identity, target-absent state, content SHA-256 and byte length; raw file content is excluded from approval/audit metadata.
+
+Technical head `12d86579335c8f553bf77457739a6f2a7d287f10` passed Governance #278 with Ubuntu **317 PASS** and Windows HIGH_ASSURANCE **89 PASS**, plus Desktop Shell #114. HEDS technical `5217411336` approved promotion with unresolved HIGH/CRITICAL `0`. Promotion head `9f82d7211aa7ae304d4045623ab1c27911c12a14` passed Governance #281 and Desktop Shell #117. HEDS promotion `5217449846` approved this final documentation/state mutation with unresolved HIGH/CRITICAL `0`. Canonical closeout main SHA `200540c2605ff4e5c32f54cd1c3be40dbd167520` passed Governance #285 and Desktop Shell #121.
+
+**Recorded status reconciliation (WO-0023 Context Lock Delta 002, Prompt 01):** the `DEC-025` ADR file header still reads `APPROVED / FINAL CANDIDATE — NOT CANONICAL` because it was last written at the WO-0021 product merge `ee2e01e99aaea89deb2754ba8295fe34d7744541` and was not updated by the CP-0021 source-of-truth reconciliation `9c2623f8b335cf29b63b5db5f43e694bfd77938e`. `HCODER-CP-0021` — the canonical checkpoint, git-proven by closeout main SHA `200540c2605ff4e5c32f54cd1c3be40dbd167520` — states DEC-025 as APPROVED / CANONICAL and is authoritative here. This ledger entry records the canonical status; the stale ADR header is carried forward as documentary drift and was not rewritten by this reconciliation.
+
+## DEC-026 — Governed Existing-File Replacement Capability
+**Status:** CANONICAL  
+**Work Order:** `HCODER-WO-0022`  
+**Correction:** `HCODER-WO-0022-CR-001`  
+**Promoted by:** `HCODER-CP-0022` / closeout merge `795ed101eaf5d770f63a96db7f01a82369be34f1`
+
+CP-0021 canonicalized safe creation of a previously absent regular workspace file. Practical code editing next requires changing an existing file. The original WO-0022 candidate required strict expected-target CAS at publication time; CR-001 established that ordinary atomic replacement and strict expected-target CAS are different guarantees, and the evaluated native replacement interfaces provide no portable publication predicate taking the exact previously approved destination identity as a success condition across Windows, Linux and macOS.
+
+Hive Coder therefore introduces a distinct `replace_file_v1` action under existing `FILESYSTEM_WRITE` authority using a **bounded-race atomic replacement contract**, not a strict CAS contract. Approval and permit binding include the canonical workspace, normalized target, parent identity, exact observed old target identity, old content digest/length and exact new content digest/length. The executor revalidates live workspace, parent, target identity and old content as late as safely possible before publication. Every stale condition observed before publication fails closed. The final publication operation must atomically replace the pathname with exactly the approved new bytes on a platform/filesystem combination whose native tests prove that property. Capability-created temporary objects are cleaned up only after their identity/ownership is verified.
+
+**Explicit residual external-process race:** an uncooperative external process may change the destination pathname after Hive's final successful observable revalidation and before the native atomic publication call where the OS exposes no expected-destination identity predicate. This interval is explicit and bounded by the selected contract and must not be represented as strict CAS.
+
+This decision does not approve append, truncate-in-place, delete, arbitrary rename/move, Git mutation, terminal/shell execution, desktop/Tauri mutation, outside-workspace mutation, Cua mutation expansion, or any broader capability. It also does not canonicalize a content-addressed workspace architecture.
+
+CR-001 exact head `12e38e98bb690e29494bab5e7a1c597a64b49765` passed Governance #322 and Desktop Shell #158 with native Linux/POSIX, Windows HIGH_ASSURANCE and dedicated macOS validation and HEDS H/C `0/0`. Product exact head `35745aa56e203fa819751aee4b70cce57a9600e7` passed Governance #323 and Desktop Shell #159 with final product HEDS H/C `0/0`, then merged as `06c68611a42e07b85ae765145d94bb613110ac14`, whose post-merge Governance #324 and Desktop Shell #160 passed. CP-0022 closeout exact head `a777ac207b42059a33ce9d73d8287122ff43c0a9` passed Governance #325 and Desktop Shell #161 with closeout HEDS review `5222180870`, H/C `0/0`, then merged as `795ed101eaf5d770f63a96db7f01a82369be34f1`. Post-closeout main validation passed Governance #326 and Desktop Shell #162.
+
+## DEC-027 — Governed Git Staging Boundary
+**Status:** APPROVED  
+**Work Order:** `HCODER-WO-0023`  
+**Issue:** `#68`  
+**Independent A4/HEDS review:** `5229345968` at `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a` — CRITICAL `0` / HIGH `0`  
+**Reviewed-head CI:** Governance `35161417857` SUCCESS; Desktop Shell `35161417859` SUCCESS
+
+Hive Coder admits its first repository-mutation authority, bounded to exactly one action. `Capability.GIT_WRITE = "git.write"` is HIGH risk, materially sensitive, mandatory trusted approval and requires target field `workspace`. The only allowlisted action is `git_stage_paths_v1`, target state `index_update`, for explicit regular files in the already-proven ordinary local SHA-1 repository envelope, maximum 128 paths. `FILESYSTEM_WRITE` and `SHELL_EXECUTE` are not reused and cannot satisfy a `git.write` rule.
+
+The approval fingerprint commits to 17 frozen argument keys covering repository identity and HEAD, index state/identity/source digest, path count, declared paths, canonical worktree states, deterministic per-path bindings (path, content SHA-256, byte length, resulting blob OID), candidate index SHA-256 and length, object-store contract/format/git-dir identity/store identity, and `target_state`. Declared paths, observed worktree paths and path-binding paths must be identical after canonical normalization; contradiction is rejected before permit consumption. Raw worktree, index and compressed object bytes have no representation in approval, audit or receipt.
+
+A request-bound, short-lived, single-use permit is consumed only at the final safe boundary, after late revalidation, owned `index.lock` preparation, and the per-object pre/post session checks plus the in-publisher check immediately before the atomic no-clobber promotion. A canonical object pathname is never opened for writing: the complete compressed object is materialized and digest-verified in Hive-owned private storage outside `.git/objects` and promoted with an atomic create-if-absent primitive. An existing object is accepted only after proving it is the exact approved blob, never overwritten and never deleted. The index is published only by the capability-owned `index.lock` transaction.
+
+The independent A4/HEDS review `5229345968` at `b827cb2e` returned CRITICAL `0` / HIGH `0`. Native governed Git staging proof passed independently on Windows HIGH_ASSURANCE, Linux and macOS at the same reviewed head.
+
+**Explicit residual bound.** Publication is atomic same-filesystem publication, explicitly **not** strict CAS. An uncooperative external process may act between the last successful revalidation and the atomic call. A crash after blob publication but before index publication may leave an unreachable content-addressed blob; that is never reported as success and is never rolled back.
+
+**Explicit non-approval.** This decision does not approve commit, tag, ref, branch, remote or credential mutation, generic Git argv, shell/terminal/process execution, hooks, executable clean/smudge/process filters, network, arbitrary `.git` writes, generic filesystem mutation, desktop/Tauri mutation expansion, provider/model execution or credentials, computer-use mutation expansion beyond prior governed boundaries, remote control, automatic skill activation or billing/purchase authority.
+
+**Canonical status.** APPROVED on this branch. Not merged, canonical main has not received it, no post-merge validation has occurred, and the Work Order is not closed.

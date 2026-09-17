@@ -29,6 +29,7 @@ class Capability(str, Enum):
     BROWSER_MUTATE = "browser.mutate"
     FILESYSTEM_READ = "filesystem.read"
     FILESYSTEM_WRITE = "filesystem.write"
+    GIT_WRITE = "git.write"
     SHELL_EXECUTE = "shell.execute"
     DESTRUCTIVE = "destructive"
     PRIVILEGED = "privileged"
@@ -57,6 +58,7 @@ CAPABILITY_SPECS: dict[Capability, CapabilitySpec] = {
     Capability.BROWSER_MUTATE: CapabilitySpec(Capability.BROWSER_MUTATE, RiskClass.HIGH, frozenset({"application", "window_id"}), True, True),
     Capability.FILESYSTEM_READ: CapabilitySpec(Capability.FILESYSTEM_READ, RiskClass.MEDIUM, frozenset({"workspace"}), True, False),
     Capability.FILESYSTEM_WRITE: CapabilitySpec(Capability.FILESYSTEM_WRITE, RiskClass.HIGH, frozenset({"workspace"}), True, True),
+    Capability.GIT_WRITE: CapabilitySpec(Capability.GIT_WRITE, RiskClass.HIGH, frozenset({"workspace"}), True, True),
     Capability.SHELL_EXECUTE: CapabilitySpec(Capability.SHELL_EXECUTE, RiskClass.CRITICAL, frozenset({"workspace"}), True, True),
     Capability.DESTRUCTIVE: CapabilitySpec(Capability.DESTRUCTIVE, RiskClass.CRITICAL, frozenset({"resource"}), True, True),
     Capability.PRIVILEGED: CapabilitySpec(Capability.PRIVILEGED, RiskClass.CRITICAL, frozenset({"resource"}), True, True),

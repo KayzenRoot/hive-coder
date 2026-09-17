@@ -44,11 +44,30 @@ If the user says `continue`, `continue do chat anterior`, or equivalent for Hive
 3. Canonical Git evidence wins if Issue #30 is stale.
 4. Continue autonomously from its NEXT EXACT ACTIONS.
 
-## Current execution state at universal-adoption baseline
-Main baseline at adoption start: `ccfed1f960c80dc58e4f45cb627451e77c7d5a79`.
+## Current execution state
+`HCODER-CP-0022 — Governed Existing-File Replacement Capability` is **APPROVED / CANONICAL**.
 
-Known source drift: the canonical checkpoint document still declares `HCODER-CP-0021`, while Git history/main contains later proven CP-0022/PLATFORM-001 evidence. Universal adoption records this drift and does not fabricate a checkpoint promotion.
+Canonical state:
+- `HCODER-CP-0022` / `DEC-026 — Governed Existing-File Replacement Capability` is **CANONICAL**, promoted by closeout merge `795ed101eaf5d770f63a96db7f01a82369be34f1`.
+- Canonical base `HCODER-CP-0021` / `9c2623f8b335cf29b63b5db5f43e694bfd77938e`.
+- Product PR #62 squash-merged as `06c68611a42e07b85ae765145d94bb613110ac14`; post-merge Governance #324 and Desktop Shell #160 passed.
+- CP-0022 closeout exact head `a777ac207b42059a33ce9d73d8287122ff43c0a9` passed Governance #325 and Desktop Shell #161 with HEDS closeout review `5222180870`, unresolved HIGH/CRITICAL `0/0`.
+- `HCODER-WO-0022-CR-001` is resolved; the canonical guarantee is bounded-race atomic replacement, explicitly **not** strict CAS.
+- Hive runtime has two privileged workspace file mutation adapters: CP-0021 create-only `write_file_v1` and CP-0022 `replace_file_v1`, both under `Capability.FILESYSTEM_WRITE`, both mandatory trusted-approval gated, both permit-bound and single-use.
 
-Active non-canonical implementation increment: `HCODER-WO-0023 — governed Git staging boundary`, Draft PR `#69`, branch `feat/HCODER-WO-0023-git-stage-capability`. It must reconcile the adopted main before further Codex execution.
+CP-0022 authority remains replacement-only: append, truncate-in-place, delete, arbitrary rename/move, recursive mutation, chmod/chown, generic filesystem mutation, shell/terminal/process execution, Tauri/desktop write commands, provider/model execution or credentials, Cua/computer-use mutation beyond prior governed boundaries, remote control, automatic skill activation and billing/purchase authority remain unapproved. Git mutation authority is governed separately by `HCODER-WO-0023` (below) and is not part of CP-0022.
 
-Read `.engineering/gef/GEF-PROJECT-MASTER.md`, `.engineering/gef/GEF-UNIVERSAL-ADOPTION.md` and `.engineering/gef/GEF-UNIVERSAL-CHECKPOINT.json` for the GEF adoption map.
+Earlier checkpoint receipts (CP-0020 and prior) remain historically recorded in their closeout evidence files under `.engineering/evidence/` and are not restated here.
+
+### GEF V1 universal adoption
+GEF V1 universal is adopted; review mode is HEDS_DELTA_EXACT_HEAD and proof carry-forward still operates in shadow assurance. The source drift recorded at adoption start (`11-CHECKPOINT.md` still declaring `HCODER-CP-0021`, while Git history contained later proven CP-0022/PLATFORM-001 evidence) has since been reconciled on this line of development, which now declares CP-0022. Read `.engineering/gef/GEF-PROJECT-MASTER.md`, `.engineering/gef/GEF-UNIVERSAL-ADOPTION.md` and `.engineering/gef/GEF-UNIVERSAL-CHECKPOINT.json` for the adoption map, and the `.engineering/gef/` protocols plus `.engineering/gef/GEF-PROJECT-PROFILE.json` for execution, review and evidence law.
+
+### In-flight increments (not checkpoints, not canonical-complete)
+- `HCODER-PLATFORM-001` (Issue #63) native validation matrix is canonical on `main`; its ledger records **CANONICAL / PROVEN_CI MATRIX COMPLETE**. Launch smoke remains PROVEN_CI on Windows only, and release package/install remains UNPROVEN on all platforms.
+- `HCODER-WO-0023` (Issue #68, PR #69 Draft) governed Git staging is an active Work Order with its own Context Lock. Its bounded Git index-mutation authority — exactly `Capability.GIT_WRITE` / `git_stage_paths_v1` — **is implemented** and covered by activated acceptance gates, including native Windows/Linux/macOS staging proof. It is **not promoted**: `DEC-027` remains PROPOSED, no HEDS is approved, and the PR remains Draft.
+
+### NEXT EXACT ACTIONS
+1. Continue the active Work Order from its own Context Lock and Work Order sources; do not infer scope from historical branches.
+2. Require exact-head Governance + Desktop Shell on every promotion head; any new head invalidates old exact-head evidence.
+3. Perform HEDS with unresolved HIGH/CRITICAL `0/0` before promotion.
+4. Refresh Issue #30 with fully sealed receipts once the active Work Order reaches a governed closeout.

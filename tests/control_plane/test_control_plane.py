@@ -451,5 +451,207 @@ class AuditTests(unittest.TestCase):
         self.assertTrue(log.verify_chain())
 
 
+def capability_is_mandatory(capability: Capability) -> bool:
+    from hive_runtime.control_types import CAPABILITY_SPECS
+
+    return CAPABILITY_SPECS[capability].mandatory_approval
+
+
+class GitWriteControlPlaneTests(unittest.TestCase):
+    """HCODER-WO-0023 dedicated git.write authority.
+
+    These tests prove the authority boundary only; nothing here executes Git.
+    """
+
+    ACTION = "git_stage_paths_v1"
+
+    def git_policy(self, root: str, *, approval: bool = True) -> ControlPolicy:
+        return ControlPolicy.build(
+            rules=[
+                CapabilityRule.build(
+                    Capability.GIT_WRITE,
+                    allowed_actions={self.ACTION},
+                    requires_approval=approval,
+                    allowed_workspace_roots={root},
+                )
+            ]
+        )
+
+    def git_request(
+        self,
+        session_id: str,
+        root: str,
+        *,
+        action: str = ACTION,
+        capability=None,
+        workspace: str | None = None,
+        arguments: dict | None = None,
+    ) -> ActionRequest:
+        return ActionRequest(
+            session_id=session_id,
+            capability=capability or Capability.GIT_WRITE,
+            action=action,
+            target=ActionTarget(workspace=workspace if workspace is not None else root),
+            arguments=arguments if arguments is not None else {"contract": "hive-git-stage-v1"},
+        )
+
+    def test_git_write_specification_is_high_and_mandatory_approval(self) -> None:
+        from hive_runtime.control_types import CAPABILITY_SPECS
+
+        self.assertEqual(Capability.GIT_WRITE.value, "git.write")
+        spec = CAPABILITY_SPECS[Capability.GIT_WRITE]
+        self.assertEqual(spec.risk, RiskClass.HIGH)
+        self.assertTrue(spec.materially_sensitive)
+        self.assertTrue(spec.mandatory_approval)
+        self.assertEqual(spec.required_target_fields, frozenset({"workspace"}))
+        self.assertNotEqual(Capability.GIT_WRITE, Capability.FILESYSTEM_WRITE)
+        self.assertNotEqual(Capability.GIT_WRITE, Capability.SHELL_EXECUTE)
+
+    def test_git_write_requires_approval_even_when_rule_waives_it(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plane = make_plane()
+            session = plane.create_session(self.git_policy(tmp, approval=False), duration_seconds=60)
+            self.assertEqual(plane.evaluate(self.git_request(session, tmp)).kind, DecisionKind.REQUIRE_APPROVAL)
+            with self.assertRaises(AuthorizationDenied):
+                plane.authorize(self.git_request(session, tmp))
+            self.assertTrue(capability_is_mandatory(Capability.GIT_WRITE))
+
+    def test_wrong_action_and_missing_allowlist_are_denied(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plane = make_plane()
+            session = plane.create_session(self.git_policy(tmp), duration_seconds=60)
+            self.assertEqual(plane.evaluate(self.git_request(session, tmp, action="git_commit_v1")).kind, DecisionKind.DENY)
+            bare = plane.create_session(ControlPolicy.build([]), duration_seconds=60)
+            self.assertEqual(plane.evaluate(self.git_request(bare, tmp)).kind, DecisionKind.DENY)
+
+    def test_wrong_workspace_is_denied(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as other:
+            plane = make_plane()
+            session = plane.create_session(self.git_policy(tmp), duration_seconds=60)
+            decision = plane.evaluate(self.git_request(session, tmp, workspace=other))
+            self.assertEqual(decision.kind, DecisionKind.DENY)
+            self.assertEqual(decision.reason, "workspace_not_allowlisted")
+
+    def test_git_write_is_not_satisfied_by_filesystem_write_rules(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plane = make_plane()
+            policy = ControlPolicy.build(
+                rules=[
+                    CapabilityRule.build(
+                        Capability.FILESYSTEM_WRITE,
+                        allowed_actions={self.ACTION},
+                        allowed_workspace_roots={tmp},
+                    )
+                ]
+            )
+            session = plane.create_session(policy, duration_seconds=60)
+            self.assertEqual(plane.evaluate(self.git_request(session, tmp)).kind, DecisionKind.DENY)
+
+    def test_approval_is_request_bound_and_single_use(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plane = make_plane()
+            session = plane.create_session(self.git_policy(tmp), duration_seconds=60)
+            request = self.git_request(session, tmp, arguments={"contract": "hive-git-stage-v1", "path_count": 1})
+            challenge = plane.create_approval_challenge(request)
+            token = plane.approve_challenge_from_trusted_ui(challenge.challenge_id, session_id=session)
+            other = self.git_request(session, tmp, arguments={"contract": "hive-git-stage-v1", "path_count": 2})
+            with self.assertRaises(ApprovalError):
+                plane.authorize(other, approval_token=token)
+            permit = plane.authorize(request, approval_token=token)
+            self.assertTrue(permit.token)
+            with self.assertRaises(ApprovalError):
+                plane.authorize(request, approval_token=token)
+
+    def test_policy_epoch_change_invalidates_ephemeral_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plane = make_plane()
+            session = plane.create_session(self.git_policy(tmp), duration_seconds=60)
+            request = self.git_request(session, tmp)
+            challenge = plane.create_approval_challenge(request)
+            token = plane.approve_challenge_from_trusted_ui(challenge.challenge_id, session_id=session)
+            plane.update_policy(session, self.git_policy(tmp))
+            with self.assertRaises(ApprovalError):
+                plane.authorize(request, approval_token=token)
+
+    def test_permit_is_single_use_and_bound_to_the_exact_request(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plane = make_plane()
+            session = plane.create_session(self.git_policy(tmp), duration_seconds=60)
+            request = self.git_request(session, tmp, arguments={"contract": "hive-git-stage-v1", "path_count": 1})
+            challenge = plane.create_approval_challenge(request)
+            token = plane.approve_challenge_from_trusted_ui(challenge.challenge_id, session_id=session)
+            permit = plane.authorize(request, approval_token=token)
+            plane.consume_execution_permit(permit.token, request)
+            with self.assertRaises(PermitError):
+                plane.consume_execution_permit(permit.token, request)
+            other = self.git_request(session, tmp, arguments={"contract": "hive-git-stage-v1", "path_count": 3})
+            other_challenge = plane.create_approval_challenge(other)
+            other_token = plane.approve_challenge_from_trusted_ui(other_challenge.challenge_id, session_id=session)
+            other_permit = plane.authorize(other, approval_token=other_token)
+            with self.assertRaises(PermitError):
+                plane.consume_execution_permit(other_permit.token, request)
+
+    def test_emergency_stop_blocks_git_write_permit_consumption(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plane = make_plane()
+            session = plane.create_session(self.git_policy(tmp), duration_seconds=60)
+            request = self.git_request(session, tmp)
+            challenge = plane.create_approval_challenge(request)
+            token = plane.approve_challenge_from_trusted_ui(challenge.challenge_id, session_id=session)
+            permit = plane.authorize(request, approval_token=token)
+            plane.emergency_stop(session_id=session)
+            with self.assertRaises(SessionStateError):
+                plane.consume_execution_permit(permit.token, request)
+
+    def test_takeover_blocks_git_write_permit_consumption(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plane = make_plane()
+            session = plane.create_session(self.git_policy(tmp), duration_seconds=60)
+            request = self.git_request(session, tmp)
+            challenge = plane.create_approval_challenge(request)
+            token = plane.approve_challenge_from_trusted_ui(challenge.challenge_id, session_id=session)
+            permit = plane.authorize(request, approval_token=token)
+            plane.user_takeover(session)
+            with self.assertRaises((SessionStateError, PermitError)):
+                plane.consume_execution_permit(permit.token, request)
+
+    def test_session_expiry_blocks_git_write_permit_consumption(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            clock = FakeClock()
+            plane = make_plane(clock)
+            session = plane.create_session(self.git_policy(tmp), duration_seconds=10)
+            request = self.git_request(session, tmp)
+            challenge = plane.create_approval_challenge(request)
+            token = plane.approve_challenge_from_trusted_ui(challenge.challenge_id, session_id=session)
+            permit = plane.authorize(request, approval_token=token)
+            clock.advance(11)
+            with self.assertRaises((SessionStateError, PermitError)):
+                plane.consume_execution_permit(permit.token, request)
+
+    def test_control_plane_audit_records_the_full_git_write_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plane = make_plane()
+            session = plane.create_session(self.git_policy(tmp), duration_seconds=60)
+            request = self.git_request(session, tmp)
+            challenge = plane.create_approval_challenge(request)
+            token = plane.approve_challenge_from_trusted_ui(challenge.challenge_id, session_id=session)
+            permit = plane.authorize(request, approval_token=token)
+            plane.consume_execution_permit(permit.token, request)
+            events = [event.event_type for event in plane.audit_events()]
+            for expected in (
+                "control.policy_decision",
+                "control.approval_challenge_created",
+                "control.approval_granted",
+                "control.approval_consumed",
+                "control.execution_permit_issued",
+                "control.execution_permit_consumed",
+            ):
+                self.assertIn(expected, events)
+            self.assertTrue(plane.verify_audit_chain())
+            serialized = " ".join(event.details_json for event in plane.audit_events())
+            self.assertNotIn(permit.token, serialized)
+            self.assertNotIn("permit_token", serialized)
+
+
 if __name__ == "__main__":
     unittest.main()

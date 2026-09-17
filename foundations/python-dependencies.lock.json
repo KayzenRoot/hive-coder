@@ -1,0 +1,100 @@
+{
+  "schemaVersion": "hive-python-dependencies-lock-v1",
+  "policy": {
+    "purpose": "Minimal governed Python third-party dependency mechanism for Hive Coder. It pins exact versions and artifact hashes, records license and transitive surface, and is consumed by CI. It introduces no packaging redesign and no new runtime authority.",
+    "installMode": "explicit-pure-python-artifact-only",
+    "requireHashes": true,
+    "noDeps": true,
+    "requirementsFile": "foundations/python-dependencies.requirements.txt",
+    "verifier": "tools/foundations/verify_python_dependencies.py",
+    "rules": [
+      "Every entry pins an exact version and the exact sha256 of the artifact installed.",
+      "Only non-platform (pure-Python) artifacts are admitted when a dependency exposes optional native extensions, so correctness never silently depends on a compiled extension.",
+      "Declared transitive dependencies that the admitted module surface does not require are recorded but deliberately NOT materialized, so their code paths are structurally unavailable rather than merely unused.",
+      "Adding, bumping or replacing an entry requires a governed dependency/provenance decision plus an exact-head Context Lock delta."
+    ]
+  },
+  "python": {
+    "requires": ">=3.10"
+  },
+  "dependencies": {
+    "dulwich": {
+      "version": "1.2.15",
+      "workOrder": "HCODER-WO-0023",
+      "risk": "HIGH_ASSURANCE",
+      "purpose": "Bounded Git index parser/serializer primitive behind a Hive-owned adapter. Not an authority provider.",
+      "license": {
+        "expression": "Apache-2.0 OR GPL-2.0-or-later",
+        "selected": "Apache-2.0",
+        "compatible": true
+      },
+      "pypi": {
+        "jsonApi": "https://pypi.org/pypi/dulwich/1.2.15/json",
+        "requiresPython": ">=3.10",
+        "requiresDist": [
+          "urllib3>=2.2.2",
+          "typing_extensions>=4.6.0; python_version < \"3.12\""
+        ]
+      },
+      "artifacts": {
+        "purePythonWheel": {
+          "filename": "dulwich-1.2.15-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/3a/96/b4c8f1cf6c69811098415903ec299cdea87576c51b0c1f13f21215368c63/dulwich-1.2.15-py3-none-any.whl",
+          "sha256": "5c863992962bab0fc5f75be132399a16f670f2a9283faf9aaeb953fd8891db83",
+          "uploaded": "2026-09-14T21:20:22.697229Z",
+          "admitted": true
+        },
+        "sdist": {
+          "filename": "dulwich-1.2.15.tar.gz",
+          "url": "https://files.pythonhosted.org/packages/63/b9/5b68d879282190b0429c815d582dc1f212d4910aa22ac7c1aff39675a719/dulwich-1.2.15.tar.gz",
+          "sha256": "e98f775601846fb4d44a384003e93c53c42b0c9796c8fe0cc3128b8e2e0bbf88",
+          "uploaded": "2026-09-14T21:20:24.556588Z",
+          "admitted": false,
+          "excludedReason": "Source builds may compile optional extensions; the pure-Python wheel is the reviewed artifact."
+        },
+        "platformWheelsNote": "PyPI also publishes cp310-cp314 platform wheels for manylinux/macosx/win32/win_amd64. They are deliberately NOT admitted: correctness must not depend on the optional compiled extension. The pure-Python wheel was verified to provide the required module surface with the native module absent."
+      },
+      "nativeExtensionRequiredForCorrectness": false,
+      "nativeExtensionEvidence": "With the admitted pure-Python wheel installed, `import dulwich._objects` raises ModuleNotFoundError and the index parse/serialize round-trip still reproduces the source index byte-for-byte.",
+      "unmaterializedDeclaredRequires": [
+        {
+          "name": "urllib3",
+          "declared": "urllib3>=2.2.2",
+          "materializedByGovernedInstall": false,
+          "reason": "The admitted module surface (index parser/serializer primitives) does not import urllib3. The governed install uses `--no-deps` so it never installs urllib3, keeping the remote/network/credential client path outside the governed dependency set."
+        }
+      ],
+      "importIsolationEvidence": {
+        "method": "import the admitted module surface and compare sys.modules before/after",
+        "observed": "Importing dulwich.index adds 83 modules including dulwich.* and stdlib urllib.parse, but NOT urllib3, socket or ssl. Using the parse/serialize primitives also leaves urllib3 and socket absent from sys.modules.",
+        "note": "urllib.parse is pure stdlib URL parsing and performs no network I/O. A locally installed urllib3 is possible for unrelated reasons; import isolation of the admitted surface is what is proven, and it is asserted by the focused WO-0023 tests."
+      },
+      "allowedModuleSurface": [
+        "dulwich.index.read_index_dict_with_version",
+        "dulwich.index.write_index_dict",
+        "dulwich.index.IndexEntry",
+        "dulwich.index.SerializedIndexEntry"
+      ],
+      "forbiddenModuleSurface": [
+        "dulwich.client",
+        "dulwich.porcelain",
+        "dulwich.repo",
+        "dulwich.server",
+        "dulwich.objectspec",
+        "urllib3",
+        "socket",
+        "ssl",
+        "subprocess"
+      ],
+      "forbiddenApi": [
+        "porcelain.add",
+        "porcelain.commit",
+        "GitFile.close",
+        "Repo.do_commit",
+        "dulwich.index.Index.write",
+        "dulwich.index.commit_index",
+        "dulwich.index.locked_index"
+      ]
+    }
+  }
+}
