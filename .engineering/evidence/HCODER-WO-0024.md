@@ -1,11 +1,13 @@
 # Evidence Bundle — HCODER-WO-0024
 
-**Status:** IMPLEMENTED IN SOURCE — EXTERNAL PROMOTION EVIDENCE REQUIRED  
+**Status:** PRODUCT IMPLEMENTATION MERGED / POSTVALIDATED — CLOSEOUT DECLARED, EFFECTIVE UNDER `HCODER_CP_0024_EFFECTIVE`  
 **Canonical base:** `HCODER-CP-0023` / `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
 **Issue:** `#77`  
 **Parent epic:** `#72`  
-**PR:** `#80` (Draft, unmerged)  
-**Reviewed-head record:** historical only; the table further below records reviewed heads and is not the current review index. Mutable current review and gate state is external in PR #80 and Issue #30.  
+**Product PR:** `#80` — MERGED (squash, expected-head protected)  
+**Product merge / canonical main at postvalidation (immutable stage fact):** `c7f2a5f21369fd92b3493bea0be0192bbd7298b4`  
+**Closeout package:** `.engineering/checkpoint-deltas/HCODER-WO-0024.md`, `.engineering/evidence/HCODER-CP-0024-CANONICAL-CLOSEOUT.md`  
+**Reviewed-head record:** historical only; the table further below records reviewed heads and is not the current review index. Mutable current review and gate state is external in the active closeout PR and Issues #30 and #77.  
 **Correction authority:** `HCODER-WO-0024`; the canonical append-only delta history lives in `.engineering/context-locks/HCODER-WO-0024.md`, and no terminal delta number or range is mirrored here.
 
 ## Correction state 5 (documentation/source-truth only — no technical change)
@@ -62,9 +64,9 @@ The prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` passed Governance `
 - That Hive Coder is installable, signed, notarized, auto-updatable or production-distributable.
 - That any update, download, install, restart or release path exists or is authorised.
 - That cryptographic verification is implemented. **No scheme is admitted**, so no authenticity-dependent state can be entered, asserted as a current status, used as a persisted event source or claimed as successfully entered — while a bounded *refused* attempt toward `ready` remains recordable, because it asserts a refusal rather than an entry.
-- That `DEC-028` is canonical. It is PROPOSED / NOT CANONICAL.
+- That `DEC-028` carries canonical force unconditionally. No repository statement may claim canonical force outside the predicate: `DEC-028` carries canonical force **if and only if** `HCODER_CP_0024_EFFECTIVE` is satisfied, meaning that for one and the same closeout revision the exact revision was independently reviewed with unresolved HIGH/CRITICAL `0/0`, was governed-merged with expected-head protection, and the resulting exact `main` SHA passed fresh Governance and Desktop Shell. While the predicate is unsatisfied, `HCODER-CP-0023` is authoritative and `DEC-028` is non-canonical; while it is satisfied, `HCODER-CP-0024` and `DEC-028` are authoritative. Whether it is satisfied is external state, evidenced in the active closeout PR and Issues #30 and #77.
 - That any platform's native distribution behaviour is proven. Only the contract lane is exercised.
-- That the contracts are proven *by this document*. Exact-head gate and review satisfaction is mutable external state tracked in PR #80 and Issue #30; this bundle records the requirement and the historical reviewed-head record below. No statement here may be read as a current-head claim.
+- That the contracts are proven *by this document*. Exact-head gate and review satisfaction is mutable external state tracked in the active closeout PR and Issues #30 and #77; this bundle records the requirement and the historical reviewed-head record below. No statement here may be read as a current-head claim.
 
 ## Persisted-history contract (current v1)
 - `ready`, `installing` and `success` are authenticity-dependent. They cannot be entered while no scheme is admitted, so they may not be a status snapshot's current state, may not be a recorded event's source, and may not be a recorded event's destination under a success outcome.
@@ -82,14 +84,15 @@ Re-read live files from the exact base before relying on these; repository sourc
 
 Durable statement of where this slice stands, written so that it cannot become false as CI or review advances:
 
-- Version/channel/update-state/about contracts, the version drift verifier and the inert `UpdateService` boundary are **IMPLEMENTED in source**, each with tests that fail when a guard is removed.
-- The three security properties that were previously over-broad are **implemented in source** with adversarial tests: authenticity-dependent current-state and source unreachability plus refusal of successful entry, while bounded refused attempts toward `ready` remain recordable; persisted event-outcome/edge coupling; and the toolchain-compatible core bound. They are not "pending" properties; they are laws whose independent confirmation is external.
-- **External promotion evidence is required and is not recorded here.** Green hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0`, and a governed expected-head merge must each be produced against the exact head a promotion decision names, and that mutable state is tracked in PR #80 and Issue #30.
-- Native Windows/Linux/macOS *distribution* behaviour, signing, notarization and release publication remain **UNPROVEN** and unauthorised; only the contract lane is exercised.
+- Version/channel/update-state/about contracts, the version drift verifier and the inert `UpdateService` boundary are **implemented in source and merged**, each with tests that fail when a guard is removed.
+- The three security properties that were previously over-broad are **implemented in source and merged** with adversarial tests: authenticity-dependent current-state and source unreachability plus refusal of successful entry, while bounded refused attempts toward `ready` remain recordable; persisted event-outcome/edge coupling; and the toolchain-compatible core bound.
+- **Product lifecycle stage (immutable facts):** reviewed head `81bdd283dfd299d5ad5035301d06501f6b953a56` (tree `99151781a7cd4a886bf0ea43bb9e29ca44b16cb1`); independent HEDS `5239135676` APPROVED FOR GOVERNED MERGE, CRITICAL `0` / HIGH `0` / MEDIUM `0`; product merge `c7f2a5f21369fd92b3493bea0be0192bbd7298b4` (PR #80, squash with expected-head protection, merge tree identical to the reviewed-head tree); post-merge Governance `35252975365` and Desktop Shell `35252975322` SUCCESS on that exact main. The product implementation is therefore **MERGED / POSTVALIDATED**.
+- **External promotion evidence for the closeout is required and is not recorded here.** Green hosted exact-head gates, an independent review with unresolved HIGH/CRITICAL `0/0` and a governed expected-head merge must each be produced against the exact closeout revision, and that mutable state is tracked in the active closeout PR and Issues #30 and #77.
+- Native Windows/Linux/macOS *distribution* behaviour, signing, notarization and release publication remain **UNPROVEN** and unauthorised; only the contract lane is exercised. `bundle.active` remains `false`.
 
 ## Reviewed-head record (historical)
 
-Each row below is an immutable historical fact: a head that was reviewed, the review identifier, and that review's verdict. **This table is a historical record, not the current review index** — reviews that occur after the last documentation reconciliation are recorded in PR #80 and Issue #30 and are deliberately not mirrored here, so recording one never requires editing this document.
+Each row below is an immutable historical fact: a head that was reviewed, the review identifier, and that review's verdict. **This table is a historical record, not the current review index** — reviews that occur after the last documentation reconciliation are recorded externally in the active PR and Issues #30 and #77 and are deliberately not mirrored here, so recording one never requires editing this document.
 
 | Reviewed head | Review | Verdict |
 |---|---|---|
@@ -116,4 +119,4 @@ For each exact technical head record:
 - HEDS HIGH/CRITICAL counts.
 
 ## STOP
-`UNKNOWN` never becomes `PASS`. Exact-head evidence proves only the exact SHA it names. Do not merge, do not declare the decision canonical, and do not begin HCODER-DIST-001B from this ledger.
+`UNKNOWN` never becomes `PASS`. Exact-head evidence proves only the exact SHA it names. `HCODER_CP_0024_EFFECTIVE` may not be treated as satisfied without exact external evidence for every one of its conditions, and `HCODER-DIST-001B` may not begin until the governed closeout lifecycle has actually satisfied the predicate and the external continuation pointers in Issues #30 and #77 admit the successor. Mutable exact-head receipts are recorded externally, never in this bundle.

@@ -1,5 +1,32 @@
 # Checkpoint — Hive Coder
 
+**Declared checkpoint:** `HCODER-CP-0024` — effective under `HCODER_CP_0024_EFFECTIVE`  
+**Predecessor checkpoint:** `HCODER-CP-0023` — effective until the predicate is satisfied  
+**Declaration source:** `.engineering/checkpoint-deltas/HCODER-WO-0024.md`, `.engineering/evidence/HCODER-CP-0024-CANONICAL-CLOSEOUT.md`  
+**Repository:** `KayzenRoot/hive-coder`
+
+> **Conditional effectiveness.** `HCODER_CP_0024_EFFECTIVE` is satisfied if and only if, for one and the same closeout revision: (a) that exact revision was independently reviewed with unresolved HIGH/CRITICAL `0/0`; (b) that exact revision was governed-merged with expected-head protection; and (c) the resulting exact `main` SHA passed fresh Governance and Desktop Shell. **While the predicate is unsatisfied**, `HCODER-CP-0023` is the authoritative checkpoint and `DEC-028` is non-canonical. **Once it is satisfied**, `HCODER-CP-0024` and `DEC-028` are authoritative under the declarations in this document, with no edit required here to flip any status. Evidence of whether the predicate holds lives externally in the active closeout PR and Issues #30 and #77 — this document selects the authoritative checkpoint by predicate, never by phase.
+
+## Declared checkpoint: `HCODER-CP-0024` — Distribution version, channel and update boundaries
+
+**Work Order:** `HCODER-WO-0024` — product implementation MERGED / POSTVALIDATED (immutable product-stage fact)  
+**Issue:** `#77`  
+**Decision:** `DEC-028` — CANONICAL / SEALED under `HCODER-CP-0024` while `HCODER_CP_0024_EFFECTIVE` is satisfied, non-canonical while it is unsatisfied  
+**Product PR:** `#80` — SQUASH MERGED (expected-head protected)  
+**Canonical product merge:** `c7f2a5f21369fd92b3493bea0be0192bbd7298b4`  
+**Reviewed product head:** `81bdd283dfd299d5ad5035301d06501f6b953a56` (tree `99151781a7cd4a886bf0ea43bb9e29ca44b16cb1`, identical to the merge tree)  
+**Independent product HEDS:** `5239135676` — CRITICAL `0` / HIGH `0` / MEDIUM `0`  
+**Post-merge exact-main gates:** Governance `35252975365` SUCCESS; Desktop Shell `35252975322` SUCCESS  
+**Unresolved HIGH/CRITICAL:** `0/0`
+
+Admits exactly one thing and nothing more: the first governed slice of `HCODER-DIST-001A` as **contracts and inert seams**. A single canonical product-version source with exact mirrors and an offline drift verifier; a toolchain-compatible bounded SemVer 2.0.0 profile with core identifiers within `0..9007199254740991`, a 128-character overall bound, exact decimal-string comparison and one acceptance set shared by the product TypeScript parser and the Python gate through a cross-language parity vector file; release channels `stable`, `beta` and `dev` with version+channel as one identity and no implicit movement; a closed update-state model whose authenticity-dependent states cannot be entered, asserted as a current status, used as a persisted event source or claimed as successfully entered while no scheme is admitted; a semantically closed persisted-event law; closed plain-own-data validation with a zero-getter rule; a bounded read-only About read model; and a Hive-owned inert `UpdateService` boundary.
+
+It admits **no** runtime authority, capability, permission or control-plane path, and no updater plugin, endpoint, network request, download, install, restart, signing, notarization, release publication or `bundle.active=true`. `bundle.active` remains `false`. Packaging, installer generation, updater transport, channel promotion execution, rollback policy and every later `HCODER-DIST-001` slice remain unapproved.
+
+## Predecessor checkpoint: `HCODER-CP-0023` — Governed Git Staging Capability
+
+The record below is history: it describes the `HCODER-CP-0023` state, which is authoritative whenever `HCODER_CP_0024_EFFECTIVE` is unsatisfied and remains preserved as history after it is satisfied.
+
 **Checkpoint:** `HCODER-CP-0023`  
 **Status:** SEALED / CANONICAL  
 **Date:** 2026-09-16  

@@ -1,16 +1,19 @@
 # HCODER-WO-0024 — Distribution Contracts, Version Model and UpdateService Boundary
 
-**Status:** IMPLEMENTED IN SOURCE — EXTERNAL PROMOTION EVIDENCE REQUIRED  
-**Promotion evidence:** hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0` and a governed expected-head merge are each required against the exact promotion head and are tracked in PR #80 and Issue #30, not in this document  
+**Status:** PRODUCT IMPLEMENTATION MERGED / POSTVALIDATED — CLOSEOUT DECLARED, EFFECTIVE UNDER `HCODER_CP_0024_EFFECTIVE`  
+**Promotion evidence:** hosted exact-head gates, an independent review with unresolved HIGH/CRITICAL `0/0` and a governed expected-head merge are each required against the exact head a promotion decision names; that mutable state is tracked in the active closeout PR and Issues #30 and #77, not in this document  
+**Product lifecycle (immutable stage facts):** reviewed head `81bdd283dfd299d5ad5035301d06501f6b953a56` (tree `99151781a7cd4a886bf0ea43bb9e29ca44b16cb1`); independent HEDS `5239135676` APPROVED FOR GOVERNED MERGE with CRITICAL `0` / HIGH `0` / MEDIUM `0`; product merge `c7f2a5f21369fd92b3493bea0be0192bbd7298b4` (PR #80, squash with expected-head protection, merge tree identical to the reviewed-head tree); post-merge Governance `35252975365` and Desktop Shell `35252975322` SUCCESS on that exact main  
+**Closeout effectiveness:** the closeout declaration in `.engineering/checkpoint-deltas/HCODER-WO-0024.md` and `.engineering/evidence/HCODER-CP-0024-CANONICAL-CLOSEOUT.md` carries canonical force for `HCODER-CP-0024` and `DEC-028` if and only if `HCODER_CP_0024_EFFECTIVE` is satisfied; it is not satisfied by any repository claim, and whether it holds is external state in the active closeout PR and Issues #30 and #77  
 **Risk:** HIGH_ASSURANCE (supply-chain-adjacent)  
 **Task class:** T3  
 **Context radius:** C4  
 **Canonical base:** `HCODER-CP-0023` / `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
-**Decision:** `DEC-028` PROPOSED / NOT CANONICAL (version/channel source-of-truth law; an ADR exists at `docs/project-brain/adrs/DEC-028-DISTRIBUTION-VERSION-CHANNEL-CONTRACT.md` with a matching ledger entry)  
+**Decision:** `DEC-028` — CANONICAL / SEALED under `HCODER-CP-0024` while `HCODER_CP_0024_EFFECTIVE` is satisfied, and non-canonical while it is unsatisfied (ADR at `docs/project-brain/adrs/DEC-028-DISTRIBUTION-VERSION-CHANNEL-CONTRACT.md` with a matching ledger entry)  
 **Issue:** `#77`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
-**PR:** `#80` (Draft, unmerged)  
-**Prior reviewed-head facts:** historical, recorded in the correction records below; this header is not the current review index. Mutable current review and gate state is external in PR #80 and Issue #30.  
+**Product PR:** `#80` — MERGED (squash, expected-head protected)  
+**Closeout PR:** the active closeout PR, identified externally by Issues #30 and #77  
+**Prior reviewed-head facts:** historical, recorded in the correction records below; this header is not the current review index. Mutable current review and gate state is external in the active closeout PR and Issues #30 and #77.  
 **Canonical authority history:** `.engineering/context-locks/HCODER-WO-0024.md` — the append-only Context Lock delta sequence for this Work Order; no terminal delta number or range is mirrored in this document.
 
 ## Objective
