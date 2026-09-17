@@ -1,6 +1,6 @@
 # HCODER-WO-0023 — Governed Git Staging Capability
 
-**Status:** COMPLETE / CANONICAL candidate — product PR #69 merged and post-merge validated; closeout PR not yet merged, Issue #68 not yet closed  
+**Status:** COMPLETE / CANONICAL — product PR #69 and closeout PR #75 both merged and post-merge validated on exact `main`; Issue #68 remains open pending this final-seal PR  
 **Delivered authority:** exactly one bounded action, `git_stage_paths_v1`, under `Capability.GIT_WRITE` (HIGH, mandatory approval, request-bound single-use permit)  
 **Backend result:** route (1) selected — `dulwich==1.2.15`, pure-Python wheel, hash-pinned, provenance and import isolation closed  
 **Native proof:** Windows, Linux and macOS governed Git staging lanes pass independently at exact head  
