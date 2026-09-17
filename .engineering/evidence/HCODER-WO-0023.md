@@ -70,9 +70,9 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 **State:** SEALED / CANONICAL. Issue #68 is **CLOSED / COMPLETED** at `2026-09-17T10:35:38Z`.
 
 - Product PR #69 squash-merged with expected-head protection as `1f09520fbd92c7e65f9726b65a854f918507c895`; validated on that exact `main` by Governance `35171215292` and Desktop Shell `35171215429`.
-- Documentation-only closeout PR #75 squash-merged with expected-head protection as `1b83666699acc8fdbd5270d811f1bf263d55ef47`; validated on that exact `main` by Governance `35204919678` and Desktop Shell `35204919616`. That SHA is the current canonical `main`.
+- Documentation-only closeout PR #75 squash-merged with expected-head protection as `1b83666699acc8fdbd5270d811f1bf263d55ef47`; validated on that exact `main` by Governance `35204919678` and Desktop Shell `35204919616`. That SHA was the **validated `main` at closeout validation** — an immutable lifecycle-stage fact.
 - Native governed Git staging proof passed on each exact `main` (Linux, Windows HIGH_ASSURANCE, macOS), and desktop web/Windows/Linux/macOS jobs passed on each.
-- The final-seal PR #76 squash-merged with expected-head protection as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, validated on that exact `main` by Governance `35210910407` and Desktop Shell `35210910423`. That SHA is the current canonical `main`.
+- The final-seal PR #76 squash-merged with expected-head protection as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, validated on that exact `main` by Governance `35210910407` and Desktop Shell `35210910423`. That SHA is the **final-seal merge SHA** and the **validated `main` at final-seal validation** — an immutable lifecycle-stage fact.
 - `DEC-027` is CANONICAL / SEALED under `HCODER-CP-0023`. Admitted authority unchanged; publication remains atomic publication, not strict CAS.
 
 This final-seal delta is documentation/state only: no runtime, authority, dependency, workflow, test semantics or desktop behavior changed, and no Python source file changed. Independent technical HEDS `5229345968` remains valid at CRITICAL `0` / HIGH `0` on that basis.
@@ -425,7 +425,7 @@ Current state, stated plainly:
 - **Authority implemented**: yes, bounded to exactly `git_stage_paths_v1`.
 - **Promotion complete**: `DEC-027` is CANONICAL / SEALED under `HCODER-CP-0023`.
 - **All three merges complete**: product PR #69, closeout PR #75 and final-seal PR #76, each squash-merged with expected-head protection and each post-merge validated on its exact `main`.
-- **Current canonical `main`**: `b6297fbe4de4681fc92093f3691f693dc2de0dc1`.
+- **Validated `main` at final-seal validation**: `b6297fbe4de4681fc92093f3691f693dc2de0dc1` (immutable lifecycle-stage fact; not a live repository pointer).
 - **Independent technical HEDS** `5229345968` at `b827cb2e`: CRITICAL `0` / HIGH `0`.
 - **Issue #68**: CLOSED / COMPLETED at `2026-09-17T10:35:38Z`.
 

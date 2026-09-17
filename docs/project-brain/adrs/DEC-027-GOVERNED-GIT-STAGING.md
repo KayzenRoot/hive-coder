@@ -9,7 +9,8 @@
 **Independently reviewed promotion-candidate head:** `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a`  
 **Independent A4/HEDS review artifact:** PR review `5229345968`  
 **Canonical product merge:** `1f09520fbd92c7e65f9726b65a854f918507c895` (PR #69, squash, expected-head protected)  
-**Final-seal merge / current canonical main:** `b6297fbe4de4681fc92093f3691f693dc2de0dc1` (PR #76, squash, expected-head protected)  
+**Final-seal merge SHA (immutable):** `b6297fbe4de4681fc92093f3691f693dc2de0dc1` (PR #76, squash, expected-head protected)  
+**Validated `main` at final-seal validation:** `b6297fbe4de4681fc92093f3691f693dc2de0dc1`  
 **Post-seal exact-main validation:** Governance `35210910407` SUCCESS; Desktop Shell `35210910423` SUCCESS  
 **Post-merge exact-main validation:** Governance `35171215292` SUCCESS; Desktop Shell `35171215429` SUCCESS  
 **Closeout merge:** `1b83666699acc8fdbd5270d811f1bf263d55ef47` (PR #75, squash, expected-head protected)  

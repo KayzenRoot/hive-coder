@@ -9,7 +9,8 @@
 **Final-seal PR:** `#76` — **MERGED** (squash `b6297fbe4de4681fc92093f3691f693dc2de0dc1`)  
 **Canonical product merge:** `1f09520fbd92c7e65f9726b65a854f918507c895`  
 **Closeout merge:** `1b83666699acc8fdbd5270d811f1bf263d55ef47`  
-**Final-seal merge / current canonical main:** `b6297fbe4de4681fc92093f3691f693dc2de0dc1`  
+**Final-seal merge SHA (immutable):** `b6297fbe4de4681fc92093f3691f693dc2de0dc1`  
+**Validated `main` at final-seal validation:** `b6297fbe4de4681fc92093f3691f693dc2de0dc1`  
 **Pre-merge canonical main:** `aaa75242826db33442cd96cdc1d550d69bd25faa`
 
 ## Purpose
@@ -35,7 +36,7 @@ Both merges used squash with expected-head protection: the merge request was bou
 | Product (PR #69) | `2dde9bb5690f22820ab9fe952aa2672e97c0f36f` | `1f09520fbd92c7e65f9726b65a854f918507c895` | Governance `35171215292` SUCCESS; Desktop Shell `35171215429` SUCCESS |
 | Closeout (PR #75) | `204aa32ac26003082366588bc9e5d5399473c3b6` | `1b83666699acc8fdbd5270d811f1bf263d55ef47` | Governance `35204919678` SUCCESS; Desktop Shell `35204919616` SUCCESS |
 
-The final-seal PR #76 then squash-merged with expected-head protection as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, validated on that exact `main` by Governance `35210910407` and Desktop Shell `35210910423`. Current canonical `main` is `b6297fbe4de4681fc92093f3691f693dc2de0dc1`. In both stages the squash SHA and the resulting `origin/main` were the same commit, so each pair identifies one product state.
+The final-seal PR #76 then squash-merged with expected-head protection as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, validated on that exact `main` by Governance `35210910407` and Desktop Shell `35210910423`. The validated `main` at final-seal validation was `b6297fbe4de4681fc92093f3691f693dc2de0dc1`. In every stage the squash SHA and the resulting `origin/main` were the same commit, so each pair identifies one lifecycle-stage state. These are immutable stage facts and are not live repository pointers.
 
 Native governed Git staging proof passed on each exact `main`: Linux SUCCESS, Windows HIGH_ASSURANCE SUCCESS, macOS SUCCESS — each independent, none inferred from another. Desktop web, Windows, Linux and macOS jobs passed on each.
 

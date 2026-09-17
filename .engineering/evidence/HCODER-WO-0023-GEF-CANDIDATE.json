@@ -321,5 +321,6 @@
     "closedAt": "2026-09-17T10:35:38Z",
     "note": "Issue closure is an external GitHub lifecycle receipt; no repository commit mirrors it."
   },
-  "canonicalMainSha": "b6297fbe4de4681fc92093f3691f693dc2de0dc1"
+  "finalSealValidatedMainSha": "b6297fbe4de4681fc92093f3691f693dc2de0dc1",
+  "pointerSemantics": "Lifecycle SHA fields are immutable stage facts, not live repository pointers. finalSealValidatedMainSha is the exact main SHA that passed post-seal validation at the final-seal stage. The repository's live main advances with later merges and is reported externally (Issue #30 and Prompt returns), never stored here as a moving pointer."
 }

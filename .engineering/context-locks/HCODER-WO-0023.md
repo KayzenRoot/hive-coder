@@ -316,6 +316,33 @@ The already-proven final-seal merge SHA and the final-seal head are recorded dir
 ### Explicit non-authorization
 No runtime, authority, dependency, workflow, test semantics, desktop, release or HCODER-WO-0024 file is touched. No HCODER-WO-0024 branch, Work Order, Context Lock, contract or implementation is created by this delta.
 
+## Context Lock Delta 014 — final pointer-semantics correction and historical-delta classification
+Review verdict on Prompt 17 was CORRECTION_REQUIRED, **source-truth wording only**. This delta authorizes the final pointer-semantics correction and records the historical classification of this Context Lock's own delta bodies. **It grants no authority, no capability, no scope and no behavior change.**
+
+### Corrected defect
+The immutable final-seal SHA `b6297fbe4de4681fc92093f3691f693dc2de0dc1` is a correct lifecycle fact, but several canonical WO-0023 artifacts labelled it, or the closeout SHA, as the `current canonical main`. That is live-pointer wording, and it became false as soon as a later merge advanced `main`. The GEF machine evidence also carried a top-level `canonicalMainSha` field with the same moving-pointer semantics.
+
+### Corrected semantics
+- Live-pointer wording is replaced by immutable lifecycle-stage wording such as **final-seal merge SHA**, **validated `main` at final-seal validation** and **validated `main` at closeout validation**.
+- The GEF machine evidence field `canonicalMainSha` was removed and replaced with the stage-bound `finalSealValidatedMainSha`, together with an explicit `pointerSemantics` note stating that lifecycle SHA fields are immutable stage facts and that the repository's live `main` is reported externally in Issue #30 and Prompt returns rather than stored as a moving pointer.
+- The future merge SHA of this correction is deliberately **not** recorded anywhere. Substituting it would recreate the same self-staling defect.
+- Unchanged: the final-seal, product and closeout merge SHAs, HEDS provenance, hosted-gate receipts, admitted authority, bounded-race law and Issue #68 closure state.
+
+### Historical classification of this Context Lock
+Every delta body in this file from Delta 001 through Delta 013 is a **historical phase record**. Each records the state, decisions and instructions that were current at the lifecycle phase it describes, including wording such as "current canonical `main`" that was true then and is not a live pointer now. They are retained verbatim as history and are **not** current-state instructions or live repository facts. Only this delta and any later delta describe current state.
+
+### Authorized files
+- `docs/project-brain/11-CHECKPOINT.md`
+- `docs/project-brain/adrs/DEC-027-GOVERNED-GIT-STAGING.md`
+- `.engineering/checkpoint-deltas/HCODER-WO-0023.md`
+- `.engineering/evidence/HCODER-CP-0023-CANONICAL-CLOSEOUT.md`
+- `.engineering/evidence/HCODER-WO-0023.md`
+- `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json`
+- this Context Lock (append-only)
+
+### Explicit non-authorization
+No runtime, authority, dependency, workflow, test semantics, desktop, release or HCODER-WO-0024 file is touched. No HCODER-WO-0024 branch, Work Order, Context Lock, contract or implementation is created.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 
