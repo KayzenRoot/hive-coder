@@ -254,3 +254,43 @@ Unresolved severity at review time: **CRITICAL 0 / HIGH 0 / MEDIUM 1**. The revi
 
 ## STOP CONDITION (Delta 006)
 STOP if any technical/runtime/test/workflow/manifest/dependency change becomes necessary, if a correction would change behaviour rather than documentation, if fresh exact-head Governance or Desktop Shell fails, if any HIGH or CRITICAL finding appears, or if any step would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.
+
+---
+
+# Context Lock Delta 007
+
+**Status:** SAME WORK ORDER — ANTI-SELF-STALING GOVERNANCE CORRECTION (documentation only)  
+**Authority granted:** none beyond documentation restructuring of the paths named below  
+**Trigger:** independent HEDS review `5238656172`, verdict `CORRECTION_REQUIRED` on exact head `45b201583878ddfcd774351fc74564eb24f9171e`
+
+## Recorded finding (as returned by the independent review)
+
+Unresolved severity at review time: **CRITICAL 0 / HIGH 0 / MEDIUM 1**. The review accepted `M-25-01` as materially CLOSED, confirmed Delta 006 was documentation-only with no technical, workflow, manifest, lockfile or dependency change, and confirmed `DEC-028` remains PROPOSED / NOT CANONICAL.
+
+- **M-26-01 — self-staling mirrored governance indices.** The Work Order mirrored `Context Lock Deltas: 001–005`, the Implementation Pack mirrored `Bounded corrections: Deltas 001–005`, the Acceptance/Security Map still declared `Authority: ... Deltas 001–004`, and `DEC-028` said `Materialised under ... Deltas 001–005` even though Delta 006 changed that ADR. Several `Immutable review history` headers listed review sets that stopped before the most recent review. Copied terminal delta numbers and exhaustive review lists guarantee another stale pointer whenever the next bounded correction or review occurs. This is not a product defect: it is a source-truth architecture defect in governance prose.
+
+## Anti-self-staling rule (binding for this Work Order from Delta 007 onward)
+
+1. **The Context Lock file is the canonical append-only authority history for this Work Order.** `.engineering/context-locks/HCODER-WO-0024.md` is the single place where the delta sequence lives. No other durable document mirrors a terminal delta number, a terminal delta range, or a "current" delta pointer.
+2. **Mutable current review and gate state is external.** PR #80 and Issue #30 are the canonical pointers for the latest review identifiers, verdicts and hosted gate receipts. Repository artifacts record *historical* reviewed-head facts in explicitly historical sections; they do not present a duplicated list as the complete current review index.
+3. **A new Context Lock delta requires editing only the Context Lock**, unless that delta changes actual law or content in another artifact.
+4. **A new independent review must not require editing any repository document merely to append its identifier.** Historical review identifiers already embedded in historical narratives remain valid and stay as they are.
+5. **No live repository field may encode** `latest review`, `current terminal delta`, `all reviews` or equivalent moving-pointer semantics, outside the two canonical pointers above.
+6. Deltas `001`–`006` and all prior review history are preserved verbatim. Historical findings are not deleted or rewritten because later reviews exist.
+
+## Authorisation
+
+1. This delta authorises **documentation/source-truth correction only**, limited to replacing terminal-delta mirrors and exhaustive live review-index headers with durable pointers, in:
+   - `.engineering/context-locks/HCODER-WO-0024.md` (this Delta 007 append);
+   - `.engineering/work-orders/HCODER-WO-0024.md`;
+   - `.engineering/prebuilt/HCODER-WO-0024-IMPLEMENTATION-PACK.md`;
+   - `.engineering/prebuilt/HCODER-WO-0024-EXECUTOR-BRIEF.md`;
+   - `.engineering/prebuilt/HCODER-WO-0024-ACCEPTANCE-SECURITY-MAP.md`;
+   - `.engineering/evidence/HCODER-WO-0024.md`;
+   - `docs/project-brain/adrs/DEC-028-DISTRIBUTION-VERSION-CHANNEL-CONTRACT.md`;
+   - `docs/project-brain/10-DECISIONS-LEDGER.md`.
+2. **Forbidden:** every TypeScript, Python and Rust source or test file, `.github/workflows/*`, `tauri.conf.json`, Cargo/npm manifests and lockfiles, dependency files, runtime/control-plane code, release files, and any `HCODER-DIST-001B` work. No behaviour, law, gate or authority changes.
+3. The corrected wording must be one that survives both a future delta and a future review without editing more than the Context Lock.
+
+## STOP CONDITION (Delta 007)
+STOP if any technical/runtime/test/workflow/manifest/dependency change becomes necessary, if a proposed wording would still require editing multiple documents whenever a new delta or review occurs, if fresh exact-head Governance or Desktop Shell fails, if any HIGH or CRITICAL finding appears, or if any step would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.

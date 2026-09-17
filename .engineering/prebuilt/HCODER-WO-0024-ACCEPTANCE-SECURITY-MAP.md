@@ -2,7 +2,7 @@
 
 **Status:** IMPLEMENTED IN SOURCE — EXTERNAL PROMOTION EVIDENCE REQUIRED  
 **Issue:** `#77`  
-**Authority:** `HCODER-WO-0024` Context Lock Deltas `001`–`004`
+**Authority:** the active Work Order `HCODER-WO-0024`; its canonical append-only authority history is `.engineering/context-locks/HCODER-WO-0024.md`. Every delta in that file governs this artifact, whether it changes product law, tests or documentation, and no terminal delta number or range is mirrored here.
 
 Required negative proofs are the point of this slice. A row is satisfied only by a
 test that fails if the guard is removed.
@@ -30,16 +30,12 @@ outcome/edge coupling, and the toolchain core bound. In each case the guard was 
 or the defective behaviour restored, the corresponding tests were observed to fail, and
 the guard was restored before commit.
 
-Immutable review history for this Work Order (every one of these heads had green hosted
-gates, which is exactly why each finding is preserved rather than superseded):
-
-| Reviewed head | Review | Verdict |
-|---|---|---|
-| `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` | `5236275753` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `4` / MEDIUM `2` |
-| `97c533de73c9d8f007b6dfc4eaf73804fb1de220` | `5236688350` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `2` / MEDIUM `1` |
-| `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0` | `5237206705` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `1` / MEDIUM `1` |
-| `a3e585823695f889dae92acc7cc5b57a17ba617d` | `5237592683` + addendum `5716617080` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `1` / MEDIUM `1` |
-| `0ec09d7e0d67018d51ee791a2bbca9f39f41c131` | `5238290797` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `0` / MEDIUM `2` (documentation-only) |
+Reviewed-head facts are historical evidence, recorded once in
+`.engineering/evidence/HCODER-WO-0024.md`; they are deliberately **not** duplicated here,
+because a copied list looks like the complete current review index and would need editing
+on every new review. Mutable current review and gate state is external in PR #80 and
+Issue #30. Every reviewed head had green hosted gates, which is exactly why each finding
+is preserved rather than superseded.
 
 | # | Property | Test location | Implementation |
 |---|---|---|---|

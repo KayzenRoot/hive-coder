@@ -5,8 +5,8 @@
 **Issue:** `#77`  
 **Parent epic:** `#72`  
 **PR:** `#80` (Draft, unmerged)  
-**Immutable review history:** see "Immutable prior reviewed-head facts" below  
-**Correction authority:** Context Lock Deltas `001`–`005`
+**Reviewed-head record:** historical only; the table further below records reviewed heads and is not the current review index. Mutable current review and gate state is external in PR #80 and Issue #30.  
+**Correction authority:** `HCODER-WO-0024`; the canonical append-only delta history lives in `.engineering/context-locks/HCODER-WO-0024.md`, and no terminal delta number or range is mirrored here.
 
 ## Correction state 5 (documentation/source-truth only — no technical change)
 
@@ -64,7 +64,7 @@ The prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` passed Governance `
 - That cryptographic verification is implemented. **No scheme is admitted**, so no authenticity-dependent state can be entered, asserted as a current status, used as a persisted event source or claimed as successfully entered — while a bounded *refused* attempt toward `ready` remains recordable, because it asserts a refusal rather than an entry.
 - That `DEC-028` is canonical. It is PROPOSED / NOT CANONICAL.
 - That any platform's native distribution behaviour is proven. Only the contract lane is exercised.
-- That the contracts are proven *by this document*. Exact-head gate and review satisfaction is mutable external state tracked in PR #80 and Issue #30; this bundle records the requirement and the immutable prior reviewed-head facts below. No statement here may be read as a current-head claim.
+- That the contracts are proven *by this document*. Exact-head gate and review satisfaction is mutable external state tracked in PR #80 and Issue #30; this bundle records the requirement and the historical reviewed-head record below. No statement here may be read as a current-head claim.
 
 ## Persisted-history contract (current v1)
 - `ready`, `installing` and `success` are authenticity-dependent. They cannot be entered while no scheme is admitted, so they may not be a status snapshot's current state, may not be a recorded event's source, and may not be a recorded event's destination under a success outcome.
@@ -87,9 +87,9 @@ Durable statement of where this slice stands, written so that it cannot become f
 - **External promotion evidence is required and is not recorded here.** Green hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0`, and a governed expected-head merge must each be produced against the exact head a promotion decision names, and that mutable state is tracked in PR #80 and Issue #30.
 - Native Windows/Linux/macOS *distribution* behaviour, signing, notarization and release publication remain **UNPROVEN** and unauthorised; only the contract lane is exercised.
 
-## Immutable prior reviewed-head facts
+## Reviewed-head record (historical)
 
-Each reviewed head, its review, and that review's verdict. These are history and do not change:
+Each row below is an immutable historical fact: a head that was reviewed, the review identifier, and that review's verdict. **This table is a historical record, not the current review index** — reviews that occur after the last documentation reconciliation are recorded in PR #80 and Issue #30 and are deliberately not mirrored here, so recording one never requires editing this document.
 
 | Reviewed head | Review | Verdict |
 |---|---|---|
@@ -98,8 +98,9 @@ Each reviewed head, its review, and that review's verdict. These are history and
 | `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0` | `5237206705` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `1` / MEDIUM `1` |
 | `a3e585823695f889dae92acc7cc5b57a17ba617d` | `5237592683` + addendum `5716617080` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `1` / MEDIUM `1` |
 | `0ec09d7e0d67018d51ee791a2bbca9f39f41c131` | `5238290797` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `0` / MEDIUM `2` |
+| `45b201583878ddfcd774351fc74564eb24f9171e` | `5238656172` | CORRECTION_REQUIRED — CRITICAL `0` / HIGH `0` / MEDIUM `1` |
 
-Hosted gates were green on every one of those heads. A green gate is not a property proof, which is why every finding above is preserved rather than superseded. The narrative sections "Correction state N" record what was corrected and why; the table above is the authoritative history.
+Hosted gates were green on every one of those heads. A green gate is not a property proof, which is why every finding is preserved rather than superseded. The "Correction state N" narrative sections record what was corrected and why.
 
 ## Promotion evidence template
 For each exact technical head record:

@@ -4,7 +4,7 @@
 **Promotion evidence:** hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0` and a governed expected-head merge are required against the exact promotion head and are tracked in PR #80 and Issue #30  
 **Base:** `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
 **Issue:** `#77`  
-**Immutable review history:** `5236275753` (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`; `5237592683` + addendum `5716617080` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `a3e585823695f889dae92acc7cc5b57a17ba617d`; `5238290797` (CRITICAL `0` / HIGH `0` / MEDIUM `2`, documentation-only) at `0ec09d7e0d67018d51ee791a2bbca9f39f41c131`
+**Prior reviewed-head facts:** historical only; the reviewed-head record lives in `.engineering/evidence/HCODER-WO-0024.md` and the correction narratives in the Work Order. Mutable current review and gate state is external in PR #80 and Issue #30, so this brief does not mirror the current review index.
 
 ## Start here
 Read, in order:

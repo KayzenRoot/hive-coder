@@ -6,12 +6,12 @@
 **Task class:** T3  
 **Context radius:** C4  
 **Canonical base:** `HCODER-CP-0023` / `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
-**Decision:** `DEC-028` PROPOSED / NOT CANONICAL (version/channel source-of-truth law; an ADR exists at `docs/project-brain/adrs/DEC-028-DISTRIBUTION-VERSION-CHANNEL-CONTRACT.md` with a matching ledger entry, materialised under Context Lock Delta 001)  
+**Decision:** `DEC-028` PROPOSED / NOT CANONICAL (version/channel source-of-truth law; an ADR exists at `docs/project-brain/adrs/DEC-028-DISTRIBUTION-VERSION-CHANNEL-CONTRACT.md` with a matching ledger entry)  
 **Issue:** `#77`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **PR:** `#80` (Draft, unmerged)  
-**Review history (immutable):** `5236275753` (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`; `5237592683` + addendum `5716617080` (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at `a3e585823695f889dae92acc7cc5b57a17ba617d`; `5238290797` (CRITICAL `0` / HIGH `0` / MEDIUM `2`, documentation-only) at `0ec09d7e0d67018d51ee791a2bbca9f39f41c131`  
-**Context Lock Deltas:** `001`–`005` (bounded corrections; `005` is documentation-only)
+**Prior reviewed-head facts:** historical, recorded in the correction records below; this header is not the current review index. Mutable current review and gate state is external in PR #80 and Issue #30.  
+**Canonical authority history:** `.engineering/context-locks/HCODER-WO-0024.md` — the append-only Context Lock delta sequence for this Work Order; no terminal delta number or range is mirrored in this document.
 
 ## Objective
 Establish the first governed slice of distribution: the canonical version/channel model and a Hive-owned `UpdateService` boundary, so that later distribution work is completion-oriented rather than architecture discovery.

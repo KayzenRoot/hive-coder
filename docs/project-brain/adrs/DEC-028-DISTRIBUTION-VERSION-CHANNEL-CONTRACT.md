@@ -5,8 +5,8 @@
 **Issue:** `#77`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **Canonical base:** `HCODER-CP-0023` / `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
-**Reviews of this proposal (immutable prior reviewed-head facts):** `5236275753` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at correction head `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at correction head `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`; `5237592683` with addendum `5716617080` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at correction head `a3e585823695f889dae92acc7cc5b57a17ba617d`; `5238290797` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `0` / MEDIUM `2`, documentation-only) at correction head `0ec09d7e0d67018d51ee791a2bbca9f39f41c131`  
-**Materialised under:** `HCODER-WO-0024` Context Lock Deltas `001`–`005` (proposal, then bounded corrections)
+**Reviews of this proposal:** prior reviewed-head facts are historical and recorded once in the review-history section below and in `.engineering/evidence/HCODER-WO-0024.md`; they are not mirrored here as a current index. Mutable current review and gate state is external in PR #80 and Issue #30.  
+**Materialised under:** `HCODER-WO-0024` — the canonical append-only delta history for this Work Order lives in `.engineering/context-locks/HCODER-WO-0024.md`, and no terminal delta number or range is mirrored here.
 
 > **State record.** This ADR is a **proposal**. It records a durable law that `HCODER-WO-0024` is establishing and has no canonical standing. It grants no authority, admits no updater, and is not evidence that Hive Coder is installable, signed, auto-updatable or production-distributable. It becomes canonical only through the promotion gate below, and only with an independent review that reports unresolved HIGH/CRITICAL `0/0`.
 
@@ -76,7 +76,7 @@ This ADR does not approve, and does not create authority for: a Tauri updater pl
 | Independent review | An independent HEDS review of that exact head reports unresolved HIGH/CRITICAL `0/0` |
 | Governed merge | The Work Order merges with expected-head protection |
 
-Mutable evidence for the last three conditions lives in PR #80 and Issue #30, where it can advance without falsifying this document; this ADR records the requirement and the immutable prior reviewed-head facts below. Until every condition is met, no promotion claim may be made for this decision, for `HCODER-WO-0024`, or for Hive Coder's distribution or update capability.
+Mutable evidence for the last three conditions lives in PR #80 and Issue #30, where it can advance without falsifying this document; this ADR records the requirement and the historical reviewed-head record below. Until every condition is met, no promotion claim may be made for this decision, for `HCODER-WO-0024`, or for Hive Coder's distribution or update capability.
 
 ## Recorded review history
 
