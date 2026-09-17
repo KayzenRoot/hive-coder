@@ -76,6 +76,37 @@ export type TransitionVerdict =
   | { readonly ok: false; readonly reason: Exclude<TransitionReason, "legal_transition"> };
 
 /**
+ * Bounded vocabulary of outcomes a *persisted* history entry may carry.
+ *
+ * This is deliberately narrower than `TransitionReason`. `illegal_transition` and
+ * `unknown_state` describe a live evaluation of raw input, and a persisted
+ * `UpdateEvent` cannot represent that situation: its `from` and `to` are already
+ * validated state names and its edge must be a declared legal transition.
+ * Persisting attempted raw input requires a distinct, separately reviewed event
+ * type rather than overloading this one.
+ */
+export const PERSISTED_EVENT_OUTCOMES = [
+  "legal_transition",
+  "authenticity_proof_required",
+  "malformed_authenticity_proof",
+] as const;
+
+export type PersistedEventOutcome = (typeof PERSISTED_EVENT_OUTCOMES)[number];
+
+export function isPersistedEventOutcome(value: unknown): value is PersistedEventOutcome {
+  return typeof value === "string" && (PERSISTED_EVENT_OUTCOMES as readonly string[]).includes(value);
+}
+
+/**
+ * Bounded refusal outcomes admissible on a reachable proof-gated attempt, i.e. on
+ * `verifying -> ready`: an attempt was made and refused, and the refusal reason is
+ * one the gate itself can produce.
+ */
+export const PROOF_REFUSAL_OUTCOMES = ["authenticity_proof_required", "malformed_authenticity_proof"] as const;
+
+export type ProofRefusalOutcome = (typeof PROOF_REFUSAL_OUTCOMES)[number];
+
+/**
  * States whose claim depends on a successful traversal of the proof-gated install
  * path: `ready` is install-ready, `installing` is downstream of it, and `success`
  * is reachable only from `installing`.
@@ -343,7 +374,8 @@ export const UPDATE_EVENT_KEYS = ["from", "to", "reason"] as const;
 export interface UpdateEvent {
   readonly from: UpdateState;
   readonly to: UpdateState;
-  readonly reason: TransitionReason;
+  /** Outcome of the recorded attempt; a closed semantic vocabulary, not `TransitionReason`. */
+  readonly reason: PersistedEventOutcome;
 }
 
 export interface UpdateStatus {
@@ -434,6 +466,59 @@ function arrayElement(array: readonly unknown[], index: number): { readonly pres
   return { present: true, value: descriptor.value };
 }
 
+export type PersistedEventRejection =
+  | "unknown_state"
+  | "unreachable_source_state"
+  | "undeclared_edge"
+  | "inadmissible_outcome";
+
+export type PersistedEventVerdict =
+  | { readonly ok: true; readonly event: UpdateEvent }
+  | { readonly ok: false; readonly reason: PersistedEventRejection };
+
+/**
+ * Persisted-event law for current contract v1.
+ *
+ * A recorded history entry is evidence, so it must be an assertion this contract
+ * could actually have produced. Four rules, in order:
+ *
+ * 1. `from` and `to` must be declared states.
+ * 2. `from` must not be an authenticity-dependent state. Entering one requires an
+ *    accepted authenticity proof, and no scheme is admitted in this slice, so
+ *    such a state cannot have been entered and cannot be the source of a recorded
+ *    event — in either direction, and for any reason. (Admitting a scheme would
+ *    change that, and therefore requires a governed change to this law.)
+ * 3. `from -> to` must be a declared legal edge.
+ * 4. The outcome must be possible for that edge. On an ordinary reachable edge
+ *    whose destination is not authenticity-dependent, the only possible outcome
+ *    is `legal_transition`. On the one reachable proof-gated attempt,
+ *    `verifying -> ready`, `legal_transition` is impossible while no scheme is
+ *    admitted and only the bounded proof-refusal outcomes may be recorded.
+ *
+ * Because `from` may not be authenticity-dependent, `verifying -> ready` is the
+ * only edge that can reach rule 4 in the gated branch: `ready -> installing` and
+ * `installing -> success` both start from a state rule 2 already rejects.
+ */
+export function evaluatePersistedEvent(from: unknown, to: unknown, reason: unknown): PersistedEventVerdict {
+  if (!isUpdateState(from) || !isUpdateState(to)) {
+    return { ok: false, reason: "unknown_state" };
+  }
+  if (isAuthenticityDependentState(from)) {
+    return { ok: false, reason: "unreachable_source_state" };
+  }
+  if (!LEGAL_TRANSITIONS[from].includes(to)) {
+    return { ok: false, reason: "undeclared_edge" };
+  }
+  if (isAuthenticityDependentState(to)) {
+    if (!isPersistedEventOutcome(reason) || reason === "legal_transition") {
+      return { ok: false, reason: "inadmissible_outcome" };
+    }
+  } else if (reason !== "legal_transition") {
+    return { ok: false, reason: "inadmissible_outcome" };
+  }
+  return { ok: true, event: { from, to, reason } };
+}
+
 /**
  * Validate a status snapshot into a canonical object.
  *
@@ -442,9 +527,13 @@ function arrayElement(array: readonly unknown[], index: number): { readonly pres
  * refused without any getter being invoked. Every field is then bounded and
  * cross-checked: unknown keys, unknown states or channels, malformed versions, a
  * version that does not belong to the declared channel, an incoherent candidate,
- * a proof outside an authenticity-dependent state, unknown error codes or event
- * shapes, oversized event lists, and an assertion of an authenticity-dependent
- * state all fail closed.
+ * a proof outside an authenticity-dependent state, unknown error codes, and
+ * oversized event lists all fail closed.
+ *
+ * Every recorded event is validated by `evaluatePersistedEvent`, so history must
+ * be an assertion this contract could actually have produced: no event may assert
+ * an authenticity-dependent source state, and no outcome may be attached to an
+ * edge that could not have produced it.
  *
  * The returned status is **reconstructed** from validated fields. The caller's
  * object is never aliased, so an unvalidated property cannot survive into
@@ -531,22 +620,16 @@ export function evaluateStatus(input: unknown): StatusVerdict {
     const eventRecord = asPlainRecord(element.value);
     if (eventRecord === null) return { ok: false, reason: "invalid_status" };
     if (!hasOnlyKeys(eventRecord, UPDATE_EVENT_KEYS)) return { ok: false, reason: "invalid_status" };
-    const eventFrom = eventRecord.data("from");
-    const eventTo = eventRecord.data("to");
-    if (!isUpdateState(eventFrom) || !isUpdateState(eventTo)) return { ok: false, reason: "invalid_status" };
-    const eventReason = eventRecord.data("reason");
-    if (!isTransitionReason(eventReason)) return { ok: false, reason: "invalid_status" };
-    // Structural legality of the edge.
-    if (!LEGAL_TRANSITIONS[eventFrom].includes(eventTo)) return { ok: false, reason: "invalid_status" };
-    // Recorded history must be consistent with current policy: a history entry
-    // may not report a successful traversal of the proof-gated install path,
-    // because current v1 carries no gate evidence a validator could verify and no
-    // scheme is admitted. Refusals on those same edges stay recordable, as do all
-    // ordinary pre-gate transitions, so history is not globally banned.
-    if (eventReason === "legal_transition" && isAuthenticityDependentState(eventTo)) {
-      return { ok: false, reason: "invalid_status" };
-    }
-    events.push({ from: eventFrom, to: eventTo, reason: eventReason });
+    // Every recorded entry is validated by the persisted-event law: declared
+    // states, a reachable source, a declared legal edge, and an outcome that edge
+    // could actually have produced. See `evaluatePersistedEvent`.
+    const eventVerdict = evaluatePersistedEvent(
+      eventRecord.data("from"),
+      eventRecord.data("to"),
+      eventRecord.data("reason"),
+    );
+    if (!eventVerdict.ok) return { ok: false, reason: "invalid_status" };
+    events.push(eventVerdict.event);
   }
 
   return {

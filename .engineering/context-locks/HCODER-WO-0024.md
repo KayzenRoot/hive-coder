@@ -116,3 +116,35 @@ Unresolved severity at review time: **CRITICAL 0 / HIGH 2 / MEDIUM 1**. The revi
 
 ## STOP CONDITION (Delta 002)
 STOP if closing any of the three findings would require updater, network, download, install, restart, signing or release authority, a new distribution dependency, a weakened HIGH_ASSURANCE gate, a change to the declared version law beyond the bounded profile (STOP for architecture review instead of silently diverging), historical migration semantics beyond v1 (STOP for an explicit versioned design), or any step that would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.
+
+---
+
+# Context Lock Delta 003
+
+**Status:** SAME WORK ORDER — THIRD CORRECTION AUTHORISED  
+**Authority granted:** none beyond the pre-existing allowed-file set; no new file path is required  
+**Trigger:** independent HEDS review `5237206705`, verdict `CORRECTION_REQUIRED` on exact head `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`
+
+## Recorded findings (as returned by the independent review)
+
+Unresolved severity at review time: **CRITICAL 0 / HIGH 1 / MEDIUM 1**. The review accepted H-21-02 (cross-language bounded SemVer parity) and M-21-03 (plain own-data record hardening) as materially closed, confirmed that direct `ready`/`installing`/`success` status injection is blocked, and found no authority or dependency expansion.
+
+- **H-22-01 (residual H-21-01) — current-v1 event history can still assert an impossible authenticity-dependent source state.** The event validator rejects `legal_transition` only when the **destination** is authenticity-dependent. It still accepts events whose **source** is authenticity-dependent — `ready -> idle` and `installing -> failure` were explicitly asserted as valid history in the test suite. Such an event asserts that the source state previously existed, which in current v1 implies a successful traversal of the proof-gated path, contradicting the same contract law that the whole install path is unreachable.
+- **M-22-02 — event reason is not semantically coupled to the edge.** The validator requires a legal structural edge and a reason from the global `TransitionReason` vocabulary, but does not prove that the outcome is possible for that edge, so an ordinary legal edge can be recorded with `illegal_transition`, `unknown_state` or `authenticity_proof_required` even when `evaluateTransition()` could never produce that outcome for the same edge.
+
+## Required corrections recorded by the review
+
+1. Under the current v1 / no-scheme policy, **no recorded event may have an authenticity-dependent source state**; a persisted event whose `from` is `ready`, `installing` or `success` fails closed regardless of destination or reason.
+2. A refusal attempt **into** an authenticity-dependent destination remains recordable only from a reachable source and only with the matching refusal reason. With the present graph and an empty allowlist the only such attempt is `verifying -> ready`.
+3. Persisted event outcomes become a **closed semantic contract**: ordinary reachable legal edges record `legal_transition`; the reachable proof-gated attempt records the bounded refusal outcomes. A distinct versioned event type is required if raw attempted input ever needs to be persisted — `UpdateEvent` must not be overloaded for that.
+4. No migration semantics may be invented. If records from another contract version must be supported, STOP and request a separately versioned migration contract.
+
+## Authorisation
+
+1. This delta authorises correction of exactly `H-22-01` and `M-22-02`, plus directly related tests, evidence and documentation, inside the existing allowed-file set. **No new authority, no new dependency, no checkpoint mutation and no DEC promotion** are authorised, and no new file path is needed.
+2. Deltas `001` and `002` and all earlier review history are preserved verbatim as historical evidence. No earlier finding, review record or defective-head record may be erased, softened or rewritten.
+3. The correction must strengthen the contract. No test may be weakened, skipped, deleted or rewritten to accept the reviewed defective behaviour, and no HIGH_ASSURANCE gate or security rule may be relaxed. Removing the two Prompt-22 positive expectations that the review identified as wrong (`ready -> idle`, `installing -> failure`) is required by the review and is a correction of an over-permissive expectation, not a weakening.
+4. The PR remains **Draft and unmerged**. No promotion claim, no `DEC-028` canonicalisation and no `HCODER-DIST-001B` work is authorised by this delta.
+
+## STOP CONDITION (Delta 003)
+In addition to the two STOP conditions above: STOP if closing either finding would require supporting historical records from another contract version (STOP for a separately versioned migration design), if any accepted Prompt-22 correction regresses, or if any step would mark PR #80 Ready, merge it, canonicalise `DEC-028` or begin `HCODER-DIST-001B`.

@@ -6,20 +6,25 @@ import {
   LEGAL_TRANSITIONS,
   MAX_UPDATE_ERROR_DETAIL_CHARS,
   MAX_UPDATE_STATUS_EVENTS,
+  PERSISTED_EVENT_OUTCOMES,
+  PROOF_REFUSAL_OUTCOMES,
   TRANSITION_REASONS,
   UPDATE_ERROR_CODES,
   UPDATE_STATES,
   UPDATE_STATE_CONTRACT,
   UPDATE_STATUS_KEYS,
   evaluateAuthenticityProof,
+  evaluatePersistedEvent,
   evaluateStatus,
   evaluateTransition,
   evaluateUpdateError,
   isAuthenticityDependentState,
   isInstallReadyReachable,
+  isPersistedEventOutcome,
   isTransitionReason,
   isUpdateState,
   requiresAuthenticityProof,
+  type PersistedEventOutcome,
   type UpdateState,
 } from "./updateState";
 
@@ -470,42 +475,82 @@ describe("update state contract", () => {
       expect(evaluateAuthenticityProof(proof)).toEqual({ ok: false, reason: "no_admitted_scheme" });
     });
 
-    it("refuses proof-gated successful history while keeping pre-gate history legal", () => {
-      // A history entry may not report a successful traversal of the proof-gated
-      // install path in v1: the event schema carries no gate evidence that the
-      // current validator could verify, and no scheme is admitted.
-      const gatedSuccesses = [
-        { from: "verifying", to: "ready", reason: "legal_transition" },
-        { from: "ready", to: "installing", reason: "legal_transition" },
-        { from: "installing", to: "success", reason: "legal_transition" },
+    it("applies the persisted-event law to every recorded entry", () => {
+      // Outcomes that this contract could actually have produced.
+      const accepted: ReadonlyArray<readonly [UpdateState, UpdateState, PersistedEventOutcome]> = [
+        ["verifying", "ready", "authenticity_proof_required"],
+        ["verifying", "ready", "malformed_authenticity_proof"],
+        ["idle", "checking", "legal_transition"],
+        ["checking", "available", "legal_transition"],
+        ["verifying", "failure", "legal_transition"],
       ];
-      for (const event of gatedSuccesses) {
+      for (const [from, to, reason] of accepted) {
+        expect(
+          evaluateStatus({ ...status(), events: [{ from, to, reason }] }),
+          `${from}->${to}/${reason}`,
+        ).toMatchObject({ ok: true });
+      }
+
+      // A recorded entry may not assert an authenticity-dependent source state:
+      // such a state cannot have been entered while no scheme is admitted.
+      const unreachableSources = [
+        { from: "ready", to: "idle", reason: "legal_transition" },
+        { from: "ready", to: "failure", reason: "legal_transition" },
+        { from: "installing", to: "failure", reason: "legal_transition" },
+        { from: "success", to: "idle", reason: "legal_transition" },
+      ];
+      for (const event of unreachableSources) {
         expect(evaluateStatus({ ...status(), events: [event] }), JSON.stringify(event)).toEqual(INVALID);
       }
 
-      // Refusals on those same edges stay recordable: a recorded refusal is not
-      // a claim that the gated transition succeeded.
-      const recordedRefusals = [
-        { from: "verifying", to: "ready", reason: "authenticity_proof_required" },
-        { from: "verifying", to: "ready", reason: "malformed_authenticity_proof" },
-        { from: "ready", to: "installing", reason: "authenticity_proof_required" },
-        { from: "installing", to: "success", reason: "authenticity_proof_required" },
-      ];
-      for (const event of recordedRefusals) {
-        expect(evaluateStatus({ ...status(), events: [event] }), JSON.stringify(event)).toMatchObject({ ok: true });
+      // A successful traversal of the proof-gated path cannot be recorded either,
+      // in any form, while no scheme is admitted.
+      expect(
+        evaluateStatus({ ...status(), events: [{ from: "verifying", to: "ready", reason: "legal_transition" }] }),
+      ).toEqual(INVALID);
+
+      // Refusal outcomes are edge-specific: they are admissible only on the one
+      // reachable proof-gated attempt, never on an ordinary edge.
+      for (const event of [
+        { from: "idle", to: "checking", reason: "authenticity_proof_required" },
+        { from: "idle", to: "checking", reason: "malformed_authenticity_proof" },
+        { from: "checking", to: "available", reason: "authenticity_proof_required" },
+      ]) {
+        expect(evaluateStatus({ ...status(), events: [event] }), JSON.stringify(event)).toEqual(INVALID);
       }
 
-      // Failures anywhere on the path, and ordinary pre-gate progress, remain
-      // valid history — verification is not globally banned.
+      // `illegal_transition` and `unknown_state` cannot ride on a validated legal
+      // edge: the event shape already fixes both states and the declared edge.
+      for (const event of [
+        { from: "idle", to: "checking", reason: "illegal_transition" },
+        { from: "idle", to: "checking", reason: "unknown_state" },
+      ]) {
+        expect(evaluateStatus({ ...status(), events: [event] }), JSON.stringify(event)).toEqual(INVALID);
+      }
+
+      // Even with the matching refusal reason, an authenticity-dependent source
+      // state stays impossible.
+      for (const event of [
+        { from: "ready", to: "installing", reason: "authenticity_proof_required" },
+        { from: "ready", to: "idle", reason: "authenticity_proof_required" },
+        { from: "installing", to: "success", reason: "malformed_authenticity_proof" },
+        { from: "installing", to: "failure", reason: "authenticity_proof_required" },
+        { from: "success", to: "idle", reason: "legal_transition" },
+      ]) {
+        expect(evaluateStatus({ ...status(), events: [event] }), JSON.stringify(event)).toEqual(INVALID);
+      }
+    });
+
+    it("keeps ordinary reachable history valid, including pre-install failure", () => {
       const legalHistory = [
         { from: "idle", to: "checking", reason: "legal_transition" },
         { from: "checking", to: "available", reason: "legal_transition" },
         { from: "available", to: "downloading", reason: "legal_transition" },
         { from: "downloading", to: "verifying", reason: "legal_transition" },
         { from: "verifying", to: "failure", reason: "legal_transition" },
-        { from: "ready", to: "idle", reason: "legal_transition" },
-        { from: "installing", to: "failure", reason: "legal_transition" },
         { from: "checking", to: "unavailable", reason: "legal_transition" },
+        { from: "downloading", to: "failure", reason: "legal_transition" },
+        { from: "checking", to: "idle", reason: "legal_transition" },
       ];
       for (const event of legalHistory) {
         expect(evaluateStatus({ ...status(), events: [event] }), JSON.stringify(event)).toMatchObject({ ok: true });
@@ -523,6 +568,111 @@ describe("update state contract", () => {
           ],
         }),
       ).toMatchObject({ ok: true });
+    });
+  });
+
+  describe("persisted event law", () => {
+    it("rejects unreachable source states with a distinct reason", () => {
+      for (const state of AUTHENTICITY_DEPENDENT_STATES) {
+        for (const to of UPDATE_STATES) {
+          for (const reason of [...PERSISTED_EVENT_OUTCOMES, "illegal_transition", "invented"]) {
+            const verdict = evaluatePersistedEvent(state, to, reason);
+            expect(verdict, `${state}->${to}/${reason}`).toEqual({ ok: false, reason: "unreachable_source_state" });
+          }
+        }
+      }
+    });
+
+    it("rejects undeclared edges, unknown states and inadmissible outcomes", () => {
+      expect(evaluatePersistedEvent("idle", "ready", "legal_transition")).toEqual({
+        ok: false,
+        reason: "undeclared_edge",
+      });
+      expect(evaluatePersistedEvent("checking", "downloading", "legal_transition")).toEqual({
+        ok: false,
+        reason: "undeclared_edge",
+      });
+      expect(evaluatePersistedEvent("bogus", "checking", "legal_transition")).toEqual({
+        ok: false,
+        reason: "unknown_state",
+      });
+      expect(evaluatePersistedEvent("idle", "bogus", "legal_transition")).toEqual({
+        ok: false,
+        reason: "unknown_state",
+      });
+      expect(evaluatePersistedEvent("idle", "checking", "illegal_transition")).toEqual({
+        ok: false,
+        reason: "inadmissible_outcome",
+      });
+      expect(evaluatePersistedEvent("idle", "checking", "unknown_state")).toEqual({
+        ok: false,
+        reason: "inadmissible_outcome",
+      });
+      expect(evaluatePersistedEvent("verifying", "ready", "legal_transition")).toEqual({
+        ok: false,
+        reason: "inadmissible_outcome",
+      });
+      expect(evaluatePersistedEvent("verifying", "ready", "illegal_transition")).toEqual({
+        ok: false,
+        reason: "inadmissible_outcome",
+      });
+      expect(evaluatePersistedEvent("idle", "checking", "")).toEqual({
+        ok: false,
+        reason: "inadmissible_outcome",
+      });
+    });
+
+    it("returns a reconstructed event for an admissible recording", () => {
+      const verdict = evaluatePersistedEvent("verifying", "ready", "authenticity_proof_required");
+      expect(verdict).toEqual({
+        ok: true,
+        event: { from: "verifying", to: "ready", reason: "authenticity_proof_required" },
+      });
+      expect(evaluatePersistedEvent("idle", "checking", "legal_transition")).toEqual({
+        ok: true,
+        event: { from: "idle", to: "checking", reason: "legal_transition" },
+      });
+    });
+
+    it("keeps the persisted outcome vocabulary closed and coupled to the refusal set", () => {
+      // `TransitionReason` is the live-evaluation vocabulary; the persisted
+      // vocabulary is strictly narrower, and its non-success members are exactly
+      // the bounded proof refusals.
+      expect(PERSISTED_EVENT_OUTCOMES.filter((outcome) => outcome !== "legal_transition")).toEqual([
+        ...PROOF_REFUSAL_OUTCOMES,
+      ]);
+      expect(TRANSITION_REASONS).toContain("illegal_transition");
+      expect(TRANSITION_REASONS).toContain("unknown_state");
+      expect(PERSISTED_EVENT_OUTCOMES).not.toContain("illegal_transition");
+      expect(PERSISTED_EVENT_OUTCOMES).not.toContain("unknown_state");
+      for (const outcome of PERSISTED_EVENT_OUTCOMES) {
+        expect(isPersistedEventOutcome(outcome), outcome).toBe(true);
+        expect(PERSISTED_EVENT_OUTCOMES.length).toBeLessThan(TRANSITION_REASONS.length);
+      }
+      for (const value of ["", "legal", "illegal_transition", "unknown_state", "invented", null, 3, {}]) {
+        expect(isPersistedEventOutcome(value), String(value)).toBe(false);
+      }
+    });
+
+    it("admits only the reachable proof-gated attempt into an authenticity-dependent state", () => {
+      // Every legal edge whose destination is authenticity-dependent, checked
+      // against the reachable-source rule.
+      const gatedEdges: Array<[UpdateState, UpdateState]> = [
+        ["verifying", "ready"],
+        ["ready", "installing"],
+        ["installing", "success"],
+      ];
+      for (const [from, to] of gatedEdges) {
+        const refusal = evaluatePersistedEvent(from, to, "authenticity_proof_required");
+        if (from === "verifying") {
+          expect(refusal, `${from}->${to}`).toEqual({
+            ok: true,
+            event: { from, to, reason: "authenticity_proof_required" },
+          });
+        } else {
+          expect(refusal, `${from}->${to}`).toEqual({ ok: false, reason: "unreachable_source_state" });
+        }
+      }
     });
   });
 

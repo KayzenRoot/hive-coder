@@ -1,6 +1,6 @@
 # HCODER-WO-0024 — Acceptance & Security Map
 
-**Status:** IMPLEMENTED / SECOND CORRECTION REVIEW PENDING — rows marked `MATERIALISED` were **withdrawn to PENDING** by reviews `5236275753` (CRITICAL `0` / HIGH `4` / MEDIUM `2`) and `5236688350` (CRITICAL `0` / HIGH `2` / MEDIUM `1`)  
+**Status:** IMPLEMENTED / THIRD CORRECTION REVIEW PENDING — rows marked `MATERIALISED` were **withdrawn to PENDING** by reviews `5236275753` (CRITICAL `0` / HIGH `4` / MEDIUM `2`), `5236688350` (CRITICAL `0` / HIGH `2` / MEDIUM `1`) and `5237206705` (CRITICAL `0` / HIGH `1` / MEDIUM `1`)  
 **Issue:** `#77`
 
 Required negative proofs are the point of this slice. A row is satisfied only by a
@@ -8,8 +8,9 @@ test that fails if the guard is removed.
 
 A row may be marked `MATERIALISED` only when a test at the *named* exact head fails
 if the guard is removed, and that head has passed its gates. Green hosted gates on
-the reviewed heads `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` and
-`97c533de73c9d8f007b6dfc4eaf73804fb1de220` did **not** mean these properties held,
+the reviewed heads `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`,
+`97c533de73c9d8f007b6dfc4eaf73804fb1de220` and
+`92b6b80fb599b3e2f810b1591b63a68e6b11ddf0` did **not** mean these properties held,
 so the rows below were returned to `PENDING`.
 
 | # | Property | Test location | State |
@@ -78,13 +79,26 @@ so the rows below were returned to `PENDING`.
 | I1 | The gated edge set is exactly the set of legal edges whose destination is authenticity-dependent, so no entering edge is left ungated (`H-21-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
 | I2 | No transition anywhere in the state vocabulary reaches `ready`, `installing` or `success`, with or without a well-formed but unadmitted proof (`H-21-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
 | I3 | A direct `success` status snapshot is refused, with and without proof material (`H-21-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
-| I4 | A history entry reporting a `legal_transition` into an authenticity-dependent state is refused, while refusal events on those edges and ordinary pre-gate history remain accepted (`H-21-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| I4 | A history entry reporting a `legal_transition` into an authenticity-dependent state is refused, while refusal attempts on `verifying -> ready` and ordinary reachable pre-gate history remain accepted (`H-21-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
 | I5 | The product TypeScript parser accepts core identifiers far above `2^53` with no precision loss, and orders them exactly (`H-21-02`) | `version.test.ts` | PENDING EXACT-HEAD PROOF |
 | I6 | Both languages accept and reject exactly the shared parity vector set, including the 128-character boundary (`H-21-02`) | `version.test.ts`, `tests/desktop/test_version_drift.py`, `apps/desktop/src/contracts/semverParityVectors.json` | PENDING EXACT-HEAD PROOF |
 | I7 | The Python gate refuses a trailing LF/CR/CRLF and Unicode line separators, so it can never report `LOCKED` for a version the product parser rejects (`H-21-02`) | `tests/desktop/test_version_drift.py` | PENDING EXACT-HEAD PROOF |
 | I8 | Python refuses Unicode decimal digits inside numeric identifiers, matching the ASCII-only JavaScript parser (`H-21-02`) | `tests/desktop/test_version_drift.py` | PENDING EXACT-HEAD PROOF |
 | I9 | Inherited fields, class instances, custom prototypes, accessor-backed records, non-enumerable fields, symbol keys, and sparse or accessor-backed event arrays are refused at every level (`M-21-03`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
 | I10 | Validation invokes zero getters, proven by an invocation counter, for status, error, event and proof records (`M-21-03`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+
+## Additional rows carried by Context Lock Delta 003
+
+| # | Property | Test location | State |
+|---|---|---|---|
+| J1 | A persisted event whose source is an authenticity-dependent state is refused for every destination and every reason, including the matching refusal reasons (`H-22-01`) | `updateState.test.ts` (`evaluatePersistedEvent`, `evaluateStatus`) | PENDING EXACT-HEAD PROOF |
+| J2 | `ready -> idle`, `ready -> failure`, `installing -> failure` and `success -> idle` recorded as `legal_transition` are all refused (`H-22-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| J3 | The only reachable proof-gated attempt, `verifying -> ready`, accepts exactly the bounded refusal outcomes and refuses `legal_transition` (`M-22-02`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| J4 | An ordinary reachable legal edge accepts only `legal_transition` and refuses `authenticity_proof_required`, `malformed_authenticity_proof`, `illegal_transition` and `unknown_state` (`M-22-02`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| J5 | `UpdateEvent.reason` uses the closed persisted vocabulary, which is strictly narrower than `TransitionReason` and whose non-success members are exactly the bounded refusal outcomes (`M-22-02`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| J6 | `evaluatePersistedEvent` reports distinct rejection reasons (`unknown_state`, `unreachable_source_state`, `undeclared_edge`, `inadmissible_outcome`) and is the single law reused by `evaluateStatus` (`M-22-02`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| J7 | Non-vacuity: removing the unreachable-source guard or the outcome-coupling guard makes the new tests fail (verified by mutation during the correction) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| J8 | No migration or legacy-event semantics exist; a record from another contract version is out of scope for v1 and would STOP for a versioned design | Work Order / DEC-028 (contract statement) | PENDING EXACT-HEAD PROOF |
 
 ## Security invariants this slice must not weaken
 The existing `tools/desktop/security_gate.py` assertions — zero frontend invokes

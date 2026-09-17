@@ -1,6 +1,6 @@
 # HCODER-WO-0024 — Distribution Contracts, Version Model and UpdateService Boundary
 
-**Status:** IMPLEMENTED / SECOND CORRECTION REVIEW PENDING  
+**Status:** IMPLEMENTED / THIRD CORRECTION REVIEW PENDING  
 **Risk:** HIGH_ASSURANCE (supply-chain-adjacent)  
 **Task class:** T3  
 **Context radius:** C4  
@@ -9,8 +9,8 @@
 **Issue:** `#77`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **PR:** `#80` (Draft, unmerged)  
-**Review history:** `5236275753` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at correction head `97c533de73c9d8f007b6dfc4eaf73804fb1de220`  
-**Context Lock Deltas:** `001` (first correction), `002` (second correction)
+**Review history:** `5236275753` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at correction head `97c533de73c9d8f007b6dfc4eaf73804fb1de220`; `5237206705` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `1` / MEDIUM `1`) at correction head `92b6b80fb599b3e2f810b1591b63a68e6b11ddf0`  
+**Context Lock Deltas:** `001` (first correction), `002` (second correction), `003` (third correction)
 
 ## Objective
 Establish the first governed slice of distribution: the canonical version/channel model and a Hive-owned `UpdateService` boundary, so that later distribution work is completion-oriented rather than architecture discovery.
@@ -44,11 +44,23 @@ No `bundle.active=true`; no updater plugin; no updater endpoint; no HTTP client 
 4. Signing material must never appear in repository, logs, prompts or runtime state.
 5. Version, channel and update-state parsing fails closed on malformed or unknown input.
 6. No silent downgrade and no implicit cross-channel promotion or demotion.
-7. Every authenticity-dependent state (`ready`, `installing`, `success`) structurally requires an accepted authenticity/integrity proof — as a transition destination, as a status snapshot and as a recorded history entry. This slice admits **no** cryptographic scheme, so the whole install path is unreachable by construction.
+7. Every authenticity-dependent state (`ready`, `installing`, `success`) structurally requires an accepted authenticity/integrity proof — as a transition destination, as a status snapshot and as a source or destination of a recorded history entry. This slice admits **no** cryptographic scheme, so the whole install path is unreachable by construction, cannot be asserted as a current state, and cannot be recorded as having existed or been entered.
 8. Diagnostic metadata is bounded and redaction-safe; credential-shaped detail is refused.
 9. One current version and one current channel form a single identity. A pair that is individually valid but mutually incompatible fails closed at service configuration, at status validation and at the read-model boundary.
 10. A status snapshot is a closed object: exact key sets at the top level, inside the error object and inside every event; unknown keys, unknown vocabularies and incoherent candidates are refused, and a validated snapshot is reconstructed from validated fields rather than returned as the caller's object. Validation reads plain own-data records only and never executes an accessor.
 11. One bounded SemVer 2.0.0 acceptance set: the product TypeScript parser and the Python drift gate accept exactly the same version strings (the SemVer grammar restricted to 128 characters), pinned by a shared cross-language vector file, with exact numeric comparison for core and prerelease identifiers.
+12. A persisted history entry must be an assertion this contract could actually have produced: declared states, a source state that current v1 can reach, a declared legal edge, and an outcome that edge could actually yield. A recorded entry may never assert an authenticity-dependent source state or an outcome that is impossible for its edge.
+
+## Correction record 3 (Context Lock Delta 003)
+
+Independent review `5237206705` accepted H-21-02 and M-21-03 as materially closed, confirmed that direct `ready`/`installing`/`success` status injection is blocked, and returned `CORRECTION_REQUIRED` with CRITICAL `0` / HIGH `1` / MEDIUM `1`:
+
+| Finding | Defect | Correction |
+|---|---|---|
+| `H-22-01` | The event validator rejected `legal_transition` only when the **destination** was authenticity-dependent, so events whose **source** was authenticity-dependent (`ready -> idle`, `installing -> failure`) were accepted and explicitly asserted as valid history. Such an event asserts the source state previously existed, which in current v1 implies successful traversal of the proof-gated path. | A persisted event whose `from` is `ready`, `installing` or `success` now fails closed for any destination and any reason. The two over-permissive positive expectations were removed and `success -> idle` added as an explicit negative. A refusal attempt *into* an authenticity-dependent state stays recordable only from a reachable source — with the present graph, `verifying -> ready`. |
+| `M-22-02` | The validator required a legal structural edge and a reason from the global `TransitionReason` vocabulary but did not prove the outcome was possible for that edge, so an ordinary legal edge could be recorded with `illegal_transition`, `unknown_state` or a proof-refusal reason. | Persisted outcomes are a closed semantic contract: `PERSISTED_EVENT_OUTCOMES` replaces `TransitionReason` on `UpdateEvent`, and `evaluatePersistedEvent(from, to, reason)` is the single reusable law used by `evaluateStatus()` and by tests. Ordinary reachable legal edges record only `legal_transition`; the reachable proof-gated attempt records only the bounded refusal outcomes. Persisting attempted raw input would require a distinct, separately reviewed event type. |
+
+No migration semantics were invented and no separate event contract was introduced; the review's STOP branch was not triggered. No correction weakens a gate, widens authority, admits an authenticity scheme or adds a dependency.
 
 ## Correction record 2 (Context Lock Delta 002)
 
