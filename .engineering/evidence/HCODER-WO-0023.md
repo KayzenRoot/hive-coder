@@ -6,7 +6,7 @@
 **Issue:** `#68`  
 **Draft PR:** `#69`
 
-## Claims allowed now
+## Claims allowed (sealed state)
 
 - Current desktop Git observation is read-only and does not execute Git.
 - Canonical workspace create/replace capabilities provide the control-plane pattern this WO preserves.
@@ -14,11 +14,11 @@
 - A data-only index candidate can be built from an approved observation plus an authority-free stage plan, and the produced bytes are accepted by Git as a correct index.
 - **`Capability.GIT_WRITE` / `git_stage_paths_v1` is implemented and reachable only through the Permission & Control Plane**, with mandatory trusted approval and a request-bound single-use permit consumed at the final safe boundary.
 - **Blob publication into the repository-local `.git/objects` store and atomic `.git/index` publication are implemented** and proven by a real-Git end-to-end lane on Windows, Linux and macOS independently.
+- **`DEC-027` is CANONICAL / SEALED under `HCODER-CP-0023`.** The admitted authority is unchanged and is not broadened by promotion or seal.
 
-## Claims explicitly NOT allowed yet
+## Claims explicitly NOT allowed
 
 - Any Git mutation is safe or production-ready in general.
-- `git.write` is canonical (DEC-027 remains PROPOSED until the promotion gates pass).
 - Strict CAS of index/worktree state exists.
 - Any capability beyond `git_stage_paths_v1` exists: no commit, tag, ref, branch, remote, credential, generic Git argv or shell surface.
 - Staged content is committed. This slice updates the index only.
@@ -67,16 +67,17 @@ Semantic proof: `tests/runtime/test_git_stage_tree_cache_semantics.py`, which co
 
 ## Final seal (Prompt 13)
 
-**State:** SEALED / CANONICAL. Issue #68 remains OPEN pending this final-seal PR.
+**State:** SEALED / CANONICAL. Issue #68 is **CLOSED / COMPLETED** at `2026-09-17T10:35:38Z`.
 
 - Product PR #69 squash-merged with expected-head protection as `1f09520fbd92c7e65f9726b65a854f918507c895`; validated on that exact `main` by Governance `35171215292` and Desktop Shell `35171215429`.
 - Documentation-only closeout PR #75 squash-merged with expected-head protection as `1b83666699acc8fdbd5270d811f1bf263d55ef47`; validated on that exact `main` by Governance `35204919678` and Desktop Shell `35204919616`. That SHA is the current canonical `main`.
 - Native governed Git staging proof passed on each exact `main` (Linux, Windows HIGH_ASSURANCE, macOS), and desktop web/Windows/Linux/macOS jobs passed on each.
+- The final-seal PR #76 squash-merged with expected-head protection as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, validated on that exact `main` by Governance `35210910407` and Desktop Shell `35210910423`. That SHA is the current canonical `main`.
 - `DEC-027` is CANONICAL / SEALED under `HCODER-CP-0023`. Admitted authority unchanged; publication remains atomic publication, not strict CAS.
 
 This final-seal delta is documentation/state only: no runtime, authority, dependency, workflow, test semantics or desktop behavior changed, and no Python source file changed. Independent technical HEDS `5229345968` remains valid at CRITICAL `0` / HIGH `0` on that basis.
 
-**Not claimed:** Issue #68 is not closed, the final-seal PR is not merged, and no post-seal `main` validation has occurred.
+**Lifecycle complete:** Issue #68 is closed as COMPLETED, the final-seal PR is merged, and post-seal `main` validation passed. No lifecycle step remains outstanding for this Work Order.
 
 ## Closeout source-truth correction (Prompt 12)
 
@@ -103,11 +104,11 @@ Documentation only: no product behavior, runtime authority, dependency, workflow
 ### Closeout candidate (as prepared at that phase)
 Documentation and governance only, on branch `chore/HCODER-WO-0023-canonical-closeout` created from the validated merge SHA. Canonical checkpoint advanced to `HCODER-CP-0023` based on CP-0022; `DEC-027` recorded as CANONICAL on `main`; Work Order moved to COMPLETE / CANONICAL candidate; checkpoint delta converted to a closeout delta; closeout evidence recorded in `.engineering/evidence/HCODER-CP-0023-CANONICAL-CLOSEOUT.md`. No runtime, authority, dependency, workflow, test semantics or desktop behavior changed, and no Python source file changed.
 
-**At that phase, not claimed:** the closeout PR was not yet merged, Issue #68 was not closed, and HCODER-CP-0023 was not yet sealed. That phase has since been superseded — the closeout PR merged as `1b83666699acc8fdbd5270d811f1bf263d55ef47` and CP-0023 is now SEALED. Issue #68 remains open pending the final-seal PR.
+**At that phase, not claimed:** the closeout PR was not yet merged, Issue #68 was not closed, and HCODER-CP-0023 was not yet sealed. That phase has since been superseded — the closeout PR merged as `1b83666699acc8fdbd5270d811f1bf263d55ef47` and CP-0023 is now SEALED. That phase was itself superseded when the final-seal PR merged and Issue #68 closed.
 
-## Approval state (Prompt 09)
+## Approval state (Prompt 09) — HISTORICAL PHASE RECORD
 
-**State:** APPROVED / READY FOR GOVERNED MERGE on this branch. **Not merged**, canonical main has not received it, no post-merge validation has occurred, and the Work Order is not closed.
+**State at that phase:** APPROVED / READY FOR GOVERNED MERGE on that branch; not yet merged and canonical main had not received it. Superseded by the merges and the Issue #68 closure recorded above.
 
 The approval-state commit is **documentation and governance only**. It changes no product or runtime behavior, no authority, no dependency, no workflow, no security or contract test, and no desktop behavior. No Python source file changed.
 
@@ -390,7 +391,7 @@ No new blanket skip was introduced, and no skip remains that is caused by incomp
 
 - The `DEC-025` ADR header still reads `APPROVED / FINAL CANDIDATE — NOT CANONICAL` while `HCODER-CP-0021` records it canonical. Recorded as `KNOWN_DOC_DRIFT` in the ledger and in Context Lock Delta 002; the historical ADR was deliberately not rewritten.
 - The private-temp cleanup path performs a name-based deletion after an identity check. The residual window is a documented bounded race, matching the CP-0022 posture. It is a hardening item, not a defect in this slice, and the failure path no longer removes a pathname it cannot prove it owns.
-- `DEC-027` remains **PROPOSED**. This head implements the decision's bounded action and produces the evidence, but promotion is the independent review's decision, not the executor's.
+- `DEC-027` is CANONICAL / SEALED. Promotion completed through the product, closeout and final-seal merges, each with expected-head protection and post-merge exact-main validation.
 - Residual bounded race on publication, as stated above: atomic publication, not strict CAS.
 
 ## Main reconciliation
@@ -422,11 +423,12 @@ Authority is **implemented** at this Work Order, not pending. `Capability.GIT_WR
 Current state, stated plainly:
 
 - **Authority implemented**: yes, bounded to exactly `git_stage_paths_v1`.
-- **Correction pending final review**: yes. This ledger records the Prompt 04 correction head; the independent review of it is the next step.
-- **PR #69 remains Draft.**
-- **HEDS not yet approved.** No FINAL HEDS has been run, and `DEC-027` remains **PROPOSED** — promotion is the reviewer's decision, not the executor's.
-- **No merge** and no marking ready for review until that review completes.
+- **Promotion complete**: `DEC-027` is CANONICAL / SEALED under `HCODER-CP-0023`.
+- **All three merges complete**: product PR #69, closeout PR #75 and final-seal PR #76, each squash-merged with expected-head protection and each post-merge validated on its exact `main`.
+- **Current canonical `main`**: `b6297fbe4de4681fc92093f3691f693dc2de0dc1`.
+- **Independent technical HEDS** `5229345968` at `b827cb2e`: CRITICAL `0` / HIGH `0`.
+- **Issue #68**: CLOSED / COMPLETED at `2026-09-17T10:35:38Z`.
 
-The only outstanding step is the promotion review itself; every executable seam the pre-Codex frontier named is complete (`FINAL_HEDS` aside, which is not an implementation seam).
+Every executable seam the pre-Codex frontier named is complete. No lifecycle step remains outstanding for this Work Order.
 
-**Promotion candidate:** `.engineering/checkpoint-deltas/HCODER-WO-0023.md`, with machine evidence in `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json`. Final technical HEDS reports CRITICAL `0`, HIGH `0`, MEDIUM `0`, LOW `3` (all corrected). `DEC-027` is recorded as a promotion candidate and remains **PROPOSED**. The canonical checkpoint is untouched, PR #69 remains Draft, and nothing has been merged.
+**Sealed artifacts:** canonical checkpoint `docs/project-brain/11-CHECKPOINT.md` (CP-0023 SEALED / CANONICAL); closeout evidence `.engineering/evidence/HCODER-CP-0023-CANONICAL-CLOSEOUT.md`; checkpoint delta `.engineering/checkpoint-deltas/HCODER-WO-0023.md`; machine evidence `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json`.

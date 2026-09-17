@@ -9,6 +9,8 @@
 **Independently reviewed promotion-candidate head:** `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a`  
 **Independent A4/HEDS review artifact:** PR review `5229345968`  
 **Canonical product merge:** `1f09520fbd92c7e65f9726b65a854f918507c895` (PR #69, squash, expected-head protected)  
+**Final-seal merge / current canonical main:** `b6297fbe4de4681fc92093f3691f693dc2de0dc1` (PR #76, squash, expected-head protected)  
+**Post-seal exact-main validation:** Governance `35210910407` SUCCESS; Desktop Shell `35210910423` SUCCESS  
 **Post-merge exact-main validation:** Governance `35171215292` SUCCESS; Desktop Shell `35171215429` SUCCESS  
 **Closeout merge:** `1b83666699acc8fdbd5270d811f1bf263d55ef47` (PR #75, squash, expected-head protected)  
 **Post-closeout exact-main validation:** Governance `35204919678` SUCCESS; Desktop Shell `35204919616` SUCCESS  
@@ -16,7 +18,7 @@
 
 > **State transition record (explicit and evidence-bound).** This ADR is **APPROVED** on this branch. Its original source main is preserved above and is not backdated or erased. Every condition in the promotion gate below was objectively satisfied at the independently reviewed head `b827cb2e`, and the independent A4/HEDS review `5229345968` returned CRITICAL `0` / HIGH `0`.
 >
-> The decision is **CANONICAL on `main`**: product PR #69 squash-merged as `1f09520fbd92c7e65f9726b65a854f918507c895` and that exact `main` SHA passed post-merge Governance `35171215292` and Desktop Shell `35171215429`. The documentation-only closeout PR #75 has since squash-merged as `1b83666699acc8fdbd5270d811f1bf263d55ef47`, whose exact-`main` push validation passed Governance `35204919678` and Desktop Shell `35204919616`. Issue #68 remains open pending this final-seal PR. The admitted authority is unchanged and is not expanded by promotion or seal.
+> The decision is **CANONICAL on `main`**: product PR #69 squash-merged as `1f09520fbd92c7e65f9726b65a854f918507c895` and that exact `main` SHA passed post-merge Governance `35171215292` and Desktop Shell `35171215429`. The documentation-only closeout PR #75 has since squash-merged as `1b83666699acc8fdbd5270d811f1bf263d55ef47`, whose exact-`main` push validation passed Governance `35204919678` and Desktop Shell `35204919616`. The final-seal PR #76 has since squash-merged with expected-head protection as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, and that exact `main` passed Governance `35210910407` and Desktop Shell `35210910423`. Issue #68 is CLOSED / COMPLETED. The admitted authority is unchanged and is not expanded by promotion or seal.
 
 ## Context
 Hive Coder can safely create and replace trusted-workspace regular files under the Permission & Control Plane, but practical coding also requires converting an approved worktree state into repository index state. Granting generic Git or shell execution would be a much larger authority boundary than staging itself.
@@ -46,7 +48,7 @@ Windows, Linux and macOS are independent evidence targets. A platform is not pro
 This ADR does not approve commit, ref/branch/tag mutation, checkout/reset/restore/clean/stash, merge/rebase/cherry-pick, remotes/network, credentials, hooks, external filters, generic process execution, terminal/shell authority, arbitrary `.git` filesystem writes or desktop/Tauri mutation authority.
 
 ## Promotion gate
-DEC-027 remains PROPOSED until the backend/dependency decision is proven, executable contract/security tests pass natively on all three target OSes, exact-head CI is green and HEDS reports HIGH/CRITICAL `0/0`.
+DEC-027 remained PROPOSED until the backend/dependency decision was proven, executable contract/security tests passed natively on all three target OSes, exact-head CI was green and HEDS reported HIGH/CRITICAL `0/0`. Every condition was met; the decision is now CANONICAL / SEALED.
 
 **Condition status at the independently reviewed head `b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a` (evidence-bound):**
 

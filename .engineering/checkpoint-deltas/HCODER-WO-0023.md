@@ -3,17 +3,19 @@
 **Status:** SEALED CLOSEOUT — PRODUCT MERGE AND CLOSEOUT MERGE BOTH COMPLETE AND POST-MERGE VALIDATED  
 **Work Order:** `HCODER-WO-0023 — Governed Git Staging Capability`  
 **Decision:** `DEC-027` — CANONICAL / SEALED under `HCODER-CP-0023`  
-**Issue:** `#68` — **OPEN**; closure pending the final-seal PR  
+**Issue:** `#68` — **CLOSED / COMPLETED** at `2026-09-17T10:35:38Z`  
 **Product PR:** `#69` — **MERGED** by squash with expected-head protection  
-**Closeout PR:** `#75` — **MERGED** (squash `1b83666699acc8fdbd5270d811f1bf263d55ef47`); final-seal PR unmerged  
+**Closeout PR:** `#75` — **MERGED** (squash `1b83666699acc8fdbd5270d811f1bf263d55ef47`)  
+**Final-seal PR:** `#76` — **MERGED** (squash `b6297fbe4de4681fc92093f3691f693dc2de0dc1`)  
 **Canonical product merge:** `1f09520fbd92c7e65f9726b65a854f918507c895`  
-**Closeout merge / current canonical main:** `1b83666699acc8fdbd5270d811f1bf263d55ef47`  
+**Closeout merge:** `1b83666699acc8fdbd5270d811f1bf263d55ef47`  
+**Final-seal merge / current canonical main:** `b6297fbe4de4681fc92093f3691f693dc2de0dc1`  
 **Pre-merge canonical main:** `aaa75242826db33442cd96cdc1d550d69bd25faa`
 
 ## Purpose
 Record the sealed canonical outcome of the first Hive-owned Git index-mutation authority. **The product merge and the documentation-only closeout merge have both completed, and their exact canonical `main` SHAs have both passed post-merge validation.**
 
-This delta creates no new authority and changes no behavior. It records the sealed lifecycle state. Issue #68 remains open and is closed only after the final-seal PR merges and post-seal `main` is validated.
+This delta creates no new authority and changes no behavior. It records the fully sealed lifecycle state. The final-seal PR has merged and post-seal `main` is validated, so Issue #68 is CLOSED / COMPLETED.
 
 ## What is admitted
 - Exactly one capability: `Capability.GIT_WRITE = "git.write"`, risk HIGH, materially sensitive, mandatory trusted approval, required target field `workspace`.
@@ -33,7 +35,7 @@ Both merges used squash with expected-head protection: the merge request was bou
 | Product (PR #69) | `2dde9bb5690f22820ab9fe952aa2672e97c0f36f` | `1f09520fbd92c7e65f9726b65a854f918507c895` | Governance `35171215292` SUCCESS; Desktop Shell `35171215429` SUCCESS |
 | Closeout (PR #75) | `204aa32ac26003082366588bc9e5d5399473c3b6` | `1b83666699acc8fdbd5270d811f1bf263d55ef47` | Governance `35204919678` SUCCESS; Desktop Shell `35204919616` SUCCESS |
 
-Current canonical `main` is `1b83666699acc8fdbd5270d811f1bf263d55ef47`. In both stages the squash SHA and the resulting `origin/main` were the same commit, so each pair identifies one product state.
+The final-seal PR #76 then squash-merged with expected-head protection as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, validated on that exact `main` by Governance `35210910407` and Desktop Shell `35210910423`. Current canonical `main` is `b6297fbe4de4681fc92093f3691f693dc2de0dc1`. In both stages the squash SHA and the resulting `origin/main` were the same commit, so each pair identifies one product state.
 
 Native governed Git staging proof passed on each exact `main`: Linux SUCCESS, Windows HIGH_ASSURANCE SUCCESS, macOS SUCCESS — each independent, none inferred from another. Desktop web, Windows, Linux and macOS jobs passed on each.
 
