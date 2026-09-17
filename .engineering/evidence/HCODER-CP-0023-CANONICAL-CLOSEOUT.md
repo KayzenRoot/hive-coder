@@ -8,7 +8,8 @@
 **Base checkpoint:** `HCODER-CP-0022`  
 **Canonical product merge SHA:** `1f09520fbd92c7e65f9726b65a854f918507c895`  
 **Closeout merge SHA:** `1b83666699acc8fdbd5270d811f1bf263d55ef47`  
-**Final-seal merge / current canonical main:** `b6297fbe4de4681fc92093f3691f693dc2de0dc1`  
+**Final-seal merge SHA (immutable):** `b6297fbe4de4681fc92093f3691f693dc2de0dc1`  
+**Validated `main` at final-seal validation:** `b6297fbe4de4681fc92093f3691f693dc2de0dc1`  
 **Post-seal exact-main validation:** Governance `35210910407` SUCCESS; Desktop Shell `35210910423` SUCCESS
 
 ## Canonical bounded authority
@@ -47,7 +48,7 @@ Publication is atomic same-filesystem **publication**, explicitly **not** strict
 ## Seal evidence
 - Closeout head `204aa32ac26003082366588bc9e5d5399473c3b6`: Governance `35174158942` SUCCESS, Desktop Shell `35174158986` SUCCESS.
 - Closeout PR #75 squash-merged with expected-head protection as `1b83666699acc8fdbd5270d811f1bf263d55ef47`.
-- Post-closeout exact-main validation on `1b83666699acc8fdbd5270d811f1bf263d55ef47`: Governance `35204919678` SUCCESS (source-pack plus native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging proof), Desktop Shell `35204919616` SUCCESS (desktop web, Windows, Linux, macOS). That SHA is the current canonical `main`.
+- Post-closeout exact-main validation on `1b83666699acc8fdbd5270d811f1bf263d55ef47`: Governance `35204919678` SUCCESS (source-pack plus native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging proof), Desktop Shell `35204919616` SUCCESS (desktop web, Windows, Linux, macOS). That SHA was the **validated `main` at closeout validation** — an immutable lifecycle-stage fact, not a live repository pointer.
 
 ## Final step (completed)
 The final-seal PR #76 squash-merged with expected-head protection as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, and that exact `main` passed Governance `35210910407` and Desktop Shell `35210910423`. Issue #68 was then closed as COMPLETED at `2026-09-17T10:35:38Z`. No further lifecycle step remains.
