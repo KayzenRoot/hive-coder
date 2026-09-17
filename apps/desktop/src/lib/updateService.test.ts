@@ -146,7 +146,13 @@ describe("UpdateService boundary", () => {
       ok: false,
       reason: "authenticity_proof_required",
     });
-    expect(service.evaluateTransition("installing", "success")).toEqual({ ok: true, reason: "legal_transition" });
+    // The completed-install claim is gated on the same edge set, so `success` is
+    // not reachable through the service surface either.
+    expect(service.evaluateTransition("installing", "success")).toEqual({
+      ok: false,
+      reason: "authenticity_proof_required",
+    });
+    expect(service.evaluateTransition("downloading", "verifying")).toEqual({ ok: true, reason: "legal_transition" });
   });
 
   it("exposes no mutating, transport or installation member", () => {

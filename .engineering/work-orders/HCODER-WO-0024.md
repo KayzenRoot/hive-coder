@@ -1,6 +1,6 @@
 # HCODER-WO-0024 — Distribution Contracts, Version Model and UpdateService Boundary
 
-**Status:** IMPLEMENTED / CORRECTION REVIEW PENDING  
+**Status:** IMPLEMENTED / SECOND CORRECTION REVIEW PENDING  
 **Risk:** HIGH_ASSURANCE (supply-chain-adjacent)  
 **Task class:** T3  
 **Context radius:** C4  
@@ -9,8 +9,8 @@
 **Issue:** `#77`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **PR:** `#80` (Draft, unmerged)  
-**Review history:** `5236275753` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`  
-**Context Lock Deltas:** `001` (correction of the six findings below; no new authority)
+**Review history:** `5236275753` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`) at prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d`; `5236688350` — CORRECTION_REQUIRED (CRITICAL `0` / HIGH `2` / MEDIUM `1`) at correction head `97c533de73c9d8f007b6dfc4eaf73804fb1de220`  
+**Context Lock Deltas:** `001` (first correction), `002` (second correction)
 
 ## Objective
 Establish the first governed slice of distribution: the canonical version/channel model and a Hive-owned `UpdateService` boundary, so that later distribution work is completion-oriented rather than architecture discovery.
@@ -44,12 +44,25 @@ No `bundle.active=true`; no updater plugin; no updater endpoint; no HTTP client 
 4. Signing material must never appear in repository, logs, prompts or runtime state.
 5. Version, channel and update-state parsing fails closed on malformed or unknown input.
 6. No silent downgrade and no implicit cross-channel promotion or demotion.
-7. Entering an install-ready state (`ready`, and `installing` again as defence in depth) structurally requires an accepted authenticity/integrity proof; this slice admits **no** cryptographic scheme, so install-ready is unreachable by construction, and a direct `ready`/`installing` status snapshot is invalid.
+7. Every authenticity-dependent state (`ready`, `installing`, `success`) structurally requires an accepted authenticity/integrity proof — as a transition destination, as a status snapshot and as a recorded history entry. This slice admits **no** cryptographic scheme, so the whole install path is unreachable by construction.
 8. Diagnostic metadata is bounded and redaction-safe; credential-shaped detail is refused.
 9. One current version and one current channel form a single identity. A pair that is individually valid but mutually incompatible fails closed at service configuration, at status validation and at the read-model boundary.
-10. A status snapshot is a closed, bounded object: exact key sets at the top level, inside the error object and inside every event; unknown keys, unknown vocabularies and incoherent candidates are refused, and a validated snapshot is reconstructed from validated fields rather than returned as the caller's object.
+10. A status snapshot is a closed object: exact key sets at the top level, inside the error object and inside every event; unknown keys, unknown vocabularies and incoherent candidates are refused, and a validated snapshot is reconstructed from validated fields rather than returned as the caller's object. Validation reads plain own-data records only and never executes an accessor.
+11. One bounded SemVer 2.0.0 acceptance set: the product TypeScript parser and the Python drift gate accept exactly the same version strings (the SemVer grammar restricted to 128 characters), pinned by a shared cross-language vector file, with exact numeric comparison for core and prerelease identifiers.
 
-## Correction record (Context Lock Delta 001)
+## Correction record 2 (Context Lock Delta 002)
+
+Independent review `5236688350` accepted the first correction round (H-20-02, H-20-03 ordinary own-key closure, H-20-04, M-20-05, M-20-06) and returned `CORRECTION_REQUIRED` with CRITICAL `0` / HIGH `2` / MEDIUM `1`:
+
+| Finding | Defect | Correction |
+|---|---|---|
+| `H-21-01` | `evaluateStatus()` accepted a direct `state:"success"` snapshot with a strictly newer candidate and no proof, although `success` is reachable only from `installing`; recorded events validated only structural edges, so v1 history could report proof-gated transitions as successful without gate evidence. | `ready`, `installing` and `success` are declared **authenticity-dependent states**. Every legal edge entering one is proof-gated, a status snapshot claiming one must carry a proof accepted under current policy (and is therefore invalid while no scheme is admitted), and a history entry may not report a `legal_transition` into one. Refusal events on those edges and all ordinary pre-gate history remain valid, so verification is not globally banned. |
+| `H-21-02` | Product TypeScript rejected core identifiers above `Number.MAX_SAFE_INTEGER` that the Python gate accepted, and Python's end-anchored `re.match` accepted a trailing newline that TypeScript rejects: two acceptance sets for one canonical version law. | Core identifiers are exact decimal strings compared by length and lexicographically, with no numeric conversion. The Python gate uses `fullmatch` with explicit ASCII `[0-9]` classes and no anchors. The law is stated as a **bounded SemVer 2.0.0 profile** (128-character maximum) and pinned by `apps/desktop/src/contracts/semverParityVectors.json`, consumed by both suites. A third divergence found while correcting this — Python's `\d` matching Unicode decimal digits — is closed with it. |
+| `M-21-03` | `asRecord()` accepted any non-array object and `hasOnlyKeys()` inspected only `Object.keys()`, so required fields could be inherited or getter-backed and reads could execute accessors. | Validation operates only on plain own-data records: no custom prototype or class instance, no accessor-backed property, no non-enumerable or symbol-keyed field, and no sparse or accessor-backed event array. Property values come from own property descriptors, so validation never invokes a getter. Applied to status, error, event and proof objects. |
+
+No correction weakens a gate, widens authority, admits an authenticity scheme or adds a dependency, and no test was weakened, skipped or rewritten to accept the defective behaviour.
+
+## Correction record 1 (Context Lock Delta 001)
 
 The first implementation head passed both hosted gates yet did not hold the properties it claimed. Independent review `5236275753` returned `CORRECTION_REQUIRED` with CRITICAL `0` / HIGH `4` / MEDIUM `2`:
 

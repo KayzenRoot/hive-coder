@@ -39,9 +39,9 @@ export function isUpdateState(value: unknown): value is UpdateState {
  * Legal transitions. Every transition not listed here is illegal and must fail
  * closed. Unknown states are rejected before this table is consulted.
  *
- * The table states *structural* legality only. Two of its edges are additionally
- * authenticity-gated in `evaluateTransition`: entering `ready` (the install-ready
- * boundary) and entering `installing` from `ready`.
+ * The table states *structural* legality only. Transitions whose destination is
+ * an authenticity-dependent state are additionally authenticity-gated in
+ * `evaluateTransition`; see `AUTHENTICITY_DEPENDENT_STATES`.
  */
 export const LEGAL_TRANSITIONS: Readonly<Record<UpdateState, readonly UpdateState[]>> = {
   idle: ["checking"],
@@ -75,6 +75,23 @@ export type TransitionVerdict =
   | { readonly ok: true; readonly reason: "legal_transition" }
   | { readonly ok: false; readonly reason: Exclude<TransitionReason, "legal_transition"> };
 
+/**
+ * States whose claim depends on a successful traversal of the proof-gated install
+ * path: `ready` is install-ready, `installing` is downstream of it, and `success`
+ * is reachable only from `installing`.
+ *
+ * Asserting any of them asserts that an authenticity proof was verified and acted
+ * on. No state in this set may therefore be claimed by a transition, a status
+ * snapshot or a recorded history entry while no scheme is admitted.
+ */
+export const AUTHENTICITY_DEPENDENT_STATES = ["ready", "installing", "success"] as const;
+
+export type AuthenticityDependentState = (typeof AUTHENTICITY_DEPENDENT_STATES)[number];
+
+export function isAuthenticityDependentState(value: unknown): value is AuthenticityDependentState {
+  return typeof value === "string" && (AUTHENTICITY_DEPENDENT_STATES as readonly string[]).includes(value);
+}
+
 export const MAX_AUTHENTICITY_HASH_CHARS = 64;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
@@ -105,52 +122,61 @@ export type ProofVerdict =
  * Structural + policy validation of an authenticity proof. A proof is acceptable
  * only when it is well formed *and* its scheme is admitted. Because no scheme is
  * admitted in this slice, this always refuses — which is the intended behaviour.
+ *
+ * The proof must be a plain own-data record: a class instance, an
+ * `Object.create(...)` object or an accessor-backed object is refused without any
+ * getter being invoked.
  */
 export function evaluateAuthenticityProof(proof: unknown): ProofVerdict {
-  if (typeof proof !== "object" || proof === null) {
+  const candidate = asPlainRecord(proof);
+  if (candidate === null) {
     return { ok: false, reason: "malformed_authenticity_proof" };
   }
-  const candidate = proof as Record<string, unknown>;
-  if (typeof candidate.scheme !== "string" || candidate.scheme.length === 0) {
+  const scheme = candidate.data("scheme");
+  if (typeof scheme !== "string" || scheme.length === 0) {
     return { ok: false, reason: "malformed_authenticity_proof" };
   }
+  const artifactSha256 = candidate.data("artifactSha256");
   if (
-    typeof candidate.artifactSha256 !== "string" ||
-    !SHA256_PATTERN.test(candidate.artifactSha256) ||
-    candidate.artifactSha256.length !== MAX_AUTHENTICITY_HASH_CHARS
+    typeof artifactSha256 !== "string" ||
+    !SHA256_PATTERN.test(artifactSha256) ||
+    artifactSha256.length !== MAX_AUTHENTICITY_HASH_CHARS
   ) {
     return { ok: false, reason: "malformed_authenticity_proof" };
   }
-  if (typeof candidate.metadataSha256 !== "string" || !SHA256_PATTERN.test(candidate.metadataSha256)) {
+  const metadataSha256 = candidate.data("metadataSha256");
+  if (typeof metadataSha256 !== "string" || !SHA256_PATTERN.test(metadataSha256)) {
     return { ok: false, reason: "malformed_authenticity_proof" };
   }
+  const verifiedAtEpochMs = candidate.data("verifiedAtEpochMs");
   if (
-    typeof candidate.verifiedAtEpochMs !== "number" ||
-    !Number.isSafeInteger(candidate.verifiedAtEpochMs) ||
-    candidate.verifiedAtEpochMs < 0
+    typeof verifiedAtEpochMs !== "number" ||
+    !Number.isSafeInteger(verifiedAtEpochMs) ||
+    verifiedAtEpochMs < 0
   ) {
     return { ok: false, reason: "malformed_authenticity_proof" };
   }
-  if (!ADMITTED_AUTHENTICITY_SCHEMES.includes(candidate.scheme)) {
+  if (!ADMITTED_AUTHENTICITY_SCHEMES.includes(scheme)) {
     return { ok: false, reason: "no_admitted_scheme" };
   }
   return { ok: true };
 }
 
 /**
- * The authenticity gate sits on the edge that *enters an install-ready state*,
- * not merely on the edge that starts installing.
+ * The authenticity gate sits on every edge that *enters an authenticity-dependent
+ * state*, not merely on the edge that starts installing.
  *
  * `ready` is install-ready by definition: once a client is `ready`, the artifact
  * is present, verified enough to install and awaiting only the install call.
  * Admitting `verifying -> ready` without a proof would make install-ready
- * reachable from untrusted input, so that edge carries the same gate. The
- * `ready -> installing` edge is re-gated as defence in depth so a proof cannot be
- * consumed once and then reused to drive a second install.
+ * reachable from untrusted input. `ready -> installing` and `installing -> success`
+ * are gated for the same reason: a completed install is as much an
+ * authenticity claim as an install-ready one.
  */
 const PROOF_GATED_TRANSITIONS: readonly (readonly [UpdateState, UpdateState])[] = [
   ["verifying", "ready"],
   ["ready", "installing"],
+  ["installing", "success"],
 ];
 
 function isProofGatedTransition(from: UpdateState, to: UpdateState): boolean {
@@ -159,8 +185,8 @@ function isProofGatedTransition(from: UpdateState, to: UpdateState): boolean {
 
 /**
  * Deterministic transition law. Unknown states fail closed; illegal transitions
- * fail closed; entering `ready` or `installing` is refused without an accepted
- * authenticity proof.
+ * fail closed; entering any authenticity-dependent state is refused without an
+ * accepted authenticity proof.
  */
 export function evaluateTransition(from: unknown, to: unknown, proof?: unknown): TransitionVerdict {
   if (!isUpdateState(from) || !isUpdateState(to)) {
@@ -190,20 +216,17 @@ export function evaluateTransition(from: unknown, to: unknown, proof?: unknown):
 }
 
 /**
- * States whose *entry* requires an accepted authenticity proof.
- *
- * `ready` is the install-ready state and is the primary gate; `installing` is
- * re-gated so that a proof is required at the moment of install as well.
+ * States whose entry, and whose presence in a status snapshot or recorded
+ * history, requires an accepted authenticity proof.
  */
 export function requiresAuthenticityProof(state: UpdateState): boolean {
-  return state === "ready" || state === "installing";
+  return isAuthenticityDependentState(state);
 }
 
 /**
- * True only when an install-ready state can be reached at all. No scheme is
- * admitted in this slice, so with the gate on `verifying -> ready` the
- * install-ready boundary is unreachable by construction rather than by
- * convention.
+ * True only when an authenticity-dependent state can be reached at all. No scheme
+ * is admitted in this slice, so with the gate on every entering edge the whole
+ * install path is unreachable by construction rather than by convention.
  */
 export function isInstallReadyReachable(): boolean {
   return ADMITTED_AUTHENTICITY_SCHEMES.length > 0;
@@ -331,8 +354,9 @@ export interface UpdateStatus {
   /** Candidate version when one is known; `null` otherwise. */
   readonly candidateVersion: string | null;
   /**
-   * Accepted authenticity proof. Admissible only in an install-ready state
-   * (`ready`, `installing`), where it is mandatory; `null` everywhere else.
+   * Accepted authenticity proof. Admissible only in an authenticity-dependent
+   * state (`ready`, `installing`, `success`), where it is mandatory; `null`
+   * everywhere else.
    */
   readonly authenticityProof: AuthenticityProof | null;
   readonly error: UpdateError | null;
@@ -356,44 +380,96 @@ const CANDIDATE_REQUIRED_STATES: readonly UpdateState[] = [
 /** States in which no candidate version may be present. */
 const CANDIDATE_FORBIDDEN_STATES: readonly UpdateState[] = ["idle", "checking", "unavailable"];
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
+/**
+ * A validated plain record: a JSON-like data object whose own enumerable string
+ * keys are the only properties it has, and whose values are reachable without
+ * executing any accessor.
+ *
+ * `Object.keys()` alone is not sufficient here. A required field can be inherited
+ * through a custom prototype or a class instance, and a field can be backed by a
+ * getter that runs arbitrary code the moment validation reads it. Both are
+ * refused, and they are refused *before* any application field is read: values
+ * come from own property descriptors, never from property access, so a getter is
+ * never invoked by this validator.
+ */
+interface PlainRecord {
+  /** Own enumerable string keys, in insertion order. */
+  readonly keys: readonly string[];
+  /** Value of an own data property, or `undefined` when it is absent. */
+  data(key: string): unknown;
 }
 
-function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]): boolean {
-  return Object.keys(value).every((key) => allowed.includes(key));
+function asPlainRecord(value: unknown): PlainRecord | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const prototype: object | null = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return null;
+  if (Object.getOwnPropertySymbols(value).length > 0) return null;
+  const keys = Object.keys(value);
+  // A non-enumerable own property is invisible to `Object.keys()` yet still
+  // readable through normal access, so the two name sets must agree exactly.
+  if (Object.getOwnPropertyNames(value).length !== keys.length) return null;
+  const values = new Map<string, unknown>();
+  for (const key of keys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor === undefined) return null;
+    if (descriptor.get !== undefined || descriptor.set !== undefined) return null;
+    values.set(key, descriptor.value);
+  }
+  return { keys, data: (key: string) => values.get(key) };
+}
+
+function hasOnlyKeys(record: PlainRecord, allowed: readonly string[]): boolean {
+  return record.keys.every((key) => allowed.includes(key));
+}
+
+/**
+ * Read one array element without invoking a possibly accessor-backed index, and
+ * refuse holes. A sparse or accessor-backed array is not JSON-like data.
+ */
+function arrayElement(array: readonly unknown[], index: number): { readonly present: boolean; readonly value: unknown } {
+  const descriptor = Object.getOwnPropertyDescriptor(array, String(index));
+  if (descriptor === undefined || descriptor.get !== undefined || descriptor.set !== undefined) {
+    return { present: false, value: undefined };
+  }
+  return { present: true, value: descriptor.value };
 }
 
 /**
  * Validate a status snapshot into a canonical object.
  *
- * Every field is bounded and cross-checked: unknown keys, unknown states or
- * channels, malformed versions, a version that does not belong to the declared
- * channel, an incoherent candidate, a proof outside an install-ready state,
- * unknown error codes or event shapes, and oversized event lists all fail closed.
+ * The input must be a plain own-data record, and so must its nested error, event
+ * and proof objects; inherited, class-backed and accessor-backed records are
+ * refused without any getter being invoked. Every field is then bounded and
+ * cross-checked: unknown keys, unknown states or channels, malformed versions, a
+ * version that does not belong to the declared channel, an incoherent candidate,
+ * a proof outside an authenticity-dependent state, unknown error codes or event
+ * shapes, oversized event lists, and an assertion of an authenticity-dependent
+ * state all fail closed.
  *
  * The returned status is **reconstructed** from validated fields. The caller's
  * object is never aliased, so an unvalidated property cannot survive into
  * product state through the returned value.
  */
 export function evaluateStatus(input: unknown): StatusVerdict {
-  const value = asRecord(input);
+  const value = asPlainRecord(input);
   if (value === null) return { ok: false, reason: "invalid_status" };
   if (!hasOnlyKeys(value, UPDATE_STATUS_KEYS)) return { ok: false, reason: "invalid_status" };
-  if (value.contract !== UPDATE_STATE_CONTRACT) return { ok: false, reason: "invalid_status" };
-  if (!isUpdateState(value.state)) return { ok: false, reason: "invalid_status" };
-  if (!isReleaseChannel(value.channel)) return { ok: false, reason: "invalid_status" };
+  if (value.data("contract") !== UPDATE_STATE_CONTRACT) return { ok: false, reason: "invalid_status" };
+  const rawState = value.data("state");
+  if (!isUpdateState(rawState)) return { ok: false, reason: "invalid_status" };
+  const rawChannel = value.data("channel");
+  if (!isReleaseChannel(rawChannel)) return { ok: false, reason: "invalid_status" };
 
   // One current version and one current channel form a single identity: an
   // independently valid pair that is mutually incompatible fails closed here.
-  const state = value.state;
-  const channel = value.channel;
-  if (!isValidVersion(value.currentVersion)) return { ok: false, reason: "invalid_status" };
-  const currentVersion = value.currentVersion;
+  const state = rawState;
+  const channel = rawChannel;
+  const rawCurrentVersion = value.data("currentVersion");
+  if (!isValidVersion(rawCurrentVersion)) return { ok: false, reason: "invalid_status" };
+  const currentVersion = rawCurrentVersion;
   if (!versionMatchesChannel(currentVersion, channel)) return { ok: false, reason: "invalid_status" };
 
-  const rawCandidate = value.candidateVersion;
+  const rawCandidate = value.data("candidateVersion");
   if (rawCandidate !== null && !isValidVersion(rawCandidate)) return { ok: false, reason: "invalid_status" };
   const candidateVersion: string | null = rawCandidate === null ? null : rawCandidate;
 
@@ -410,33 +486,33 @@ export function evaluateStatus(input: unknown): StatusVerdict {
     if (!isStrictlyNewer(candidateVersion, currentVersion)) return { ok: false, reason: "invalid_status" };
   }
 
-  // Proof material is admissible only where it is mandatory. Because no scheme
-  // is admitted in this slice, no proof can be accepted, so a snapshot claiming
-  // `ready` or `installing` is always invalid here.
-  const installReady = state === "ready" || state === "installing";
-  const rawProof = value.authenticityProof;
+  // A status snapshot asserts reachability. Any authenticity-dependent state
+  // requires a proof accepted under current policy, and no scheme is admitted in
+  // this slice, so such a snapshot is always invalid here.
+  const authenticityDependent = isAuthenticityDependentState(state);
+  const rawProof = value.data("authenticityProof");
   let authenticityProof: AuthenticityProof | null = null;
-  if (installReady) {
-    const proofRecord = asRecord(rawProof);
+  if (authenticityDependent) {
+    const proofRecord = asPlainRecord(rawProof);
     if (proofRecord === null) return { ok: false, reason: "invalid_status" };
     if (!evaluateAuthenticityProof(proofRecord).ok) return { ok: false, reason: "invalid_status" };
     authenticityProof = {
-      scheme: proofRecord.scheme as string,
-      artifactSha256: proofRecord.artifactSha256 as string,
-      metadataSha256: proofRecord.metadataSha256 as string,
-      verifiedAtEpochMs: proofRecord.verifiedAtEpochMs as number,
+      scheme: proofRecord.data("scheme") as string,
+      artifactSha256: proofRecord.data("artifactSha256") as string,
+      metadataSha256: proofRecord.data("metadataSha256") as string,
+      verifiedAtEpochMs: proofRecord.data("verifiedAtEpochMs") as number,
     };
   } else if (rawProof !== null) {
     return { ok: false, reason: "invalid_status" };
   }
 
-  const rawError = value.error;
+  const rawError = value.data("error");
   let error: UpdateError | null = null;
   if (rawError !== null) {
-    const errorRecord = asRecord(rawError);
+    const errorRecord = asPlainRecord(rawError);
     if (errorRecord === null) return { ok: false, reason: "invalid_status" };
     if (!hasOnlyKeys(errorRecord, UPDATE_ERROR_KEYS)) return { ok: false, reason: "invalid_status" };
-    const errorVerdict = evaluateUpdateError(errorRecord.code, errorRecord.detail);
+    const errorVerdict = evaluateUpdateError(errorRecord.data("code"), errorRecord.data("detail"));
     if (!errorVerdict.ok) return { ok: false, reason: "invalid_status" };
     error = errorVerdict.error;
   }
@@ -445,23 +521,32 @@ export function evaluateStatus(input: unknown): StatusVerdict {
     return { ok: false, reason: "invalid_status" };
   }
 
-  const rawEvents = value.events;
+  const rawEvents = value.data("events");
   if (!Array.isArray(rawEvents)) return { ok: false, reason: "invalid_status" };
   if (rawEvents.length > MAX_UPDATE_STATUS_EVENTS) return { ok: false, reason: "oversized_status" };
   const events: UpdateEvent[] = [];
-  for (const rawEvent of rawEvents) {
-    const eventRecord = asRecord(rawEvent);
+  for (let index = 0; index < rawEvents.length; index += 1) {
+    const element = arrayElement(rawEvents, index);
+    if (!element.present) return { ok: false, reason: "invalid_status" };
+    const eventRecord = asPlainRecord(element.value);
     if (eventRecord === null) return { ok: false, reason: "invalid_status" };
     if (!hasOnlyKeys(eventRecord, UPDATE_EVENT_KEYS)) return { ok: false, reason: "invalid_status" };
-    const eventFrom = eventRecord.from;
-    const eventTo = eventRecord.to;
+    const eventFrom = eventRecord.data("from");
+    const eventTo = eventRecord.data("to");
     if (!isUpdateState(eventFrom) || !isUpdateState(eventTo)) return { ok: false, reason: "invalid_status" };
-    if (!isTransitionReason(eventRecord.reason)) return { ok: false, reason: "invalid_status" };
-    // Structural legality only. The proof gate is live policy applied at the
-    // moment of transition by `evaluateTransition`; it is not a property of a
-    // recorded history entry, which may legitimately predate a gate.
+    const eventReason = eventRecord.data("reason");
+    if (!isTransitionReason(eventReason)) return { ok: false, reason: "invalid_status" };
+    // Structural legality of the edge.
     if (!LEGAL_TRANSITIONS[eventFrom].includes(eventTo)) return { ok: false, reason: "invalid_status" };
-    events.push({ from: eventFrom, to: eventTo, reason: eventRecord.reason });
+    // Recorded history must be consistent with current policy: a history entry
+    // may not report a successful traversal of the proof-gated install path,
+    // because current v1 carries no gate evidence a validator could verify and no
+    // scheme is admitted. Refusals on those same edges stay recordable, as do all
+    // ordinary pre-gate transitions, so history is not globally banned.
+    if (eventReason === "legal_transition" && isAuthenticityDependentState(eventTo)) {
+      return { ok: false, reason: "invalid_status" };
+    }
+    events.push({ from: eventFrom, to: eventTo, reason: eventReason });
   }
 
   return {

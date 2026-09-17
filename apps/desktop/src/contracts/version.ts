@@ -22,14 +22,33 @@ export const VERSION_MIRRORS = ["apps/desktop/src-tauri/Cargo.toml", "apps/deskt
 
 export const MAX_VERSION_CHARS = 128;
 
-/** Official SemVer 2.0.0 pattern, anchored. */
+/**
+ * Declared acceptance profile: **bounded SemVer 2.0.0**.
+ *
+ * The accepted set is exactly the SemVer 2.0.0 grammar, restricted to version
+ * strings of at most `MAX_VERSION_CHARS` characters. The bound is part of the
+ * law, not an implementation detail: it is enforced identically by this parser
+ * and by the Python drift gate, and it is stated as a bounded profile so that
+ * neither implementation can drift into claiming unqualified acceptance.
+ *
+ * Official SemVer 2.0.0 pattern, anchored, ASCII digits only.
+ */
 const SEMVER_PATTERN =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 
 export interface ParsedVersion {
-  readonly major: number;
-  readonly minor: number;
-  readonly patch: number;
+  /**
+   * Major identifier as an exact decimal string. Core identifiers are kept as
+   * strings on purpose: a SemVer core identifier is an arbitrary-precision
+   * unsigned integer, so `Number()` would both round values above 2^53 and
+   * reject versions that a conformant reader — including this repository's
+   * Python drift gate — accepts as valid.
+   */
+  readonly major: string;
+  /** Minor identifier as an exact decimal string. */
+  readonly minor: string;
+  /** Patch identifier as an exact decimal string. */
+  readonly patch: string;
   /** Prerelease identifiers, or `null` when the version has no prerelease. */
   readonly prerelease: readonly string[] | null;
   /** Build metadata identifiers, or `null`. Never participates in precedence. */
@@ -41,8 +60,9 @@ export type VersionParseResult =
   | { readonly ok: false; readonly reason: "malformed_version" };
 
 /**
- * Strict SemVer 2.0.0 parse. Malformed input fails closed; it is never coerced,
- * trimmed, defaulted or partially accepted.
+ * Strict SemVer 2.0.0 parse under the declared bounded profile. Malformed input
+ * fails closed; it is never coerced, trimmed, defaulted or partially accepted.
+ * No numeric conversion takes place, so no precision is lost.
  */
 export function parseVersion(value: unknown): VersionParseResult {
   if (typeof value !== "string" || value.length === 0 || value.length > MAX_VERSION_CHARS) {
@@ -52,18 +72,12 @@ export function parseVersion(value: unknown): VersionParseResult {
   if (match === null) {
     return { ok: false, reason: "malformed_version" };
   }
-  const major = Number(match[1]);
-  const minor = Number(match[2]);
-  const patch = Number(match[3]);
-  if (!Number.isSafeInteger(major) || !Number.isSafeInteger(minor) || !Number.isSafeInteger(patch)) {
-    return { ok: false, reason: "malformed_version" };
-  }
   return {
     ok: true,
     version: {
-      major,
-      minor,
-      patch,
+      major: match[1],
+      minor: match[2],
+      patch: match[3],
       prerelease: match[4] === undefined ? null : match[4].split("."),
       build: match[5] === undefined ? null : match[5].split("."),
     },
@@ -76,12 +90,13 @@ export function isValidVersion(value: unknown): value is string {
 }
 
 /**
- * Exact numeric-identifier comparison.
+ * Exact numeric-identifier comparison, used for both core identifiers
+ * (`major`/`minor`/`patch`) and numeric prerelease identifiers.
  *
- * A SemVer numeric prerelease identifier is an arbitrary-precision unsigned
- * integer. Converting it with `Number()` collapses every value above 2^53 onto
- * the same double, so two distinct identifiers — for example `9007199254740993`
- * and `9007199254740992` — would compare equal and silently corrupt same-channel
+ * A SemVer numeric identifier is an arbitrary-precision unsigned integer.
+ * Converting it with `Number()` collapses every value above 2^53 onto the same
+ * double, so two distinct identifiers — for example `9007199254740993` and
+ * `9007199254740992` — would compare equal and silently corrupt same-channel
  * upgrade/downgrade eligibility. The digit strings are therefore compared by
  * length and then lexically, which is exact because parsing admits no leading
  * zeros in a numeric identifier and therefore length is the value's magnitude.
@@ -111,7 +126,8 @@ export function compareVersions(left: unknown, right: unknown): number | null {
   const b = parseVersion(right);
   if (!a.ok || !b.ok) return null;
   for (const key of ["major", "minor", "patch"] as const) {
-    if (a.version[key] !== b.version[key]) return a.version[key] < b.version[key] ? -1 : 1;
+    const coreResult = compareNumericIdentifier(a.version[key], b.version[key]);
+    if (coreResult !== 0) return coreResult;
   }
   const ap = a.version.prerelease;
   const bp = b.version.prerelease;

@@ -34,20 +34,39 @@ VERSION_CONTRACT = "hive-version-v1"
 VERIFIER_SCHEMA = "hive-version-drift-doctor-v1"
 MAX_VERSION_CHARS = 128
 
-# Official SemVer 2.0.0 pattern, anchored.
+# Official SemVer 2.0.0 pattern under the declared bounded profile: the SemVer
+# grammar restricted to version strings of at most MAX_VERSION_CHARS characters.
+# The bound is part of the shared law and is asserted identically by the product
+# TypeScript parser, by this gate and by the shared vector file
+# `apps/desktop/src/contracts/semverParityVectors.json`.
+#
+# Two properties are deliberate and load-bearing for cross-language parity:
+#   * No anchors, and matching via `fullmatch`. `re.match` with a trailing `$`
+#     accepts a final newline, so this gate would report LOCKED for a version the
+#     product parser rejects.
+#   * Explicit `[0-9]` digit classes instead of `\d`. Python's `\d` also matches
+#     Unicode decimal digits, whereas JavaScript's `\d` (used by the product
+#     parser) is ASCII-only, so `1.0.0-1٠` would be accepted here and rejected
+#     there.
 SEMVER_PATTERN = re.compile(
-    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
-    r"(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
-    r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
-    r"(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+    r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+    r"(?:-((?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)"
+    r"(?:\.(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+    r"(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?"
 )
 
 
 def is_valid_version(value: object) -> bool:
-    """Strict SemVer 2.0.0 acceptance. Malformed input fails closed."""
+    """Strict SemVer 2.0.0 acceptance under the bounded profile.
+
+    A full-string match is required, so nothing — including a trailing newline,
+    carriage return or Unicode line separator — may ride along. Malformed input
+    fails closed. Acceptance must agree exactly with the product TypeScript
+    parser; the shared vector file is the executable statement of that agreement.
+    """
     if not isinstance(value, str) or not value or len(value) > MAX_VERSION_CHARS:
         return False
-    return SEMVER_PATTERN.match(value) is not None
+    return SEMVER_PATTERN.fullmatch(value) is not None
 
 
 @dataclass(frozen=True)

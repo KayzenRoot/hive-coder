@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CANONICAL_VERSION_SOURCE,
+  MAX_VERSION_CHARS,
   VERSION_CONTRACT,
   VERSION_MIRRORS,
   compareVersions,
@@ -10,6 +11,7 @@ import {
   isStrictlyNewer,
   parseVersion,
 } from "./version";
+import PARITY_VECTORS from "./semverParityVectors.json";
 
 describe("version contract", () => {
   it("declares exactly one canonical source and its mirrors", () => {
@@ -24,11 +26,66 @@ describe("version contract", () => {
     const parsed = parseVersion("12.34.56-beta.2+build.7");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.version.major).toBe(12);
-    expect(parsed.version.minor).toBe(34);
-    expect(parsed.version.patch).toBe(56);
+    // Core identifiers are exact decimal strings, never floating-point numbers.
+    expect(parsed.version.major).toBe("12");
+    expect(parsed.version.minor).toBe("34");
+    expect(parsed.version.patch).toBe("56");
     expect(parsed.version.prerelease).toEqual(["beta", "2"]);
     expect(parsed.version.build).toEqual(["build", "7"]);
+  });
+
+  it("accepts core identifiers beyond the JavaScript safe-integer range", () => {
+    // These are valid SemVer and are accepted by the Python drift gate; the
+    // product parser must agree, so one canonical version law cannot have two
+    // acceptance sets.
+    for (const version of [
+      "9007199254740991.0.0",
+      "9007199254740992.0.0",
+      "9007199254740993.0.0",
+      "1.9007199254740993.0",
+      "1.0.9007199254740993",
+      "123456789012345678901234567890.0.0",
+    ]) {
+      expect(isValidVersion(version), version).toBe(true);
+      expect(parseVersion(version).ok, version).toBe(true);
+    }
+    const parsed = parseVersion("9007199254740993.0.0");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.version.major).toBe("9007199254740993");
+    // No precision is lost: the exact string survives, and ordering is exact.
+    expect(compareVersions("9007199254740993.0.0", "9007199254740992.0.0")).toBe(1);
+    expect(compareVersions("9007199254740992.0.0", "9007199254740993.0.0")).toBe(-1);
+    expect(compareVersions("9007199254740992.0.0", "9007199254740992.0.0")).toBe(0);
+    expect(
+      compareVersions("123456789012345678901234567891.0.0", "123456789012345678901234567890.0.0"),
+    ).toBe(1);
+    expect(isStrictlyNewer("9007199254740993.0.0", "9007199254740992.0.0")).toBe(true);
+    expect(isStrictlyNewer("9007199254740992.0.0", "9007199254740993.0.0")).toBe(false);
+  });
+
+  it("agrees with the shared cross-language parity vectors", () => {
+    expect(PARITY_VECTORS.profile.maxVersionChars).toBe(MAX_VERSION_CHARS);
+    expect(PARITY_VECTORS.profile.law).toBe("bounded SemVer 2.0.0");
+    expect(PARITY_VECTORS.accepted.length).toBeGreaterThan(0);
+    expect(PARITY_VECTORS.rejected.length).toBeGreaterThan(0);
+    for (const version of PARITY_VECTORS.accepted) {
+      expect(isValidVersion(version), `accepted: ${JSON.stringify(version)}`).toBe(true);
+      expect(parseVersion(version).ok, `accepted: ${JSON.stringify(version)}`).toBe(true);
+    }
+    for (const version of PARITY_VECTORS.rejected) {
+      expect(isValidVersion(version), `rejected: ${JSON.stringify(version)}`).toBe(false);
+      expect(parseVersion(version).ok, `rejected: ${JSON.stringify(version)}`).toBe(false);
+    }
+  });
+
+  it("rejects a version one character past the declared profile boundary", () => {
+    const atBoundary = "1" + "0".repeat(123) + ".0.0";
+    const overBoundary = "1" + "0".repeat(124) + ".0.0";
+    expect(atBoundary.length).toBe(MAX_VERSION_CHARS);
+    expect(overBoundary.length).toBe(MAX_VERSION_CHARS + 1);
+    expect(isValidVersion(atBoundary)).toBe(true);
+    expect(isValidVersion(overBoundary)).toBe(false);
   });
 
   it("rejects malformed versions rather than coercing them", () => {

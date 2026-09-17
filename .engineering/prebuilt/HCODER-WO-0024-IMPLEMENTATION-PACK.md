@@ -1,6 +1,6 @@
 # HCODER-WO-0024 — Prebuilt Implementation Pack
 
-**Status:** IMPLEMENTED / CORRECTION REVIEW PENDING — the reviewed prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` returned CORRECTION_REQUIRED (CRITICAL `0` / HIGH `4` / MEDIUM `2`, review `5236275753`); corrections are carried in source under Context Lock Delta `001` and their exact-head proof is pending  
+**Status:** IMPLEMENTED / SECOND CORRECTION REVIEW PENDING — two independent reviews returned CORRECTION_REQUIRED on the prebuild head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` (`5236275753`, CRITICAL `0` / HIGH `4` / MEDIUM `2`) and on the first correction head `97c533de73c9d8f007b6dfc4eaf73804fb1de220` (`5236688350`, CRITICAL `0` / HIGH `2` / MEDIUM `1`). Both correction rounds are carried in source under Context Lock Delta `001` and Delta `002`; their exact-head proof is pending.  
 **Base:** `b6aff55ac12c1d31a883878f1d8478d642fbe8e6`  
 **Issue:** `#77`
 
@@ -20,7 +20,10 @@ CANONICAL_VERSION_SOURCE    = "apps/desktop/src-tauri/tauri.conf.json"
 ## Canonical version law
 - Canonical source: `tauri.conf.json` → `version`.
 - Mirrors: `Cargo.toml` `[package].version`, `package.json` `version`.
-- A mirror is correct only when it parses as strict SemVer **and** equals the canonical value exactly.
+- A mirror is correct only when it parses as SemVer under the bounded profile **and** equals the canonical value exactly.
+- The declared profile is **bounded SemVer 2.0.0**: the SemVer 2.0.0 grammar restricted to version strings of at most 128 characters. The bound is part of the law and is enforced identically by the product TypeScript parser and the Python drift gate.
+- Core identifiers (`major`/`minor`/`patch`) and numeric prerelease identifiers are arbitrary-precision integers: they are carried as exact decimal strings and compared by digit length then lexicographically. No `Number()`/float conversion and no safe-integer rejection, which would otherwise split the acceptance set across languages.
+- The product parser and the Python gate share one acceptance set, pinned by `apps/desktop/src/contracts/semverParityVectors.json`, which both suites read. The Python gate matches with `fullmatch`, uses explicit ASCII `[0-9]` classes and carries no end anchor, so a trailing newline or a Unicode decimal digit cannot be accepted there while the product parser rejects it.
 - Malformed canonical or mirror versions fail closed and are reported by path.
 - The verifier is offline, read-only, deterministic and reports `sideEffects: NONE`.
 
@@ -47,11 +50,13 @@ failure -> idle
 unavailable -> idle
 ```
 - Unknown states and undeclared transitions fail closed.
-- The table declares *structural* legality. Two edges are additionally authenticity-gated: `verifying -> ready` (the install-ready boundary) and `ready -> installing` (defence in depth). `ready` means install-ready, so entering it is the gate that matters; gating only the install call leaves install-ready reachable from untrusted state.
-- `ADMITTED_AUTHENTICITY_SCHEMES` is empty in this slice, so install-ready is unreachable by construction. No scheme may be invented, faked or bypassed. A status snapshot claiming `ready` or `installing` must carry an accepted proof against the same policy and is therefore invalid here.
+- `ready`, `installing` and `success` are **authenticity-dependent states**: `success` is reachable only from `installing`, so asserting any of them asserts that a verified proof was acted on. Every legal edge entering one — `verifying -> ready`, `ready -> installing`, `installing -> success` — is authenticity-gated in `evaluateTransition`, and a test asserts that the gated set is exactly the set of legal edges whose destination is authenticity-dependent.
+- A status snapshot claiming an authenticity-dependent state must carry a proof accepted under the same policy, and a recorded history entry may not report a `legal_transition` into one. Because no scheme is admitted, the whole install path is unreachable and unassertable in this slice.
+- Refusal events on those edges (`authenticity_proof_required`, `malformed_authenticity_proof`), failure edges such as `verifying -> failure`, and all ordinary pre-gate history remain valid: verification is not globally banned.
 - One current version and one current channel form a single identity: a valid-but-incompatible pair fails closed at service construction, in status validation (for both the current and the candidate version) and in the About read model.
 - A status snapshot is a closed object: exact key sets at the top level, in the error object and in every event; per-event vocabulary and structural legality; state-dependent candidate (`required` / `forbidden` / either) and error invariants; a maximum event count. It is validated and then **reconstructed** from validated fields — never returned as the caller's object cast to `UpdateStatus`.
-- Numeric prerelease identifiers compare exactly, by digit length then lexicographically. Floating-point conversion would collapse distinct identifiers above `2^53`.
+- Validation reads **plain own-data records only**: no custom prototype or class instance, no accessor-backed property, no non-enumerable or symbol-keyed field, no sparse or accessor-backed event array. Values come from own property descriptors, so validation never executes a getter. The rule applies to status, error, event and proof objects.
+- Numeric identifiers compare exactly, by digit length then lexicographically, for core identifiers and prerelease identifiers alike.
 - Error metadata is a closed code vocabulary plus bounded detail drawn from a narrow charset and free of credential shapes.
 
 ## UpdateService boundary
@@ -76,7 +81,7 @@ None. This slice adds no dependency. If completing it appears to require an upda
 - **Uncertainty Ledger:** unresolved assumptions are explicit gates and never silently become implementation facts.
 
 ## Tests before promotion
-Contract tests must cover: strict SemVer acceptance and rejection; exact numeric prerelease precedence above `2^53`; canonical/mirror drift, missing and malformed mirrors; channel vocabulary and unknown-channel refusal; version-shape/channel matching derived from the single strict parser; same-channel upgrade eligibility; downgrade, identical-version and prerelease-mismatch refusal; cross-channel refusal with governed-decision reporting; the full transition table including illegal transitions; install-ready refusal without an accepted proof on **both** gated edges; exhaustive unreachability of `ready` and `installing`; malformed proof refusal; bounded and credential-shaped error-detail refusal; status closure (unknown keys at every level, per-event validation, required keys, candidate and error invariants, canonical reconstruction); version/channel identity at every boundary; inert-boundary member absence; and absence of any network/process/update side-effect surface.
+Contract tests must cover: SemVer acceptance and rejection under the bounded profile; exact numeric comparison for core and prerelease identifiers above `2^53`; cross-language parity vectors consumed by both the TypeScript and Python suites (huge core values, huge prerelease values, malformed forms, trailing LF/CR/CRLF and Unicode line separators, non-ASCII and Unicode-digit content, the 128-character boundary); canonical/mirror drift, missing and malformed mirrors; channel vocabulary and unknown-channel refusal; version-shape/channel matching derived from the single canonical parser; same-channel upgrade eligibility; downgrade, identical-version and prerelease-mismatch refusal; cross-channel refusal with governed-decision reporting; the full transition table including illegal transitions; proof-gated refusal on every edge entering an authenticity-dependent state; exhaustive unreachability of `ready`, `installing` and `success`; malformed proof refusal; bounded and credential-shaped error-detail refusal; status closure (unknown keys at every level, per-event validation, required keys, candidate and error invariants, canonical reconstruction); refusal of direct authenticity-dependent snapshots and of proof-gated successful history, with pre-gate history still accepted; plain own-data record validation (inherited fields, class instances, accessor-backed records, non-enumerable and symbol keys, sparse and accessor-backed arrays) with a proven zero getter-invocation count; version/channel identity at every boundary; inert-boundary member absence; and absence of any network/process/update side-effect surface.
 
 Native proof runs independently on Windows, Linux and macOS. Platform skips cannot promote that platform.
 

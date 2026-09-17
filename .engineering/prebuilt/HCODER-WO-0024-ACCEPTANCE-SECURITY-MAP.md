@@ -1,6 +1,6 @@
 # HCODER-WO-0024 — Acceptance & Security Map
 
-**Status:** IMPLEMENTED / CORRECTION REVIEW PENDING — rows marked `MATERIALISED` were **withdrawn to PENDING** by review `5236275753`  
+**Status:** IMPLEMENTED / SECOND CORRECTION REVIEW PENDING — rows marked `MATERIALISED` were **withdrawn to PENDING** by reviews `5236275753` (CRITICAL `0` / HIGH `4` / MEDIUM `2`) and `5236688350` (CRITICAL `0` / HIGH `2` / MEDIUM `1`)  
 **Issue:** `#77`
 
 Required negative proofs are the point of this slice. A row is satisfied only by a
@@ -8,8 +8,9 @@ test that fails if the guard is removed.
 
 A row may be marked `MATERIALISED` only when a test at the *named* exact head fails
 if the guard is removed, and that head has passed its gates. Green hosted gates on
-the reviewed head `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` did **not** mean
-these properties held, so the rows below were returned to `PENDING`.
+the reviewed heads `4710a47e2e099b03baa7fd3e5665bfbc882c4c8d` and
+`97c533de73c9d8f007b6dfc4eaf73804fb1de220` did **not** mean these properties held,
+so the rows below were returned to `PENDING`.
 
 | # | Property | Test location | State |
 |---|---|---|---|
@@ -36,13 +37,13 @@ these properties held, so the rows below were returned to `PENDING`.
 | C2 | Only declared transitions are legal | `updateState.test.ts` | MATERIALISED |
 | C3 | Illegal transitions refused | `updateState.test.ts` | MATERIALISED |
 | C4 | No cryptographic scheme admitted in this slice | `updateState.test.ts` | MATERIALISED |
-| C5 | Entering an install-ready state is refused without an accepted authenticity proof, on **both** gated edges (`H-20-01`) | `updateState.test.ts`, `updateService.test.ts` | PENDING EXACT-HEAD PROOF |
+| C5 | Every edge entering an authenticity-dependent state is refused without an accepted authenticity proof (`H-20-01`, `H-21-01`) | `updateState.test.ts`, `updateService.test.ts` | PENDING EXACT-HEAD PROOF |
 | C6 | Malformed proof refused before any policy question | `updateState.test.ts` | MATERIALISED |
 | C7 | Error code vocabulary closed; unknown code refused | `updateState.test.ts` | MATERIALISED |
 | C8 | Oversized error detail refused | `updateState.test.ts` | MATERIALISED |
 | C9 | Credential-shaped detail refused even when charset-valid | `updateState.test.ts` | MATERIALISED |
 | C10 | Detail containing URLs, paths, uppercase blobs or control characters refused | `updateState.test.ts` | MATERIALISED |
-| C11 | Status snapshot closed and bounded: unknown keys refused at top level, in the error object and in **every** event; per-event vocabulary and structural legality; state-dependent candidate and error invariants; canonical reconstruction instead of a cast (`H-20-01`, `H-20-03`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| C11 | Status snapshot closed and bounded: unknown keys refused at top level, in the error object and in **every** event; per-event vocabulary and structural legality; state-dependent candidate and error invariants; canonical reconstruction instead of a cast; direct `ready`/`installing`/`success` snapshots refused; proof-gated successful history refused while pre-gate history stays valid (`H-20-01`, `H-20-03`, `H-21-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
 | D1 | Boundary identity fixed | `updateService.test.ts` | MATERIALISED |
 | D2 | Inert service reports unavailable and never claims readiness | `updateService.test.ts` | MATERIALISED |
 | D3 | Inert service exposes no mutating/transport/install member | `updateService.test.ts` | MATERIALISED |
@@ -69,6 +70,21 @@ these properties held, so the rows below were returned to `PENDING`.
 | H5 | Transition-reason vocabulary is closed and enumerable | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
 | H6 | Every declared status key is required; unknown keys are refused at every level | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
 | H7 | `DEC-028` exists as `PROPOSED / NOT CANONICAL` with a matching ledger entry (`M-20-06`) | `docs/project-brain/adrs/DEC-028-DISTRIBUTION-VERSION-CHANNEL-CONTRACT.md`, `docs/project-brain/10-DECISIONS-LEDGER.md` | PENDING EXACT-HEAD PROOF |
+
+## Additional rows carried by Context Lock Delta 002
+
+| # | Property | Test location | State |
+|---|---|---|---|
+| I1 | The gated edge set is exactly the set of legal edges whose destination is authenticity-dependent, so no entering edge is left ungated (`H-21-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| I2 | No transition anywhere in the state vocabulary reaches `ready`, `installing` or `success`, with or without a well-formed but unadmitted proof (`H-21-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| I3 | A direct `success` status snapshot is refused, with and without proof material (`H-21-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| I4 | A history entry reporting a `legal_transition` into an authenticity-dependent state is refused, while refusal events on those edges and ordinary pre-gate history remain accepted (`H-21-01`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| I5 | The product TypeScript parser accepts core identifiers far above `2^53` with no precision loss, and orders them exactly (`H-21-02`) | `version.test.ts` | PENDING EXACT-HEAD PROOF |
+| I6 | Both languages accept and reject exactly the shared parity vector set, including the 128-character boundary (`H-21-02`) | `version.test.ts`, `tests/desktop/test_version_drift.py`, `apps/desktop/src/contracts/semverParityVectors.json` | PENDING EXACT-HEAD PROOF |
+| I7 | The Python gate refuses a trailing LF/CR/CRLF and Unicode line separators, so it can never report `LOCKED` for a version the product parser rejects (`H-21-02`) | `tests/desktop/test_version_drift.py` | PENDING EXACT-HEAD PROOF |
+| I8 | Python refuses Unicode decimal digits inside numeric identifiers, matching the ASCII-only JavaScript parser (`H-21-02`) | `tests/desktop/test_version_drift.py` | PENDING EXACT-HEAD PROOF |
+| I9 | Inherited fields, class instances, custom prototypes, accessor-backed records, non-enumerable fields, symbol keys, and sparse or accessor-backed event arrays are refused at every level (`M-21-03`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
+| I10 | Validation invokes zero getters, proven by an invocation counter, for status, error, event and proof records (`M-21-03`) | `updateState.test.ts` | PENDING EXACT-HEAD PROOF |
 
 ## Security invariants this slice must not weaken
 The existing `tools/desktop/security_gate.py` assertions — zero frontend invokes

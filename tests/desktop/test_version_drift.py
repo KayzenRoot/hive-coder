@@ -13,10 +13,19 @@ from pathlib import Path
 
 from tools.desktop.version_drift import (
     CANONICAL_SOURCE,
+    MAX_VERSION_CHARS,
+    VERSION_CONTRACT,
     MirrorObservation,
     evaluate_version_drift,
     is_valid_version,
 )
+
+ROOT = Path(__file__).resolve().parents[2]
+
+# Shared with the product TypeScript suite: one acceptance set, two languages.
+# See apps/desktop/src/contracts/version.test.ts.
+PARITY_VECTORS_PATH = ROOT / "apps" / "desktop" / "src" / "contracts" / "semverParityVectors.json"
+PARITY_VECTORS = json.loads(PARITY_VECTORS_PATH.read_text(encoding="utf-8"))
 
 
 def _mirrors(cargo: str | None, npm: str | None) -> tuple[MirrorObservation, ...]:
@@ -59,6 +68,102 @@ class SemVerLawTests(unittest.TestCase):
         for value in (None, 1, 1.0, ["1.2.3"], {"version": "1.2.3"}):
             with self.subTest(value=type(value).__name__):
                 self.assertFalse(is_valid_version(value))  # type: ignore[arg-type]
+
+    def test_accepts_core_identifiers_beyond_safe_integer_range(self) -> None:
+        """A core numeric identifier is arbitrary precision, not a machine int."""
+        for value in (
+            "9007199254740991.0.0",
+            "9007199254740992.0.0",
+            "9007199254740993.0.0",
+            "1.9007199254740993.0",
+            "1.0.9007199254740993",
+            "123456789012345678901234567890.0.0",
+        ):
+            with self.subTest(version=value):
+                self.assertTrue(is_valid_version(value))
+
+    def test_rejects_a_trailing_line_terminator(self) -> None:
+        """A trailing newline must not be accepted: the product parser refuses it.
+
+        `re.match` with a `$` anchor accepts a final LF, which would let this gate
+        report LOCKED for a version the product TypeScript parser rejects.
+        """
+        for value in (
+            "1.2.3\n",
+            "1.2.3\n\n",
+            "1.2.3\r",
+            "1.2.3\r\n",
+            "1.2.3\u2028",
+            "1.2.3\u2029",
+            "0.1.0\n",
+            "1.2.3-beta.1\n",
+        ):
+            with self.subTest(version=repr(value)):
+                self.assertFalse(is_valid_version(value))
+
+    def test_rejects_unicode_decimal_digits(self) -> None:
+        """Python's `\\d` matches Unicode digits; JavaScript's does not.
+
+        The pattern therefore uses explicit ASCII `[0-9]` classes so both sides
+        accept exactly the same set.
+        """
+        for value in ("1.0.0-1\u0660", "\u0661.0.0", "\u0661.2.3", "1.0.\u0660", "\u0661\u0662.\u0663.\u0664"):
+            with self.subTest(version=repr(value)):
+                self.assertFalse(is_valid_version(value))
+
+    def test_enforces_the_declared_profile_boundary(self) -> None:
+        at_boundary = "1" + "0" * 123 + ".0.0"
+        over_boundary = "1" + "0" * 124 + ".0.0"
+        self.assertEqual(len(at_boundary), MAX_VERSION_CHARS)
+        self.assertEqual(len(over_boundary), MAX_VERSION_CHARS + 1)
+        self.assertTrue(is_valid_version(at_boundary))
+        self.assertFalse(is_valid_version(over_boundary))
+
+    def test_agrees_with_the_shared_cross_language_parity_vectors(self) -> None:
+        """The single executable statement of TypeScript/Python acceptance parity.
+
+        Both suites read this file, so the two implementations cannot drift into
+        different acceptance sets without one of them failing.
+        """
+        self.assertEqual(PARITY_VECTORS["contract"], VERSION_CONTRACT)
+        self.assertEqual(PARITY_VECTORS["profile"]["maxVersionChars"], MAX_VERSION_CHARS)
+        self.assertEqual(PARITY_VECTORS["profile"]["law"], "bounded SemVer 2.0.0")
+        accepted = PARITY_VECTORS["accepted"]
+        rejected = PARITY_VECTORS["rejected"]
+        self.assertGreater(len(accepted), 0)
+        self.assertGreater(len(rejected), 0)
+        for value in accepted:
+            with self.subTest(accepted=value):
+                self.assertTrue(is_valid_version(value))
+        for value in rejected:
+            with self.subTest(rejected=repr(value)):
+                self.assertFalse(is_valid_version(value))
+
+    def test_locked_canonical_version_implies_product_parser_acceptance(self) -> None:
+        """Python may never report LOCKED for a version the product parser rejects.
+
+        Within the declared profile the acceptance sets are identical, so every
+        version this gate accepts is a version TypeScript accepts. The shared
+        vector file pins that equality from both sides.
+        """
+        accepted = PARITY_VECTORS["accepted"]
+        for canonical in accepted:
+            with self.subTest(canonical=canonical):
+                report = evaluate_version_drift(canonical, _mirrors(canonical, canonical))
+                self.assertEqual(report.status, "LOCKED")
+                self.assertIn(canonical, accepted)
+        for canonical in PARITY_VECTORS["rejected"]:
+            with self.subTest(canonical=repr(canonical)):
+                if not isinstance(canonical, str):
+                    continue
+                report = evaluate_version_drift(canonical, _mirrors(canonical, canonical))
+                self.assertEqual(report.status, "INVALID")
+                self.assertEqual(report.reason, "malformed_canonical_version")
+
+    def test_a_trailing_newline_can_never_reach_locked(self) -> None:
+        report = evaluate_version_drift("0.1.0\n", _mirrors("0.1.0\n", "0.1.0\n"))
+        self.assertEqual(report.status, "INVALID")
+        self.assertEqual(report.reason, "malformed_canonical_version")
 
 
 class VersionDriftLawTests(unittest.TestCase):
