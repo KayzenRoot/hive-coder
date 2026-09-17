@@ -165,6 +165,34 @@
   "hostedGates": [
     {
       "workflow": "Governance",
+      "runId": 35210910407,
+      "sha": "b6297fbe4de4681fc92093f3691f693dc2de0dc1",
+      "conclusion": "SUCCESS",
+      "scope": "post-seal canonical main validation"
+    },
+    {
+      "workflow": "Desktop Shell",
+      "runId": 35210910423,
+      "sha": "b6297fbe4de4681fc92093f3691f693dc2de0dc1",
+      "conclusion": "SUCCESS",
+      "scope": "post-seal canonical main validation"
+    },
+    {
+      "workflow": "Governance",
+      "runId": 35205511215,
+      "sha": "404eba14be94be710b7f08c845d43540b65c9b96",
+      "conclusion": "SUCCESS",
+      "scope": "final-seal PR head"
+    },
+    {
+      "workflow": "Desktop Shell",
+      "runId": 35205511447,
+      "sha": "404eba14be94be710b7f08c845d43540b65c9b96",
+      "conclusion": "SUCCESS",
+      "scope": "final-seal PR head"
+    },
+    {
+      "workflow": "Governance",
       "runId": 35204919678,
       "sha": "1b83666699acc8fdbd5270d811f1bf263d55ef47",
       "conclusion": "SUCCESS",
@@ -176,20 +204,6 @@
       "sha": "1b83666699acc8fdbd5270d811f1bf263d55ef47",
       "conclusion": "SUCCESS",
       "scope": "post-closeout canonical main validation"
-    },
-    {
-      "workflow": "Governance",
-      "runId": 35174158942,
-      "sha": "204aa32ac26003082366588bc9e5d5399473c3b6",
-      "conclusion": "SUCCESS",
-      "scope": "closeout PR head"
-    },
-    {
-      "workflow": "Desktop Shell",
-      "runId": 35174158986,
-      "sha": "204aa32ac26003082366588bc9e5d5399473c3b6",
-      "conclusion": "SUCCESS",
-      "scope": "closeout PR head"
     },
     {
       "workflow": "Governance",
@@ -228,7 +242,7 @@
   ],
   "checkpointDelta": ".engineering/checkpoint-deltas/HCODER-WO-0023.md",
   "canonicalCheckpointMutated": true,
-  "stopState": "FINAL_SEAL_CANDIDATE_READY_FOR_REVIEW",
+  "stopState": "WO_0023_FULLY_CLOSED",
   "lastBehaviorChangingHead": "b904b473416786e72c7e805e2e8c8b557d377166",
   "independentHedsReviewId": "5229345968",
   "independentHedsHead": "b827cb2eaa04eb2efa3ffb0b9aa7a82cbb7c672a",
@@ -278,15 +292,16 @@
   },
   "provenanceSemantics": "lastBehaviorChangingHead is behavior provenance: the last head at which product/runtime behavior changed. In this Work Order that is also the technical baseline the executor audited. It is NOT a HEDS head. independentHedsHead and independentHedsReviewId are the authoritative HEDS provenance. headSha is the reviewed evidence target this file describes.",
   "decisionState": "CANONICAL_SEALED",
-  "canonicalCheckpointMutationScope": "docs/project-brain/11-CHECKPOINT.md records HCODER-CP-0023 as SEALED / CANONICAL with both merge SHAs and their post-merge exact-main receipts. The final-seal PR is not merged, so this is a final-seal candidate state; Issue #68 remains open.",
+  "canonicalCheckpointMutationScope": "docs/project-brain/11-CHECKPOINT.md records HCODER-CP-0023 as SEALED / CANONICAL with all three merge SHAs and their post-merge exact-main receipts, and records Issue #68 as CLOSED / COMPLETED. No lifecycle field in this file becomes false merely because the source-truth correction PR later merges.",
   "mergeState": {
     "merged": true,
     "canonicalMainReceived": true,
     "postMergeValidated": true,
     "workOrderClosed": true,
-    "issue68Closed": false,
+    "issue68Closed": true,
     "canonicalProductMergeSha": "1f09520fbd92c7e65f9726b65a854f918507c895",
     "closeoutMergeSha": "1b83666699acc8fdbd5270d811f1bf263d55ef47",
+    "finalSealMergeSha": "b6297fbe4de4681fc92093f3691f693dc2de0dc1",
     "squashMerge": true,
     "expectedHeadProtection": true
   },
@@ -295,12 +310,16 @@
     "closeoutPrMerged": true,
     "closeoutMergeSha": "1b83666699acc8fdbd5270d811f1bf263d55ef47",
     "closeoutSealPending": false,
-    "finalSealPrMerged": false,
-    "finalSealHead": "SELF_REFERENTIAL_SEE_NOTE",
-    "note": "The final-seal head carries this file and cannot contain its own SHA; it is recorded by its own exact-head receipts and the Prompt 13 return."
+    "finalSealPrMerged": true,
+    "finalSealHead": "404eba14be94be710b7f08c845d43540b65c9b96",
+    "finalSealMergeSha": "b6297fbe4de4681fc92093f3691f693dc2de0dc1",
+    "note": "The final-seal head and its squash merge SHA are proven facts and are recorded directly; no self-referential or future SHA is stored."
   },
   "issueState": {
-    "issue68": "OPEN",
-    "note": "Issue #68 is closed only after the final-seal PR merges and post-seal main is validated; this file does not guess that future state."
-  }
+    "issue68": "CLOSED",
+    "stateReason": "COMPLETED",
+    "closedAt": "2026-09-17T10:35:38Z",
+    "note": "Issue closure is an external GitHub lifecycle receipt; no repository commit mirrors it."
+  },
+  "canonicalMainSha": "b6297fbe4de4681fc92093f3691f693dc2de0dc1"
 }

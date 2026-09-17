@@ -288,6 +288,34 @@ The closeout merge has completed and the sealed lifecycle state is documented. T
 ### Explicit non-authorization
 No Issue #68 closure, no branch deletion, no final-seal PR merge, and no post-seal validation claim. No runtime, authority, dependency, workflow, test semantics or desktop behavior change, and no Python source file change. No future SHA is fabricated; the final-seal head is recorded externally by its own exact-head receipts.
 
+## Context Lock Delta 013 — post-seal source-truth correction
+Review verdict on Prompt 14 was CORRECTION_REQUIRED, **documentation, evidence and source-truth only**. This is the last same-WO source-truth reconciliation. **It grants no authority, no capability, no scope and no behavior change**, and it does not alter the technical decision.
+
+### Corrected defect
+The canonical WO-0023 artifacts were frozen in pre-final-seal and pre-Issue-closure current-state wording. Prompt 14 correctly forbade creating a repository commit purely to mirror the mutable issue state, so the artifacts continued to assert, in the present tense, that the final-seal PR was unmerged, that Issue #68 remained open pending it, and in places that `DEC-027` was still PROPOSED or the Work Order unmerged. Those statements became false once the final-seal PR merged and Issue #68 closed.
+
+Corrected across the canonical checkpoint, `DEC-027`, the Decisions Ledger, the Work Order, the checkpoint delta, the Evidence Ledger, the closeout evidence and the GEF machine evidence. Superseded phase wording is retained only where its section is explicitly labelled as a historical phase record.
+
+### Authorized files
+- `docs/project-brain/11-CHECKPOINT.md`
+- `docs/project-brain/10-DECISIONS-LEDGER.md`
+- `docs/project-brain/adrs/DEC-027-GOVERNED-GIT-STAGING.md`
+- `.engineering/work-orders/HCODER-WO-0023.md`
+- `.engineering/checkpoint-deltas/HCODER-WO-0023.md`
+- `.engineering/evidence/HCODER-WO-0023.md`
+- `.engineering/evidence/HCODER-CP-0023-CANONICAL-CLOSEOUT.md`
+- `.engineering/evidence/HCODER-WO-0023-GEF-CANDIDATE.json`
+- this Context Lock (append-only)
+
+### Recorded final state
+Product PR `#69` merged as `1f09520fbd92c7e65f9726b65a854f918507c895`; closeout PR `#75` merged as `1b83666699acc8fdbd5270d811f1bf263d55ef47`; final-seal PR `#76` merged as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, which is the current canonical `main` and which passed post-seal Governance `35210910407` and Desktop Shell `35210910423` including native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging proof. `DEC-027` is CANONICAL / SEALED under `HCODER-CP-0023`. Work Order status is COMPLETE / CANONICAL. Issue `#68` is CLOSED / COMPLETED at `2026-09-17T10:35:38Z`. Independent technical HEDS `5229345968`: CRITICAL `0` / HIGH `0`.
+
+### Self-reference law
+The already-proven final-seal merge SHA and the final-seal head are recorded directly because they are established facts. The merge SHA of this source-truth correction branch is **not** recorded anywhere in this commit, is not called current `main`, and is not part of the admitted authority evidence. No new lifecycle field is introduced that would become false merely because this correction PR later merges.
+
+### Explicit non-authorization
+No runtime, authority, dependency, workflow, test semantics, desktop, release or HCODER-WO-0024 file is touched. No HCODER-WO-0024 branch, Work Order, Context Lock, contract or implementation is created by this delta.
+
 ## Source check
 The current desktop Git surface is read-only and deliberately does not execute Git. `apps/desktop/src-tauri/src/lib.rs` discovers `.git`, reads bounded `HEAD`, loose refs and `packed-refs`, rejects symlink/reparse traversal, rejects linked-worktree gitdir files, and reports provenance `git-head-read-v1`.
 

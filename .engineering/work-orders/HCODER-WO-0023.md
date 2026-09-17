@@ -1,6 +1,6 @@
 # HCODER-WO-0023 — Governed Git Staging Capability
 
-**Status:** COMPLETE / CANONICAL — product PR #69 and closeout PR #75 both merged and post-merge validated on exact `main`; Issue #68 remains open pending this final-seal PR  
+**Status:** COMPLETE / CANONICAL / SEALED — product PR #69, closeout PR #75 and final-seal PR #76 all merged and post-seal validated on exact `main`; Issue #68 CLOSED / COMPLETED  
 **Delivered authority:** exactly one bounded action, `git_stage_paths_v1`, under `Capability.GIT_WRITE` (HIGH, mandatory approval, request-bound single-use permit)  
 **Backend result:** route (1) selected — `dulwich==1.2.15`, pure-Python wheel, hash-pinned, provenance and import isolation closed  
 **Native proof:** Windows, Linux and macOS governed Git staging lanes pass independently at exact head  
@@ -8,7 +8,7 @@
 **Task class:** T3  
 **Context radius:** C4  
 **Canonical base:** `22b56b0f3111158cbf50789b1647c5a578a171c1`  
-**Decision:** `DEC-027` PROPOSED  
+**Decision:** `DEC-027` — CANONICAL / SEALED under `HCODER-CP-0023`  
 **Issue:** `#68`
 
 ## Objective
@@ -42,7 +42,7 @@ Implementation completed under Context Lock Deltas 004 (authority/publication), 
 ## Acceptance law
 Contract/security tests were prebuilt first. Promotion requires successful exact-path staging plus stale HEAD/index/worktree rejection, foreign-lock safety, traversal/.git/symlink/reparse rejection, permit lifecycle proof, redaction proof and independent Windows/Linux/macOS evidence.
 
-**Status of that law:** all of the above is implemented and passing at the independently reviewed head `b827cb2e`, including independent native Windows, Linux and macOS governed staging lanes. Promotion itself has not occurred: `DEC-027` remains PROPOSED and PR #69 remains Draft pending the governing review.
+**Status of that law:** all of the above is implemented and passing at the independently reviewed head `b827cb2e`, including independent native Windows, Linux and macOS governed staging lanes. Promotion has since completed: `DEC-027` is CANONICAL / SEALED, PR #69 merged, the closeout and final-seal PRs merged, and Issue #68 is CLOSED / COMPLETED.
 
 ## Preserved exclusions
 No commit/ref/branch/tag mutation; no checkout/reset/restore/clean/stash; no merge/rebase/cherry-pick; no remote/network/credentials; no hooks/external executable filters; no generic shell/process/terminal; no arbitrary `.git` write authority; no desktop/Tauri mutation expansion.
@@ -52,4 +52,4 @@ If exact-path staging cannot be implemented without one of the excluded authorit
 
 That condition did not trigger: exact-path staging was implemented within the excluded-authority boundaries, and no broader authority was smuggled in. The preserved exclusions below still hold at the approved head.
 
-**Approval state.** This Work Order is APPROVED / READY FOR MERGE on this branch. It is not merged, not closed, canonical main has not received it, and no post-merge validation has occurred. The executor may prepare approval-state evidence but does not self-issue the final merge approval; the approval-state head still requires independent exact-head review. Historical backend-gate and correction chronology above is preserved and is not rewritten.
+**Approval state (historical phase).** At the approval-state phase this Work Order was APPROVED / READY FOR MERGE on its branch and not yet merged. That phase has been superseded: the product, closeout and final-seal merges are complete, `HCODER-CP-0023` is SEALED / CANONICAL, and Issue #68 is CLOSED / COMPLETED. The frozen execution law below still holds for any future Work Order. Historical backend-gate and correction chronology above is preserved and is not rewritten.
