@@ -61,5 +61,9 @@ No product behavior, runtime authority, workflow behavior, dependency state or t
 
 This section deliberately does not claim that `DEC-027` status or the checkpoint were untouched: the closeout candidate intentionally advances them to the canonical state recorded above, and claiming otherwise would be false. What remains unchanged is the admitted authority and the release state.
 
-## STOP CONDITION
-Do not close Issue #68 and do not merge the final-seal PR in the prompt that produced it. The sealed state recorded above describes merges and validations that have actually occurred; it does not authorize any further authority, capability or behavior change.
+## STOP CONDITION (final post-closure state)
+`HCODER-WO-0023` is fully closed and sealed. This delta records completed merges and validations; it grants **no** additional authority, capability, scope or behavior change.
+
+No further repository mutation under `HCODER-WO-0023` is authorized. The admitted authority remains exactly `Capability.GIT_WRITE` / `git_stage_paths_v1` for explicit regular files in the proven ordinary local SHA-1 envelope, and publication remains atomic publication, explicitly not strict CAS.
+
+Any new product behavior requires a **newly governed Work Order** with its own Context Lock, allowed files and exact-head gates. Historical pre-merge phase records earlier in this document are preserved as history and are not current instructions.

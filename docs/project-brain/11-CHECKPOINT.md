@@ -61,7 +61,7 @@ Premium UX/UGAS/themes/i18n/notifications/project navigator: Issue #71.
 
 ## Residual boundaries
 - Append/truncate-in-place, delete and arbitrary rename/move remain unapproved.
-- Git mutation and terminal/shell execution remain unapproved.
+- Git mutation beyond the canonical bounded `Capability.GIT_WRITE` / `git_stage_paths_v1` staging authority remains unapproved, as does terminal/shell execution. Commit, ref/branch/tag, remote, network, credential, generic Git argv and arbitrary `.git` write authority remain unapproved.
 - Installer/signing/updater/release packaging and rollback/roll-forward proof remain open.
 - Runtime-status sidecar packaging/signing/attestation and packaged live E2E remain open.
 - RustSec warning-class dependency debt, stricter CSP, native/full desktop E2E, visual/accessibility automation and final license remain open.

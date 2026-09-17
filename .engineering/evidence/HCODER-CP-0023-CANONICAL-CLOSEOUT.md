@@ -52,5 +52,9 @@ Publication is atomic same-filesystem **publication**, explicitly **not** strict
 ## Final step (completed)
 The final-seal PR #76 squash-merged with expected-head protection as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, and that exact `main` passed Governance `35210910407` and Desktop Shell `35210910423`. Issue #68 was then closed as COMPLETED at `2026-09-17T10:35:38Z`. No further lifecycle step remains.
 
-## STOP CONDITION
-Do not close Issue #68 and do not merge the final-seal PR in the prompt that produced it. The sealed state recorded here describes the product and closeout merges that have actually occurred; it does not authorize any further authority or behavior change.
+## STOP CONDITION (final sealed state)
+The lifecycle for `HCODER-WO-0023` is **complete**. Issue #68 is **CLOSED / COMPLETED** at `2026-09-17T10:35:38Z`; final-seal PR #76 is **merged** as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, and that exact `main` passed post-seal exact-main validation.
+
+This closeout grants **no** additional authority, scope or behavior change under `HCODER-WO-0023`. The admitted authority is unchanged: exactly `Capability.GIT_WRITE` / `git_stage_paths_v1`, with atomic publication rather than strict CAS. Broader Git mutation, shell/terminal execution, commit/ref/branch/remote/network/credential capability and arbitrary `.git` writes remain unapproved.
+
+Any new product behavior requires a **newly governed Work Order** with its own Context Lock, allowed files and exact-head gates. The evidence SHAs, HEDS provenance and bounded-race law recorded above are unchanged.
