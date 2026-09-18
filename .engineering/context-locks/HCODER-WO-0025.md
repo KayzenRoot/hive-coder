@@ -196,3 +196,34 @@ Both thought experiments must hold simultaneously. First: if these exact correct
 
 ## STOP CONDITION (Delta 004)
 STOP if any correction would require a technical, workflow, tool, test, Tauri-config, manifest, lockfile, dependency, runtime or authority change; if it would alter the accepted predicate or the package contract rather than only source-truth wording; if any durable closeout file would still become false solely because review, merge or postvalidation state advances; if any HIGH/CRITICAL finding arises or fresh exact-head gates are not fully green; or if any step would mark the closeout PR Ready, merge it, close Issue #82 as complete, or begin `HCODER-DIST-001C`.
+
+## Delta 005 — Context Lock pointer supersession (M-40-01)
+
+**Trigger:** independent closeout HEDS review `5250270929`, verdict `CORRECTION_REQUIRED`, CRITICAL `0` / HIGH `0` / MEDIUM `1`, on exact reviewed head `7c48100067d31c6ea34f07c8365ea26c99d1604a`. The closeout base is `676138df041c4147df7a5fe3a42b481c0f5e7f13`.
+
+**Accepted by that review and preserved by this delta:** M-39-01 is closed across the seven closeout files; `HCODER_CP_0025_EFFECTIVE` is unchanged and remains accepted; the Prompt 40 delta was documentation/governance-only with no technical, workflow, tool, test, Tauri-config, manifest, lockfile or dependency byte changed; fresh exact-head Governance, Desktop Shell and Native Package Matrix evidence was green with every Governance, Desktop and package job passing; product and package authority boundaries are unchanged; and `HCODER-DIST-001C` is not started. `DEC-029` carries no canonical force while the predicate is unsatisfied, and `HCODER-CP-0024` remains authoritative while the CP-0025 predicate is unsatisfied and the CP-0024 predicate is satisfied.
+
+## Recorded finding (as returned by the independent review)
+
+- **M-40-01 — one residual moving-pointer sentence remained in the append-only Context Lock preamble.** The preamble's standing interpretation clause still located current mutable state, including the state of the PR then carrying the work, in that PR and Issues #30/#82. That is the same lifecycle-pointer pattern Delta 004 removed from the closeout files: once a closeout merges there is no such active PR, so the sentence ceases to be literally durable. The review required the smallest lawful **append-only** supersession rather than a rewrite, and rejected no technical law, package-matrix fact, exact-head evidence or authority boundary.
+
+## Authorised correction
+
+Supersede the preamble's pointer semantics **prospectively**, without rewriting the historical record. The preamble's clause locating current mutable state in the PR then carrying the work is hereby **historical and superseded for interpretation**: from Delta 005 onward it must not be read as a live pointer, and it is preserved only as a description of the stage at which it was written. More generally, every PR, review, gate, approval or merge reference inside Deltas 001–004 — including Delta 001's STOP-condition wording that names a Draft PR, and including the passages in Deltas 003 and 004 that quote lifecycle-pointer wording while recording or correcting it — is a historical stage record by the standing rule at the head of this file, is superseded for pointer interpretation by this delta, and is not a current-state field.
+
+**Durable replacement law.** Mutable lifecycle evidence is **external evidence referenced by Issues #30 and #82 and by the PR carrying the evaluated revision**, independent of whether that PR is open, draft, merged, closed or otherwise inactive. A PR is named only by immutable identity or by role.
+
+**No moving pointer is canonical repository state.** No PR state, no latest-review pointer, no current-head pointer and no moving-main pointer is canonical repository state. Every delta in this file records what was authorised, required or true at its own stage; only each delta's *law* — allowed files, prohibitions, predicates — carries forward, and this delta's law is the paragraph above.
+
+Change set, exactly: this Context Lock. No other repository file is changed by Delta 005, because the source check found no independent contradiction caused by M-40-01 outside it — the seven closeout files were already corrected under Delta 004 and retain that correction and the three-condition predicate unchanged.
+
+**Forbidden:** `.github/workflows/native-package-matrix.yml`; `tools/desktop/package_inventory.py`; `tests/desktop/test_package_inventory.py`; every product or runtime source; `tauri.conf.json`; manifests and lockfiles; dependencies; the Governance and Desktop workflows; and any permission, capability or authority surface.
+
+**Preserved:** the `HCODER_CP_0025_EFFECTIVE` predicate; the package matrix (Windows `msi`+`nsis`, macOS `app`+`dmg`, Linux `appimage`+`deb`); the split-build, ephemeral-overlay, closed-inventory, tree-digest, structural-validation and evidence-is-not-trust law; every product-stage immutable fact and postvalidation receipt; and every authority exclusion. Deltas 001–004 are preserved byte-for-byte, are not renumbered or collapsed, and no terminal delta range is created in another file. No signing, notarization, release, updater, install, restart, rollback or production-distributable authority is admitted by this delta.
+
+## Anti-self-staling test applied
+
+Three thought experiments must hold simultaneously. First: if this exact Context Lock byte sequence merges unchanged, every current law statement remains true — the historical deltas remain true as stage records, and the preamble's pointer clause is superseded by this delta rather than relied upon. Second: after exact-main postvalidation satisfies `HCODER_CP_0025_EFFECTIVE`, no current law statement becomes false merely because the closeout PR is merged or closed, because none of them depends on its state. Third: before merge, nothing in this delta claims the predicate already holds or that `DEC-029` already carries canonical force. Mutable receipts — head SHAs, run IDs, review IDs and merge state — remain external and are never embedded here.
+
+## STOP CONDITION (Delta 005)
+STOP if any correction beyond this Context Lock is required; if any accepted closeout predicate or the package contract would need to change; if fresh exact-head Governance, Desktop Shell or Native Package Matrix is not fully green; if any HIGH/CRITICAL finding appears; or if any step would mark the closeout PR Ready, merge it, close Issue #82, assert CP-0025 effectiveness prematurely, or begin `HCODER-DIST-001C`.
