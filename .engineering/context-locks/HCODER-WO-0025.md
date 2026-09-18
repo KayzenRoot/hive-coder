@@ -137,3 +137,35 @@ HIVE is the primary project-context, retrieval and delta-memory layer for this W
 
 ## STOP CONDITION (Delta 002)
 STOP if a correction requires a tracked `tauri.conf.json` or icon-format change, a new dependency/plugin/runtime authority, a reduced package matrix, installer execution, or signing/notarization/release/updater/install/restart/secret authority; if fresh exact-head Governance, Desktop Shell or Native Package Matrix is not fully green; if any HIGH/CRITICAL finding remains unresolved; or if any step would merge PR #83 or begin `HCODER-DIST-001C`.
+
+
+---
+
+# Context Lock Delta 003
+
+**Status:** DOCUMENTATION/SOURCE-TRUTH RECONCILIATION ONLY — no technical authority  
+**Authority granted:** correction of durable governance wording in the paths listed below, and nothing else  
+**Trigger:** independent HEDS review `5249173061`, verdict `CORRECTION_REQUIRED`, CRITICAL `0` / HIGH `0` / MEDIUM `1`, on exact head `20a63350fb685953893ae03b57fc26d22e460f10`
+
+## Recorded finding (as returned by the independent review)
+
+The review **accepted and closed** the technical work: the HIVE bootstrap blocker is resolved and the project fingerprint matches the candidate head; `H-34-01` (closed-schema manifest verification with duplicate rejection before comparison and exact canonical-document equality), `H-34-02` (internal bundle symlinks failing closed on absolute or normalized escape targets), `M-34-03` (no stored version/identifier mirror; every lane gates on `VERSION_DRIFT=LOCKED` and derives both from the canonical Tauri config) and `M-34-04` (unfiltered `pull_request` trigger) are all closed. Exact-head `Governance`, `Desktop Shell` and `Native Package Matrix` evidence was green, all six package targets were produced, and `TRACKED_SOURCE_UNCHANGED` passed.
+
+- **M-37-01 — durable governance artifacts still described the Work Order as pre-implementation.** The Work Order carried a live `PREBUILT / IMPLEMENTATION PENDING` status; the Evidence Bundle said packages were not produced or validated yet and that the inventory/validator and workflow were not yet implemented; the Acceptance/Security Map kept executable obligations as a live `PENDING` execution state; the Implementation Pack and Executor Brief carried pre-execution status wording; `DEC-029` stated as present tense that no gate had ever exercised the bundler, which is only true historically before this Work Order; and the Decisions Ledger expressed satisfaction as a phase claim rather than as delegated external state. These are not technical defects, and the review explicitly required that they must **not** be "fixed" by embedding current SHA, run or review identifiers.
+
+## Authorised correction
+
+Convert current-state scaffolding into durable source law. Repository artifacts state what is materialized in source and which properties and evidence are required, while mutable review, gate, merge and promotion satisfaction stays external in PR #83 and Issues #30 and #82. Historical pre-Work-Order facts are labelled explicitly historical. `DEC-029` is not promoted by this delta.
+
+Allowed paths, exactly: this Context Lock; `.engineering/work-orders/HCODER-WO-0025.md`; `.engineering/evidence/HCODER-WO-0025.md`; `.engineering/prebuilt/HCODER-WO-0025-ACCEPTANCE-SECURITY-MAP.md`; the Implementation Pack and Executor Brief only where stale live execution wording is present; `docs/project-brain/adrs/DEC-029-NATIVE-PACKAGE-MATRIX-EVIDENCE-CONTRACT.md`; and the `DEC-029` entry in `docs/project-brain/10-DECISIONS-LEDGER.md`.
+
+**Forbidden:** `.github/workflows/native-package-matrix.yml`; `tools/desktop/package_inventory.py`; `tests/desktop/test_package_inventory.py`; every product or runtime source; `tauri.conf.json`; manifests and lockfiles; dependencies; the Governance and Desktop workflows; and any authority surface.
+
+**Preserved:** the acceptance properties themselves are unchanged — closed-schema verification, root-bounded discovery, mutation proofs, the native target matrix, the tracked-source guard and every authority exclusion remain exactly as reviewed. Prompt 33/35/36/37 history, including the preflight and bootstrap STOPs, is preserved as historical record and is not rewritten.
+
+## Anti-self-staling test applied
+
+Both thought experiments must hold simultaneously: if this exact correction later merges without another byte changing, every durable statement remains true; and before merge, no source statement falsely claims that `DEC-029` is canonical or that the Work Order is complete. Mutable receipts — head SHAs, run IDs, review IDs and merge state — remain external and are never embedded here.
+
+## STOP CONDITION (Delta 003)
+STOP if any wording correction would require a technical, workflow, tool, test, Tauri-config, manifest, lockfile, dependency or authority change; if it would canonicalise `DEC-029` before governed promotion; if a durable source would still self-stale merely because review, gate or merge phase advances; if fresh exact-head gates are not fully green; or if any step would mark PR #83 Ready, merge it, or begin `HCODER-DIST-001C`.

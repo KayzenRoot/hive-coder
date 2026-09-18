@@ -1,6 +1,7 @@
 # HCODER-WO-0025 — Native Package Matrix In CI For Windows, Linux And macOS
 
-**Status:** PREBUILT / IMPLEMENTATION PENDING  
+**Status:** IMPLEMENTATION AND EVIDENCE CONTRACT MATERIALIZED IN SOURCE — PROMOTION SATISFACTION EXTERNAL  
+**Promotion law:** the contract, workflow, tool and tests this Work Order defines exist in source. Whether a particular exact head satisfies promotion evidence — hosted exact-head Governance, Desktop Shell and Native Package Matrix green, an independent HEDS review with unresolved HIGH/CRITICAL `0/0`, and a governed expected-head merge — is mutable external state tracked in PR #83 and Issues #30 and #82, and is deliberately not encoded here.
 **Risk:** HIGH_ASSURANCE (supply-chain-adjacent)  
 **Task class:** T3  
 **Context radius:** C4  
@@ -9,7 +10,7 @@
 **Issue:** `#82`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **Slice:** `HCODER-DIST-001B`  
-**Preflight history:** Prompt 33 preflight STOP on Issue #82 (`5721095900`); independent review `5721331226` confirmed the STOP and authorised the bounded ephemeral-overlay continuation
+**Preflight history (historical):** Prompt 33 preflight STOP on Issue #82 (`5721095900`); independent review `5721331226` confirmed the STOP and authorised the bounded ephemeral-overlay continuation.
 
 **Promotion evidence:** hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0` and a governed expected-head merge are each required against the exact head the promotion decision names; that mutable state is tracked in the active PR and Issues #30 and #82, not in this document.
 

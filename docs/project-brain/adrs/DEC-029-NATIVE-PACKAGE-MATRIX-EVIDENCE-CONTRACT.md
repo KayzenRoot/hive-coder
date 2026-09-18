@@ -13,7 +13,7 @@
 
 ## Context
 
-`HCODER-CP-0024` sealed the distribution and version contract law but admitted no packaging. Every existing desktop lane builds with `tauri build --no-bundle`, so no gate in the repository has ever exercised the bundler — which is exactly why the canonical config's missing icon declaration went unnoticed until packaging was attempted.
+`HCODER-CP-0024` sealed the distribution and version contract law but admitted no packaging. Before `HCODER-WO-0025`, every existing desktop lane built with `tauri build --no-bundle` and no governed gate in this repository exercised the bundler at all — which is why the canonical config's missing icon declaration went unnoticed until a package slice was attempted.
 
 Producing native packages raises a question the previous slice deliberately deferred: what may a generated package artifact be *used as*? A build that emits installers can very easily drift into implying trust, and a digest can very easily be read as authenticity. This proposal fixes that boundary before any package exists, rather than retrofitting it afterwards.
 

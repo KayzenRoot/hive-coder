@@ -1,6 +1,6 @@
 # HCODER-WO-0025 — Executor Brief
 
-**Status:** PREBUILT / READY FOR COMPLETION-ORIENTED EXECUTION  
+**Status:** FROZEN EXECUTION BRIEF — the contract it describes is materialized in source; whether a given head satisfies its obligations is external evidence
 **Base:** `3e1e1af7596c56716825206587bf2a88e1b179d0`  
 **Issue:** `#82`  
 **Prior reviewed-head facts:** historical only; mutable current review and gate state is external in the active PR and Issues #30 and #82.

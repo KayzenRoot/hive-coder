@@ -1,6 +1,6 @@
 # HCODER-WO-0025 — Acceptance & Security Map
 
-**Status:** PREBUILT — every row is an executable test obligation  
+**Status:** PROPERTY CONTRACT — every row is an executable obligation, not an execution status  
 **Issue:** `#82`  
 **Canonical authority history:** `.engineering/context-locks/HCODER-WO-0025.md`
 
@@ -8,7 +8,12 @@ Required negative proofs are the point of this slice. A row is satisfied only by
 
 ## How to read this map
 
-The **Implementation** column is a durable statement about the repository, not about any CI run or review outcome. `IMPLEMENTED` means the law exists in source with a test written to fail when the guard is removed. `EXTERNAL` means the row is inherently an evidence requirement. **External promotion evidence** — hosted exact-head gates plus an independent HEDS review with unresolved HIGH/CRITICAL `0/0` on the exact promotion head — is required for every row and is deliberately not encoded per row; that mutable state lives in the active PR and Issues #30 and #82.
+The **Implementation** column is a durable statement about the repository, not about any CI run or review outcome:
+
+- `REQUIRED` — the property is an obligation of this slice; it is satisfied in source by the named test or gate and is enforced whenever that lane runs.
+- `EXTERNAL PROOF` — the property can only be demonstrated by hosted exact-head evidence: the lanes must actually run and produce, or refuse, their declared targets on a named head.
+
+**External promotion evidence is required for every row and is deliberately not encoded per row.** Hosted exact-head Governance, Desktop Shell and Native Package Matrix green, plus an independent review with unresolved HIGH/CRITICAL `0/0`, must each be produced against whichever exact head a promotion decision names. That mutable state lives in the active PR and Issues #30 and #82; this map records the property and its evidence path, never a current PASS claim.
 
 ## Package matrix and canary law
 
@@ -33,16 +38,16 @@ The **Implementation** column is a durable statement about the repository, not a
 
 | # | Property the law must enforce | Test location | Implementation |
 |---|---|---|---|
-| C1 | Schema is closed and deterministic: `hive-package-inventory-v1` with exact key set | `tests/desktop/test_package_inventory.py` | PENDING |
-| C2 | File packages hash exact bytes with SHA-256; directory bundles use a documented sorted-tree digest | `test_package_inventory.py` | PENDING |
-| C3 | Absolute path, `..` traversal and symlink escape are rejected | `test_package_inventory.py` | PENDING |
-| C4 | Missing, duplicate and unexpected package types are rejected | `test_package_inventory.py` | PENDING |
-| C5 | Zero-size file package, wrong canonical version and wrong source SHA are rejected | `test_package_inventory.py` | PENDING |
-| C6 | Artifact outside the bounded root is never discovered, including lookalikes | `test_package_inventory.py` | PENDING |
-| C7 | One-byte hash mutation invalidates the expected digest | `test_package_inventory.py` | PENDING |
-| C8 | Directory-tree mutation invalidates the `.app` tree digest | `test_package_inventory.py` | PENDING |
-| C9 | Shuffled discovery order yields byte-identical manifest output | `test_package_inventory.py` | PENDING |
-| C10 | Documentation and tests state that SHA-256 is integrity evidence, not signing or publisher authenticity | `test_package_inventory.py` | PENDING |
+| C1 | Schema is closed and deterministic: `hive-package-inventory-v1` with exact key set | `tests/desktop/test_package_inventory.py` | REQUIRED |
+| C2 | File packages hash exact bytes with SHA-256; directory bundles use a documented sorted-tree digest | `test_package_inventory.py` | REQUIRED |
+| C3 | Absolute path, `..` traversal and symlink escape are rejected | `test_package_inventory.py` | REQUIRED |
+| C4 | Missing, duplicate and unexpected package types are rejected | `test_package_inventory.py` | REQUIRED |
+| C5 | Zero-size file package, wrong canonical version and wrong source SHA are rejected | `test_package_inventory.py` | REQUIRED |
+| C6 | Artifact outside the bounded root is never discovered, including lookalikes | `test_package_inventory.py` | REQUIRED |
+| C7 | One-byte hash mutation invalidates the expected digest | `test_package_inventory.py` | REQUIRED |
+| C8 | Directory-tree mutation invalidates the `.app` tree digest | `test_package_inventory.py` | REQUIRED |
+| C9 | Shuffled discovery order yields byte-identical manifest output | `test_package_inventory.py` | REQUIRED |
+| C10 | Documentation and tests state that SHA-256 is integrity evidence, not signing or publisher authenticity | `test_package_inventory.py` | REQUIRED |
 
 ## Security invariants this slice must not weaken
 
