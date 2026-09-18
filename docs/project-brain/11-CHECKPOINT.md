@@ -1,13 +1,37 @@
 # Checkpoint — Hive Coder
 
-**Declared checkpoint:** `HCODER-CP-0024` — effective under `HCODER_CP_0024_EFFECTIVE`  
-**Predecessor checkpoint:** `HCODER-CP-0023` — effective until the predicate is satisfied  
-**Declaration source:** `.engineering/checkpoint-deltas/HCODER-WO-0024.md`, `.engineering/evidence/HCODER-CP-0024-CANONICAL-CLOSEOUT.md`  
+**Declared checkpoint:** `HCODER-CP-0025` — effective under `HCODER_CP_0025_EFFECTIVE`  
+**Predecessor checkpoint:** `HCODER-CP-0024` — effective whenever `HCODER_CP_0025_EFFECTIVE` is unsatisfied and `HCODER_CP_0024_EFFECTIVE` is satisfied  
+**Earlier checkpoint:** `HCODER-CP-0023` — effective only while both later predicates are unsatisfied  
+**Declaration source:** `.engineering/checkpoint-deltas/HCODER-WO-0025.md`, `.engineering/evidence/HCODER-CP-0025-CANONICAL-CLOSEOUT.md`  
 **Repository:** `KayzenRoot/hive-coder`
 
-> **Conditional effectiveness.** `HCODER_CP_0024_EFFECTIVE` is satisfied if and only if, for one and the same closeout revision: (a) that exact revision was independently reviewed with unresolved HIGH/CRITICAL `0/0`; (b) that exact revision was governed-merged with expected-head protection; and (c) the resulting exact `main` SHA passed fresh Governance and Desktop Shell. **While the predicate is unsatisfied**, `HCODER-CP-0023` is the authoritative checkpoint and `DEC-028` is non-canonical. **Once it is satisfied**, `HCODER-CP-0024` and `DEC-028` are authoritative under the declarations in this document, with no edit required here to flip any status. Evidence of whether the predicate holds lives externally in the active closeout PR and Issues #30 and #77 — this document selects the authoritative checkpoint by predicate, never by phase.
+> **Conditional effectiveness.** `HCODER_CP_0025_EFFECTIVE` is satisfied if and only if, for one and the same closeout revision: (a) that exact revision was independently reviewed with unresolved HIGH/CRITICAL `0/0`; (b) that exact revision was governed-merged with expected-head protection; and (c) the resulting exact `main` SHA passed fresh Governance, Desktop Shell **and** Native Package Matrix. The packaging lane belongs in this predicate because this is the slice that introduces packaging: without it a closeout could assert a packaging capability whose own gates were never verified at the closeout stage.
+>
+> **Checkpoint ladder.** This document selects the authoritative checkpoint by predicate, never by phase. If `HCODER_CP_0025_EFFECTIVE` holds, `HCODER-CP-0025` is authoritative and `DEC-029` is canonical. Otherwise, if `HCODER_CP_0024_EFFECTIVE` holds, `HCODER-CP-0024` is authoritative and `DEC-029` is non-canonical. Otherwise `HCODER-CP-0023` is authoritative. **No edit here is required to flip any status**, and evidence of whether each predicate holds lives externally in the active closeout PR and Issues #30, #77 and #82.
 
-## Declared checkpoint: `HCODER-CP-0024` — Distribution version, channel and update boundaries
+## Declared checkpoint: `HCODER-CP-0025` — Native package matrix evidence
+
+**Work Order:** `HCODER-WO-0025` — product implementation MERGED / POSTVALIDATED (immutable product-stage fact)  
+**Issue:** `#82`  
+**Decision:** `DEC-029` — CANONICAL / SEALED under `HCODER-CP-0025` while `HCODER_CP_0025_EFFECTIVE` is satisfied, non-canonical while it is unsatisfied  
+**Slice:** `HCODER-DIST-001B` of parent epic `HCODER-DIST-001` / Issue `#72`  
+**Product PR:** `#83` — SQUASH MERGED (expected-head protected)  
+**Canonical product merge:** `676138df041c4147df7a5fe3a42b481c0f5e7f13`  
+**Reviewed product head:** `a13f3097c47609fbf5dc34e4bab5134ee956b7e0` (tree `41eac2dc19bac61144e66226ce0432350b12a971`, identical to the merge tree)  
+**Independent product HEDS:** `5249394339` — APPROVED FOR GOVERNED PRODUCT MERGE, CRITICAL `0` / HIGH `0` / MEDIUM `0`  
+**Post-merge exact-main gates:** Governance `35364805912` SUCCESS; Desktop Shell `35364805928` SUCCESS; Native Package Matrix `35364805920` SUCCESS  
+**Unresolved HIGH/CRITICAL:** `0/0`
+
+Admits exactly one thing and nothing more: `HCODER-DIST-001B`, as deterministic native package **evidence** generation on Windows, macOS and Linux. A **declared** matrix in which Windows produces `msi`+`nsis`, macOS produces `app`+`dmg` and Linux produces `appimage`+`deb`, with a lane that cannot produce its declared targets failing closed rather than shipping a smaller set; the pinned CLI's **split-build** path (`build --no-bundle`, then an explicit `bundle --bundles`) with canonical `bundle.active` preserved as `false`; the canonical config left unmodified for packaging, with the bundler's required icon declaration supplied as an **ephemeral, runner-local, non-tracked overlay** naming only already-generated deterministic icon inputs and never committed or uploaded; a **closed, deterministic** `hive-package-inventory-v1` manifest bounded to one explicit per-lane package root that refuses absolute paths, traversal, symlink escape, artifacts outside the root, and missing, duplicate, unexpected or zero-size packages, wrong versions and wrong source SHAs; directory bundles hashed as **sorted trees** rather than plain file hashes; non-installing, runner-native structural validation per platform; and short-retention internal workflow artifacts with no release, tag or publication.
+
+Admits **no** signing, codesign, notarization, stapling or publisher-authenticity claim; no release or tag creation and no GitHub Release upload; no updater plugin, endpoint, updater artifact or channel-promotion execution; no product network fetch; no artifact download, install, restart or rollback execution; no installer execution as acceptance; no tracked `bundle.icon` or other canonical-config mutation for packaging; no new dependency, plugin, permission or capability; no expansion of filesystem, Git, shell/process, Cua or credential authority; and no production-distributable claim. `bundle.active` remains `false`.
+
+A digest recorded by this slice proves **byte identity and integrity for evidence transport** only. It is not signing, notarization or publisher authenticity. Packages produced here are deliberately unsigned, unsigned state is never a security success, and nothing in this checkpoint is evidence that Hive Coder is installable, signed, notarized, auto-updatable or production-distributable. `HCODER-DIST-001C` remains explicitly unapproved.
+
+## Predecessor checkpoint: `HCODER-CP-0024` — Distribution version, channel and update boundaries
+
+The record below describes the `HCODER-CP-0024` state, which is authoritative whenever `HCODER_CP_0025_EFFECTIVE` is unsatisfied and `HCODER_CP_0024_EFFECTIVE` is satisfied, and remains preserved as history after that.
 
 **Work Order:** `HCODER-WO-0024` — product implementation MERGED / POSTVALIDATED (immutable product-stage fact)  
 **Issue:** `#77`  
@@ -23,9 +47,9 @@ Admits exactly one thing and nothing more: the first governed slice of `HCODER-D
 
 It admits **no** runtime authority, capability, permission or control-plane path, and no updater plugin, endpoint, network request, download, install, restart, signing, notarization, release publication or `bundle.active=true`. `bundle.active` remains `false`. Packaging, installer generation, updater transport, channel promotion execution, rollback policy and every later `HCODER-DIST-001` slice remain unapproved.
 
-## Predecessor checkpoint: `HCODER-CP-0023` — Governed Git Staging Capability
+## Earlier checkpoint: `HCODER-CP-0023` — Governed Git Staging Capability
 
-The record below is history: it describes the `HCODER-CP-0023` state, which is authoritative whenever `HCODER_CP_0024_EFFECTIVE` is unsatisfied and remains preserved as history after it is satisfied.
+The record below is history: it describes the `HCODER-CP-0023` state, which is authoritative only while `HCODER_CP_0025_EFFECTIVE` and `HCODER_CP_0024_EFFECTIVE` are both unsatisfied, and remains preserved as history after either becomes satisfied.
 
 **Checkpoint:** `HCODER-CP-0023`  
 **Status:** SEALED / CANONICAL  
@@ -75,6 +99,7 @@ CP-0022 closeout exact head `a777ac207b42059a33ce9d73d8287122ff43c0a9` passed Go
 `DEC-026 — Governed Existing-File Replacement Capability` is **CANONICAL**, promoted by `HCODER-CP-0022` with closeout merge `795ed101eaf5d770f63a96db7f01a82369be34f1`. It canonicalizes only bounded-race atomic replacement of one already-existing regular workspace file behind the Permission & Control Plane.
 
 ## Downstream increments in flight
+- `HCODER-WO-0025` native package matrix is the declared checkpoint above: its product implementation is **MERGED / POSTVALIDATED**, and its canonical standing is governed entirely by `HCODER_CP_0025_EFFECTIVE`. Its closeout is the documentation-only revision declared in `.engineering/checkpoint-deltas/HCODER-WO-0025.md` and `.engineering/evidence/HCODER-CP-0025-CANONICAL-CLOSEOUT.md`; that revision's own review, gates and merge are the predicate's mutable inputs and are tracked in the active closeout PR and Issues #30 and #82, not here.
 - `HCODER-PLATFORM-001` (Issue #63) first-class native validation matrix is materialized on `main` at `22b56b0f3111158cbf50789b1647c5a578a171c1` and its evidence ledger reconciled at `ccfed1f960c80dc58e4f45cb627451e77c7d5a79`. Its evidence ledger remains **PREBUILT / NATIVE MATRIX INCOMPLETE**: Linux and macOS native desktop/Tauri exact-head evidence is still required. It is **not** a checkpoint and must not be represented as complete.
 - `HCODER-WO-0023` governed Git staging is **SEALED / CANONICAL** under `HCODER-CP-0023`. Product PR #69 squash-merged with expected-head protection as `1f09520fbd92c7e65f9726b65a854f918507c895`, validated on that exact `main` by Governance `35171215292` and Desktop Shell `35171215429`. The documentation-only closeout PR #75 squash-merged with expected-head protection as `1b83666699acc8fdbd5270d811f1bf263d55ef47`, validated on that exact `main` by Governance `35204919678` and Desktop Shell `35204919616`. Native Linux, Windows HIGH_ASSURANCE and macOS governed Git staging proof passed on each exact `main`. The final-seal PR #76 squash-merged with expected-head protection as `b6297fbe4de4681fc92093f3691f693dc2de0dc1`, validated on that exact `main` by Governance `35210910407` and Desktop Shell `35210910423`. `b6297fbe...` is the **final-seal merge SHA** and the **validated `main` at final-seal validation** — an immutable lifecycle-stage fact, not a live repository pointer. Independent technical HEDS `5229345968` at `b827cb2e`: CRITICAL `0` / HIGH `0`. Issue #68 is CLOSED / COMPLETED.
 
@@ -89,7 +114,7 @@ Premium UX/UGAS/themes/i18n/notifications/project navigator: Issue #71.
 ## Residual boundaries
 - Append/truncate-in-place, delete and arbitrary rename/move remain unapproved.
 - Git mutation beyond the canonical bounded `Capability.GIT_WRITE` / `git_stage_paths_v1` staging authority remains unapproved, as does terminal/shell execution. Commit, ref/branch/tag, remote, network, credential, generic Git argv and arbitrary `.git` write authority remain unapproved.
-- Installer/signing/updater/release packaging and rollback/roll-forward proof remain open.
+- Internal unsigned native package **evidence generation** is admitted under `HCODER-CP-0025` while `HCODER_CP_0025_EFFECTIVE` is satisfied. Signing, codesign, notarization, stapling, release/tag publication, updater transport and rollback/roll-forward proof remain open, as does any production-distributable claim.
 - Runtime-status sidecar packaging/signing/attestation and packaged live E2E remain open.
 - RustSec warning-class dependency debt, stricter CSP, native/full desktop E2E, visual/accessibility automation and final license remain open.
 - Linux and macOS desktop-native validation remain open under `HCODER-PLATFORM-001`.
