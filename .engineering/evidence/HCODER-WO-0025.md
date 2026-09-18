@@ -1,6 +1,6 @@
 # Evidence Bundle — HCODER-WO-0025
 
-**Status:** SOURCE MATERIALIZED — EXACT-HEAD PROMOTION EVIDENCE EXTERNAL  
+**Status:** PRODUCT STAGE COMPLETE — MERGED / POSTVALIDATED; CANONICAL STANDING GOVERNED BY `HCODER_CP_0025_EFFECTIVE`  
 **Canonical base:** `HCODER-CP-0024` / `3e1e1af7596c56716825206587bf2a88e1b179d0`  
 **Issue:** `#82`  
 **Parent epic:** `#72`  
@@ -33,11 +33,17 @@ Whether any of these holds is satisfied only against a named exact head, and tha
 - That a package digest establishes publisher authenticity. A digest proves byte identity and integrity for evidence transport only.
 - That the ephemeral overlay is canonical product config or a new authority surface.
 - That this slice admits any installer execution, release or tag publication, updater behaviour, network fetch by product code, or new dependency, plugin, permission or capability.
-- That `DEC-029` is canonical. It is PROPOSED / NOT CANONICAL.
+- That `DEC-029` carries canonical force except while `HCODER_CP_0025_EFFECTIVE` is satisfied. It is non-canonical while that predicate is unsatisfied, and no repository text asserts that it is satisfied.
+
+## Immutable product-stage facts
+
+The product stage is closed, so these cannot change and are recorded rather than tracked externally: independently reviewed product head `a13f3097c47609fbf5dc34e4bab5134ee956b7e0`, tree `41eac2dc19bac61144e66226ce0432350b12a971`; independent product HEDS `5249394339` APPROVED FOR GOVERNED PRODUCT MERGE with unresolved CRITICAL `0` / HIGH `0` / MEDIUM `0`; pre-merge base `main` `3e1e1af7596c56716825206587bf2a88e1b179d0`; product merge `676138df041c4147df7a5fe3a42b481c0f5e7f13` (squash, expected-head protected) whose tree equals the reviewed-head tree exactly; and post-merge exact-main Governance `35364805912`, Desktop Shell `35364805928` and Native Package Matrix `35364805920` all SUCCESS on that merge SHA, the last covering Windows, Linux and macOS with all six package targets produced at `VERSION_DRIFT=LOCKED` and `TRACKED_SOURCE_UNCHANGED=PASS`.
+
+Full correction chronology and the reviewed-head record are preserved in the Work Order, the Context Lock and the `DEC-029` ADR.
 
 ## Reviewed-head records (historical)
 
-Reviewed-head facts are recorded externally in the active PR and Issues #30 and #82. This ledger deliberately mirrors **no** head SHA, run ID, review ID or merge SHA: those are mutable evidence and must not be embedded in a pre-CI commit. The Prompt 33 preflight STOP and the Prompt 35/36 HIVE bootstrap STOPs are historical records and are preserved as such.
+Product-stage reviewed-head facts are recorded above as immutable lifecycle-stage facts and as external lifecycle evidence referenced by Issues #30 and #82. This ledger deliberately mirrors **no** closeout-stage head SHA, run ID, review ID or merge SHA: those are the mutable inputs to `HCODER_CP_0025_EFFECTIVE` and must not be embedded in a pre-CI commit. The Prompt 33 preflight STOP and the Prompt 35/36 HIVE bootstrap STOPs are historical records and are preserved as such.
 
 ## Base-state facts to re-verify
 Re-read live files before relying on these; repository source wins:
@@ -50,4 +56,4 @@ Re-read live files before relying on these; repository source wins:
 For each exact technical head record: commit SHA; workflow run IDs and job IDs; runner OS/architecture per package lane; pinned CLI version and the `--bundles` targets that lane advertised; whether the ephemeral overlay was required; generated package paths; inventory manifest identity; workflow artifact name and retention; confirmation that `tauri.conf.json` and tracked source were unchanged; confirmation that no signing/notarization/release/updater path exists; and HEDS HIGH/CRITICAL counts.
 
 ## STOP
-`UNKNOWN` never becomes `PASS`. Exact-head evidence proves only the exact SHA it names. Mutable receipts are recorded externally, never in this bundle. Do not merge, do not claim production distributability, and do not begin `HCODER-DIST-001C` from this ledger.
+`UNKNOWN` never becomes `PASS`. Exact-head evidence proves only the exact SHA it names. Mutable receipts are recorded externally, never in this bundle. Canonical standing for this Work Order is determined only by `HCODER_CP_0025_EFFECTIVE`; no production-distributable claim and no `HCODER-DIST-001C` transition is admitted unless separately governed.

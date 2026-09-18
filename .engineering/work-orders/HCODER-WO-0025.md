@@ -1,18 +1,18 @@
 # HCODER-WO-0025 — Native Package Matrix In CI For Windows, Linux And macOS
 
-**Status:** IMPLEMENTATION AND EVIDENCE CONTRACT MATERIALIZED IN SOURCE — PROMOTION SATISFACTION EXTERNAL  
-**Promotion law:** the contract, workflow, tool and tests this Work Order defines exist in source. Whether a particular exact head satisfies promotion evidence — hosted exact-head Governance, Desktop Shell and Native Package Matrix green, an independent HEDS review with unresolved HIGH/CRITICAL `0/0`, and a governed expected-head merge — is mutable external state tracked in PR #83 and Issues #30 and #82, and is deliberately not encoded here.
+**Status:** PRODUCT IMPLEMENTATION MERGED / POSTVALIDATED — CANONICAL STANDING GOVERNED BY `HCODER_CP_0025_EFFECTIVE`  
+**Promotion law:** the contract, workflow, tool and tests this Work Order defines exist in source, and the **product stage** completed — independently reviewed head `a13f3097c47609fbf5dc34e4bab5134ee956b7e0` (tree `41eac2dc19bac61144e66226ce0432350b12a971`), independent HEDS `5249394339` with CRITICAL `0` / HIGH `0` / MEDIUM `0`, product merge `676138df041c4147df7a5fe3a42b481c0f5e7f13` with the merge tree identical to the reviewed-head tree, and post-merge Governance `35364805912`, Desktop Shell `35364805928` and Native Package Matrix `35364805920` SUCCESS on that exact merge SHA with all six targets produced. These are immutable lifecycle-stage facts, not live pointers. **Canonical standing** is governed by the durable predicate declared in `.engineering/checkpoint-deltas/HCODER-WO-0025.md`: `HCODER_CP_0025_EFFECTIVE` holds if and only if, for one and the same closeout revision, that revision was independently reviewed with unresolved HIGH/CRITICAL `0/0`, was governed-merged with expected-head protection, and the resulting exact `main` passed fresh Governance, Desktop Shell and Native Package Matrix. Whether any given closeout revision satisfies it is external lifecycle state referenced by Issues #30 and #82 and by the closeout PR carrying the evaluated revision, and is deliberately not encoded here.
 **Risk:** HIGH_ASSURANCE (supply-chain-adjacent)  
 **Task class:** T3  
 **Context radius:** C4  
 **Canonical base:** `HCODER-CP-0024` / `3e1e1af7596c56716825206587bf2a88e1b179d0`  
-**Decision:** `DEC-029` PROPOSED / NOT CANONICAL (native package matrix evidence contract), if retained  
+**Decision:** `DEC-029` — CANONICAL / SEALED under `HCODER-CP-0025` while `HCODER_CP_0025_EFFECTIVE` is satisfied, non-canonical while it is unsatisfied  
 **Issue:** `#82`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **Slice:** `HCODER-DIST-001B`  
 **Preflight history (historical):** Prompt 33 preflight STOP on Issue #82 (`5721095900`); independent review `5721331226` confirmed the STOP and authorised the bounded ephemeral-overlay continuation.
 
-**Promotion evidence:** hosted exact-head gates, an independent HEDS review with unresolved HIGH/CRITICAL `0/0` and a governed expected-head merge are each required against the exact head the promotion decision names; that mutable state is tracked in the active PR and Issues #30 and #82, not in this document.
+**Promotion evidence:** `.engineering/evidence/HCODER-CP-0025-CANONICAL-CLOSEOUT.md` is the promotion evidence for this Work Order's canonical standing. The closeout stage's own exact-head gates, independent review and governed merge are the predicate's mutable inputs; their evidence is external lifecycle evidence referenced by Issues #30 and #82 and by the closeout PR carrying the evaluated revision, not this document.
 
 ## Objective
 

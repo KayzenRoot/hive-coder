@@ -1,23 +1,25 @@
 # DEC-029 — Native Package Matrix Evidence Contract
 
-**Status:** PROPOSED / NOT CANONICAL  
-**Work Order:** `HCODER-WO-0025`  
+**Status:** CANONICAL / SEALED under `HCODER-CP-0025` — **effective under `HCODER_CP_0025_EFFECTIVE`; non-canonical while that predicate is unsatisfied**  
+**Work Order:** `HCODER-WO-0025` — product implementation MERGED / POSTVALIDATED  
 **Issue:** `#82`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **Slice:** `HCODER-DIST-001B`  
 **Canonical base:** `HCODER-CP-0024` / `3e1e1af7596c56716825206587bf2a88e1b179d0`  
-**Reviews of this proposal:** prior reviewed-head facts are historical and recorded externally in the active PR and Issues #30 and #82; they are not mirrored here as a current index.  
+**Product merge (immutable lifecycle-stage fact):** `676138df041c4147df7a5fe3a42b481c0f5e7f13` — PR #83, squash with expected-head protection; merge tree `41eac2dc19bac61144e66226ce0432350b12a971` identical to the reviewed-head tree  
+**Promotion evidence:** `.engineering/evidence/HCODER-CP-0025-CANONICAL-CLOSEOUT.md`  
+**Reviews of this proposal:** prior reviewed-head facts are historical and recorded externally in product PR #83 and Issues #30 and #82; they are not mirrored here as an index. Mutable review and gate state is external lifecycle evidence referenced by Issues #30 and #82 and by the closeout PR carrying the evaluated revision.  
 **Materialised under:** `HCODER-WO-0025`; the canonical append-only delta history for this Work Order lives in `.engineering/context-locks/HCODER-WO-0025.md`, and no terminal delta number or range is mirrored here.
 
-> **State record.** This ADR is a **proposal**. It records a durable evidence contract that `HCODER-WO-0025` is establishing and has no canonical standing. It grants no authority, admits no signing, notarization, release or updater, and is not evidence that Hive Coder is installable or production-distributable. It becomes canonical only through a governed promotion with an independent review reporting unresolved HIGH/CRITICAL `0/0`.
+> **Conditional effectiveness (must not be misread).** This ADR declares the CANONICAL / SEALED state of `DEC-029` under `HCODER-CP-0025`. That state is **effective if and only if** `HCODER_CP_0025_EFFECTIVE` holds: for one and the same closeout revision, (a) the exact revision was independently reviewed with unresolved HIGH/CRITICAL `0/0`; (b) it was governed-merged with expected-head protection; and (c) the resulting exact `main` SHA passed fresh Governance, Desktop Shell **and** Native Package Matrix. **While the predicate is unsatisfied**, `DEC-029` is non-canonical and `HCODER-CP-0024` remains the authoritative checkpoint. The predicate depends on no merge SHA, run ID, review ID, Issue state, PR state or moving `current main` field; evidence of whether it holds is external lifecycle evidence referenced by Issues #30 and #82 and by the closeout PR carrying the evaluated revision. This ADR admits no signing, notarization, release, updater or installation authority, and is not evidence that Hive Coder is installable, signed, notarized or production-distributable.
 
 ## Context
 
 `HCODER-CP-0024` sealed the distribution and version contract law but admitted no packaging. Before `HCODER-WO-0025`, every existing desktop lane built with `tauri build --no-bundle` and no governed gate in this repository exercised the bundler at all — which is why the canonical config's missing icon declaration went unnoticed until a package slice was attempted.
 
-Producing native packages raises a question the previous slice deliberately deferred: what may a generated package artifact be *used as*? A build that emits installers can very easily drift into implying trust, and a digest can very easily be read as authenticity. This proposal fixes that boundary before any package exists, rather than retrofitting it afterwards.
+Producing native packages raises a question the previous slice deliberately deferred: what may a generated package artifact be *used as*? A build that emits installers can very easily drift into implying trust, and a digest can very easily be read as authenticity. This decision fixes that boundary as part of admitting the capability, rather than retrofitting it afterwards.
 
-## Decision candidate
+## Decision
 
 **1. One bounded native package matrix per platform.** Windows produces `msi` and `nsis`; macOS produces `app` and `dmg`; Linux produces `appimage` and `deb`. The matrix is declared, not discovered at runtime: a lane that cannot produce its declared targets fails closed instead of quietly shipping a smaller set.
 
@@ -51,7 +53,7 @@ This ADR does not approve signing, codesign, notarization, stapling or any publi
 
 ## Promotion gate
 
-`DEC-029` is **PROPOSED / NOT CANONICAL**. Promotion is a durable gate rather than a statement about any particular head, and requires all of the following, each produced against whatever exact head the promotion decision names:
+`DEC-029` is CANONICAL / SEALED under `HCODER-CP-0025`, effective under `HCODER_CP_0025_EFFECTIVE` and non-canonical while that predicate is unsatisfied. The gate is durable rather than a statement about any particular head:
 
 | Condition | Requirement |
 |---|---|
@@ -63,4 +65,6 @@ This ADR does not approve signing, codesign, notarization, stapling or any publi
 | Independent review | An independent HEDS review of that exact head reports unresolved HIGH/CRITICAL `0/0` |
 | Governed merge | The Work Order merges with expected-head protection |
 
-Mutable evidence for these conditions lives in the active PR and Issues #30 and #82, where it can advance without falsifying this document. Until every condition is met, no promotion claim may be made for this decision or for Hive Coder's packaging capability.
+The **product stage** met every one of those conditions: reviewed head `a13f3097c47609fbf5dc34e4bab5134ee956b7e0` (tree `41eac2dc19bac61144e66226ce0432350b12a971`), independent HEDS `5249394339` APPROVED FOR GOVERNED PRODUCT MERGE with CRITICAL `0` / HIGH `0` / MEDIUM `0`, product merge `676138df041c4147df7a5fe3a42b481c0f5e7f13` with the merge tree identical to the reviewed-head tree, and post-merge Governance `35364805912`, Desktop Shell `35364805928` and Native Package Matrix `35364805920` SUCCESS on that exact merge SHA with all six targets produced. The **closeout stage** requires its own revision, review, gates and merge under `HCODER_CP_0025_EFFECTIVE`.
+
+Mutable evidence for whether the predicate holds is external lifecycle evidence referenced by Issues #30 and #82 and by the closeout PR carrying the evaluated revision, where it can advance without falsifying this document.
