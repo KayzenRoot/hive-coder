@@ -48,13 +48,13 @@ def _dmg_payload(body: bytes = b"udif") -> bytes:
     return body + DMG_MAGIC + b"\x00" * 508
 
 
-def _make_app(root: Path, name: str = f"Hive Coder_{VERSION}_aarch64.app") -> Path:
+def _make_app(root: Path, name: str = "Hive Coder.app", version: str = VERSION) -> Path:
     bundle = root / name
     (bundle / "Contents" / "MacOS").mkdir(parents=True, exist_ok=True)
     (bundle / "Contents" / "MacOS" / "hive-coder-desktop").write_bytes(b"#!/bin/exec placeholder")
     plist = {
         "CFBundleIdentifier": IDENTIFIER,
-        "CFBundleShortVersionString": VERSION,
+        "CFBundleShortVersionString": version,
         "CFBundleExecutable": "hive-coder-desktop",
         "CFBundleName": "Hive Coder",
     }
@@ -260,12 +260,32 @@ class RejectionTests(unittest.TestCase):
     def test_app_bundle_without_info_plist_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            bundle = root / f"Hive Coder_{VERSION}_aarch64.app"
+            bundle = root / "Hive Coder.app"
             (bundle / "Contents").mkdir(parents=True)
             _write(root / "dmg" / f"Hive Coder_{VERSION}_aarch64.dmg", _dmg_payload())
             with self.assertRaises(InventoryError) as ctx:
                 _inventory(root, "macos", ["app", "dmg"])
             self.assertIn("Info.plist", str(ctx.exception))
+
+
+    def test_app_bundle_wrong_plist_version_is_rejected(self) -> None:
+        """For a directory bundle the version assertion comes from Info.plist."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _make_app(root, version="9.9.9")
+            _write(root / "dmg" / f"Hive Coder_{VERSION}_aarch64.dmg", _dmg_payload())
+            with self.assertRaises(InventoryError) as ctx:
+                _inventory(root, "macos", ["app", "dmg"])
+            self.assertIn("Info.plist version", str(ctx.exception))
+
+    def test_app_bundle_without_a_version_in_its_name_is_accepted(self) -> None:
+        """The pinned bundler emits `Hive Coder.app`; the name carries no version."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = _macos_root(Path(tmp))
+            document = _inventory(root, "macos", ["app", "dmg"])
+            app_entry = next(entry for entry in document["packages"] if entry["packageType"] == "app")
+            self.assertEqual(app_entry["relativePath"], "Hive Coder.app")
+            self.assertIn("version_match", app_entry["structuralValidation"])
 
 
 class MutationAndDeterminismTests(unittest.TestCase):
@@ -292,8 +312,8 @@ class MutationAndDeterminismTests(unittest.TestCase):
             document = _inventory(root, "macos", ["app", "dmg"])
             recorded = next(entry["digest"] for entry in document["packages"] if entry["packageType"] == "app")
 
-            (root / f"Hive Coder_{VERSION}_aarch64.app" / "Contents" / "Resources").mkdir(parents=True)
-            (root / f"Hive Coder_{VERSION}_aarch64.app" / "Contents" / "Resources" / "extra.bin").write_bytes(b"x")
+            (root / "Hive Coder.app" / "Contents" / "Resources").mkdir(parents=True)
+            (root / "Hive Coder.app" / "Contents" / "Resources" / "extra.bin").write_bytes(b"x")
 
             mutated = _inventory(root, "macos", ["app", "dmg"])
             changed = next(entry["digest"] for entry in mutated["packages"] if entry["packageType"] == "app")

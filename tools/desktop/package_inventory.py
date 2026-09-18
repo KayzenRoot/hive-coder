@@ -234,7 +234,9 @@ def _app_checks(bundle: Path, canonical_version: str, expected_identifier: str) 
     if not executable.is_file():
         raise InventoryError(f"bundle executable is missing: {executable.name}")
     checks.append("expected_executable")
-    _version_from_name(bundle.name, canonical_version)
+    # A macOS bundle's version lives in Info.plist (checked above), not in the
+    # directory name: the pinned bundler names the bundle after the product
+    # ("Hive Coder.app"), so the name carries no version to match.
     checks.append("version_match")
     return sorted(checks)
 
