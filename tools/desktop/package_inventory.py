@@ -127,27 +127,31 @@ def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _symlink_target(bundle_root: Path, link_path: Path) -> str:
-    """Return a symlink's target after proving it stays inside ``bundle_root``.
+def validate_link_target(bundle_root: Path, link_parent: Path, target: str) -> str:
+    """Prove a link target stays inside ``bundle_root``; return the target string.
 
-    An absolute target anywhere outside the bundle is refused. A relative target
-    is normalized lexically against the symlink's own directory — without
-    following it — and the resulting destination must remain inside the bundle
-    root, so both a shallow ``../`` escape and a deep ``../../..`` escape are
-    refused. The target string itself is returned unchanged, so retargeting a
-    valid internal link still changes the tree digest.
+    An absolute target is refused even when it happens to resolve inside the
+    bundle, because an absolute link is not portable evidence. A relative target
+    is normalized lexically against the symlink's own directory — never
+    followed — and the resulting destination must remain inside the bundle root,
+    so both a shallow ``../`` escape and a deep ``../../..`` escape are refused.
+    The target string is returned unchanged, so retargeting a valid internal link
+    still changes the tree digest.
+
+    The decision is pure path arithmetic so it can be tested without creating
+    real symlinks, on every platform.
     """
-    target = os.readlink(link_path)
     if os.path.isabs(target):
-        raise InventoryError(f"bundle symlink has an absolute target: {link_path} -> {target}")
-    resolved = os.path.normpath(os.path.join(str(link_path.parent), target))
-    try:
-        contained = Path(resolved).is_relative_to(bundle_root)
-    except (TypeError, ValueError):  # pragma: no cover - defensive on exotic paths
-        contained = False
-    if not contained:
-        raise InventoryError(f"bundle symlink escapes the bundle root: {link_path} -> {target}")
+        raise InventoryError(f"bundle symlink has an absolute target: {link_parent} -> {target}")
+    resolved = Path(os.path.normpath(os.path.join(str(link_parent), target)))
+    if not resolved.is_relative_to(bundle_root):
+        raise InventoryError(f"bundle symlink escapes the bundle root: {link_parent} -> {target}")
     return target
+
+
+def _symlink_target(bundle_root: Path, link_path: Path) -> str:
+    """Containment-checked target of a real symlink on disk."""
+    return validate_link_target(bundle_root, link_path.parent, os.readlink(link_path))
 
 
 def tree_digest(root: Path) -> str:
