@@ -16,7 +16,7 @@
 - (b) that exact revision was governed-merged with expected-head protection;
 - (c) the resulting exact `main` SHA passed fresh Governance, Desktop Shell **and** Native Package Matrix.
 
-Before the predicate is satisfied, `HCODER-CP-0024` and the non-canonical `DEC-029` state remain authoritative. Once it is satisfied, `HCODER-CP-0025` and `DEC-029` are CANONICAL / SEALED under this declaration with no repository-document rewrite required. The predicate depends on no merge SHA, run ID, review ID, Issue state, PR state or moving `current main` field: evidence of whether it holds lives externally in the active closeout PR and Issues #30 and #82.
+Before the predicate is satisfied, `HCODER-CP-0024` and the non-canonical `DEC-029` state remain authoritative. Once it is satisfied, `HCODER-CP-0025` and `DEC-029` are CANONICAL / SEALED under this declaration with no repository-document rewrite required. The predicate depends on no merge SHA, run ID, review ID, Issue state, PR state or moving `current main` field: evidence of whether it holds is external lifecycle evidence referenced by Issues #30 and #82, and by the closeout PR carrying the evaluated revision without depending on that PR's state.
 
 The third condition is specific to this checkpoint. `HCODER-CP-0024`'s predicate required Governance and Desktop Shell; a closeout of the slice that *introduces* packaging must additionally require the packaging lane on its own exact merged `main`, or it would canonicalize a packaging capability without ever having verified that capability at the closeout stage.
 
@@ -56,7 +56,7 @@ No signing, codesign, notarization, stapling or publisher-authenticity claim; no
 - Product PR #83 squash-merged with expected-head protection as `676138df041c4147df7a5fe3a42b481c0f5e7f13`; the merge tree equals the reviewed-head tree exactly, so the merge introduced no content change and the reviewed bytes are the shipped bytes.
 - Post-merge exact-main validation: Governance `35364805912` SUCCESS, Desktop Shell `35364805928` SUCCESS and Native Package Matrix `35364805920` SUCCESS on that merge SHA, the last covering all three lanes with all six package targets produced at `VERSION_DRIFT=LOCKED` and `TRACKED_SOURCE_UNCHANGED=PASS`, and with the ephemeral overlay never uploaded.
 
-The recorded preflight history of this slice — an initial STOP because the Windows `msi` target could not be produced from the canonical configuration, followed by a bounded continuation authorising an ephemeral overlay — is preserved in the Work Order, the Context Lock and the `DEC-029` ADR. Correction chronology and the reviewed-head record are likewise preserved there and are not restated here. The closeout stage's own review, gates and merge evidence are the mutable inputs to `HCODER_CP_0025_EFFECTIVE`; they are not recorded in this committed package and live externally in the active closeout PR and Issues #30 and #82, so this document remains true whether or not the predicate has been satisfied.
+The recorded preflight history of this slice — an initial STOP because the Windows `msi` target could not be produced from the canonical configuration, followed by a bounded continuation authorising an ephemeral overlay — is preserved in the Work Order, the Context Lock and the `DEC-029` ADR. Correction chronology and the reviewed-head record are likewise preserved there and are not restated here. The closeout stage's own review, gates and merge evidence are the mutable inputs to `HCODER_CP_0025_EFFECTIVE`; they are not recorded in this committed package, and their evidence is external lifecycle evidence referenced by Issues #30 and #82 and by the closeout PR carrying the evaluated revision, so this document remains true whether or not the predicate has been satisfied.
 
 ## Canonical decision
 
@@ -74,7 +74,7 @@ This declaration becomes effective only through the predicate above. Concretely,
 6. the resulting exact `main` SHA to pass fresh Governance, Desktop Shell and Native Package Matrix;
 7. every closeout change to remain documentation/governance only, without broadening runtime authority or altering the reviewed contract law.
 
-While the predicate holds, `HCODER-WO-0025` is complete, `DEC-029` is CANONICAL with this checkpoint as its promotion evidence, and Issue #82 may be closed. Whether each of those has happened is external state recorded in the active closeout PR and Issues #30 and #82, not in this document.
+While the predicate holds, `HCODER-WO-0025` is complete, `DEC-029` is CANONICAL with this checkpoint as its promotion evidence, and Issue #82 may be closed. Whether each of those has happened is external state recorded as lifecycle evidence referenced by Issues #30 and #82, not in this document.
 
 ## STOP CONDITION
 

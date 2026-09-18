@@ -169,3 +169,30 @@ Both thought experiments must hold simultaneously: if this exact correction late
 
 ## STOP CONDITION (Delta 003)
 STOP if any wording correction would require a technical, workflow, tool, test, Tauri-config, manifest, lockfile, dependency or authority change; if it would canonicalise `DEC-029` before governed promotion; if a durable source would still self-stale merely because review, gate or merge phase advances; if fresh exact-head gates are not fully green; or if any step would mark PR #83 Ready, merge it, or begin `HCODER-DIST-001C`.
+
+## Delta 004 — closeout source-truth correction (M-39-01)
+
+**Trigger:** independent closeout HEDS review `5250120095`, verdict `CORRECTION_REQUIRED`, CRITICAL `0` / HIGH `0` / MEDIUM `1`, on exact reviewed closeout head `8d7ad5e2dfc285116d86e992d830e4fa76864f06`. The closeout base is `676138df041c4147df7a5fe3a42b481c0f5e7f13`.
+
+**Accepted by that review and preserved by this delta:** the product implementation and the six-target package matrix; the `HCODER_CP_0025_EFFECTIVE` predicate design itself — independent HIGH/CRITICAL `0/0` review of one closeout revision, expected-head governed merge of that same revision, and fresh exact-main Governance, Desktop Shell and Native Package Matrix; CP-0025/DEC-029 admitted authority and exclusions; and the documentation-only character of the closeout revision. `DEC-029` holds no canonical force while the predicate is unsatisfied, and `HCODER-CP-0024` remains authoritative while the CP-0025 predicate is unsatisfied and the CP-0024 predicate is satisfied.
+
+## Recorded finding (as returned by the independent review)
+
+- **M-39-01 — residual self-staling lifecycle pointers remain in the closeout source.** The conditional-effectiveness design was accepted, but several durable files still carried phase-relative wording. Three specific defects: `.engineering/evidence/HCODER-WO-0025.md` ended with a terminal `Do not merge` command, which the already-merged product stage and any future governed closeout merge contradict; multiple closeout files located mutable evidence in `the active closeout PR`, a pointer that ceases to exist once a closeout merges; and the no-byte-change thought experiment had to be applied consistently to all seven closeout files. The review recorded this as documentation/source-truth only, rejected no technical law, package-matrix fact, exact-head evidence or authority boundary, and required that the correction must **not** be made by embedding current SHA, run or review identifiers.
+
+## Authorised correction
+
+Replace phase-relative commands and moving pointers with durable predicate, evidence and authority law, so that one and the same repository text is true before the closeout merge, after it, and after exact-main postvalidation. Specifically: the terminal command in the Evidence Bundle becomes a durable rule that `UNKNOWN` never becomes `PASS`, that canonical standing is determined only by `HCODER_CP_0025_EFFECTIVE`, and that no production-distributable claim and no `HCODER-DIST-001C` transition is admitted unless separately governed; and every `the active closeout PR` pointer is replaced with external lifecycle evidence referenced by Issues #30 and #82, naming a PR only by immutable identity or by role without depending on its open, active, draft, unmerged or current state. No phase command of any other form is introduced in its place.
+
+Allowed paths, exactly: this Context Lock; `.engineering/evidence/HCODER-WO-0025.md`; `.engineering/work-orders/HCODER-WO-0025.md`; `.engineering/checkpoint-deltas/HCODER-WO-0025.md`; `.engineering/evidence/HCODER-CP-0025-CANONICAL-CLOSEOUT.md`; `docs/project-brain/11-CHECKPOINT.md`; the `DEC-029` ADR; and the `DEC-029` entry in `docs/project-brain/10-DECISIONS-LEDGER.md`, together with the `DEC-028` ledger entry only for the same moving-pointer wording — the whole ledger file is already in the closeout revision. Files outside this set are changed only where they actually contain M-39-01 wording.
+
+**Forbidden:** `.github/workflows/native-package-matrix.yml`; `tools/desktop/package_inventory.py`; `tests/desktop/test_package_inventory.py`; every product or runtime source; `tauri.conf.json`; manifests and lockfiles; dependencies; the Governance and Desktop workflows; the product version; and any authority surface.
+
+**Preserved:** the three-condition `HCODER_CP_0025_EFFECTIVE` predicate; the package matrix (Windows `msi`+`nsis`, macOS `app`+`dmg`, Linux `appimage`+`deb`); the split-build, ephemeral-overlay, closed-inventory, tree-digest, structural-validation and evidence-is-not-trust law; every product-stage immutable fact and every product merge/postvalidation receipt; `bundle.active` as `false` with no tracked `bundle.icon`; and every authority exclusion. Prompt 33/35/36/37 preflight and bootstrap STOPs and the Prompt 39 closeout findings remain historical record and are not rewritten.
+
+## Anti-self-staling test applied
+
+Both thought experiments must hold simultaneously. First: if these exact corrected bytes are governed-merged unchanged and the exact-main gates satisfy the predicate, every durable statement remains true with no follow-up status-flip commit. Second: before merge, no durable statement falsely claims that `HCODER_CP_0025_EFFECTIVE` already holds or that `DEC-029` already carries canonical force. Mutable receipts — head SHAs, run IDs, review IDs and merge state — remain external and are never embedded here.
+
+## STOP CONDITION (Delta 004)
+STOP if any correction would require a technical, workflow, tool, test, Tauri-config, manifest, lockfile, dependency, runtime or authority change; if it would alter the accepted predicate or the package contract rather than only source-truth wording; if any durable closeout file would still become false solely because review, merge or postvalidation state advances; if any HIGH/CRITICAL finding arises or fresh exact-head gates are not fully green; or if any step would mark the closeout PR Ready, merge it, close Issue #82 as complete, or begin `HCODER-DIST-001C`.

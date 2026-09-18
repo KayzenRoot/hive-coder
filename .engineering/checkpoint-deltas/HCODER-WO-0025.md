@@ -20,7 +20,7 @@
 
 **Before** the predicate is satisfied, `HCODER-CP-0024` and the non-canonical `DEC-029` state remain authoritative. **Once** it is satisfied, `HCODER-CP-0025` and `DEC-029` are CANONICAL / SEALED under the declaration in this document, with no repository-document rewrite required merely to flip phase or status wording.
 
-The predicate deliberately depends on no merge SHA, run ID, review ID, Issue state, PR state or moving `current main` field. Evidence of whether it is satisfied lives externally in the active closeout PR and Issues #30 and #82.
+The predicate deliberately depends on no merge SHA, run ID, review ID, Issue state, PR state or moving `current main` field. Evidence of whether it is satisfied is external lifecycle evidence referenced by Issues #30 and #82, and by the closeout PR carrying the evaluated revision without depending on that PR's state.
 
 The Native Package Matrix belongs in this predicate and not in its predecessor's: this slice is the one that introduces a packaging lane, so a closeout that canonicalized it while its own gates could go unverified would assert a packaging capability on the strength of runs belonging to a different stage.
 
@@ -68,7 +68,7 @@ A digest recorded by this slice proves **byte identity and integrity for evidenc
 
 Post-merge exact-main validation covered Governance source-pack, governed-runtime Linux, control-plane Windows HIGH_ASSURANCE and workspace-replace macOS; Desktop web, Windows, Linux and macOS; and Native Package Matrix Windows, Linux and macOS with all six package targets produced at `VERSION_DRIFT=LOCKED` and `TRACKED_SOURCE_UNCHANGED=PASS`. Every required lane belonged to the merge SHA; none was inferred from an adjacent commit. Production lanes used runs triggered by the merged `main` itself, never the PR-head runs that preceded the merge.
 
-These are immutable lifecycle-stage facts and are not live repository pointers. The *closeout* stage's own review, gates and merge evidence are deliberately **not** recorded here: they are the mutable inputs to `HCODER_CP_0025_EFFECTIVE` and live externally in the active closeout PR and Issues #30 and #82. This document therefore stays true whether or not the predicate has been satisfied.
+These are immutable lifecycle-stage facts and are not live repository pointers. The *closeout* stage's own review, gates and merge evidence are deliberately **not** recorded here: they are the mutable inputs to `HCODER_CP_0025_EFFECTIVE`, and their evidence is external lifecycle evidence referenced by Issues #30 and #82 and by the closeout PR carrying the evaluated revision, whose state this document does not depend on. This document therefore stays true whether or not the predicate has been satisfied.
 
 ## Not changed by this delta
 
