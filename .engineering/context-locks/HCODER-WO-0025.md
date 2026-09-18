@@ -93,3 +93,47 @@ Prompt 33 stopped before implementation on Issue #82 (`5721095900`) because the 
 
 ## STOP CONDITION (Delta 001)
 In addition to the pre-existing STOP condition: STOP if any native lane requires a tracked `tauri.conf.json` or icon-format mutation, if any target can only work by reducing the approved matrix, if artifact discovery cannot be made root-bounded and deterministic, or if any step would merge the Draft PR, call Hive Coder production-distributable, or begin `HCODER-DIST-001C`.
+
+---
+
+# Context Lock Delta 002
+
+**Status:** HIVE PROVIDER ONLINE — BOUNDED CORRECTION AUTHORISED (same Work Order)  
+**Authority granted:** exactly the four corrections below, within the existing allowed-file set; no new product/runtime/update/package/network/install/signing/release/filesystem/Git/shell/Cua/credential authority and no successor-slice authority  
+**Trigger:** independent HEDS review `5248101122`, verdict `CORRECTION_REQUIRED`, CRITICAL `0` / HIGH `2` / MEDIUM `2`, on exact head `c2bf8605f64c1584e00def7f06ba6d3d5176c7ed`
+
+## Recorded pre-execution STOP history (immutable)
+
+- **Prompt 35** stopped before execution: HIVE was healthy but registered zero projects, no repository mutation occurred, and no correction commit existed.
+- **Prompt 36** stopped as `HIVE_PROJECT_BOOTSTRAP_BLOCKED`: the running `hive-api-1` container mounted only `D:/HIVE/data` and `D:/HIVE/projects` (read-only), so the active checkout at `D:/Projeto Codexx/hive-coder` was not visible and no legal registration could become context-capable.
+- **Prompt 37 unblock** (`5730739379`) authorised one bounded host-side HIVE mount reconfiguration.
+
+## Host bootstrap performed (recorded, verified)
+
+The effective bind source was **not** the `.env` file: `HIVE_PROJECTS_ROOT` was set as a Windows user environment variable, which overrides `.env` in Compose, so the mount did not change until that variable was corrected. Both were brought into agreement on `D:/Projeto Codexx`; `.env` was backed up as `.env.<timestamp>.pre-hive-coder.bak` before the byte-precise edit (newline style preserved). HIVE was restarted only through the documented launchers (`hive-down.cmd` uses `docker compose stop`, never deleting volumes, then `hive-up.cmd`); all services returned healthy. The container now mounts `D:/Projeto Codexx → /workspace/projects` read-only, proven both by `docker inspect` (`rw=false`) and independently by `ro` in the container's `/proc/mounts`. Container checkout identity was proven by SHA-256 equality of `apps/desktop/src-tauri/tauri.conf.json` and `tools/desktop/version_drift.py` between host and container.
+
+HIVE project `hive-coder` (`bec146b3-7ac9-404a-bb79-17ea8dbda7e5`, `relative_path=hive-coder`) registered through the documented `POST /api/v1/projects`, refreshed through the documented `POST /inspect` (state `READY`, `repository_accessible: true`, `git_head_sha` exactly `c2bf8605…`), indexed through the documented `POST /index` (400 files, 2021 symbols at that head), and made retrievable through the documented `POST /retrieval/corpus/sync` (2421 sources, 3018 chunks). Capsule fingerprints were cross-checked against the working tree and match exactly.
+
+**Recorded environmental note.** HIVE's git inspection caps each git call at 5 seconds; the first cold inspection exceeded that and was reported as `git_timeout`, while a warm re-inspection succeeded. Separately, the container's git reports 360 files as modified because this Windows checkout materialises CRLF while the index holds LF and only the host's `core.autocrlf=true` hides the difference, so `working_tree_clean` is `false` in HIVE while the host tree is clean. Neither condition affects indexing (which reads the git index) and neither is repaired by this Work Order.
+
+## Authorised correction scope (exactly these four)
+
+| Finding | Defect | Required correction |
+|---|---|---|
+| `H-34-01` | `validate_manifest()` compared only environment fields and a dictionary of `(type, path) → digest`, so duplicates collapsed, ordering and several entry fields were unverified, and schema/closed-key compliance was not enforced. | Accept recorded evidence only if it exactly matches the recomputed canonical closed inventory: exact top-level closed keys and `schemaVersion`, `packages` a list of closed entry dictionaries with exact keys, duplicate `(packageType, relativePath)` rejected before comparison, and every evidence-significant field plus package count and order compared. Prefer canonical-serialization equality. |
+| `H-34-02` | `tree_digest()` recorded symlink targets without validating containment, so a link inside a `.app` could point outside the bundle. | Validate every symlink's containment before writing its record: reject absolute external targets and relative targets that normalize outside the bundle root; preserve valid internal relative links and keep hashing the link-target string. |
+| `M-34-03` | The workflow hardcoded `CANONICAL_VERSION: "0.1.0"` and the macOS lane hardcoded the identifier, creating duplicate version/config sources. | Remove the workflow constant and never replace it with another tracked mirror; run the existing `tools/desktop/version_drift.py` in every native lane and require `VERSION_DRIFT=LOCKED`; derive the canonical version and the bundle identifier at runtime from `apps/desktop/src-tauri/tauri.conf.json`; export them only as per-job observations and log the canonical source path. |
+| `M-34-04` | The `pull_request` path filter did not include the WO-0025 governance/decision paths, so a docs-only correction head could not receive package evidence. | Make the trigger durable for every legal same-Work-Order correction: include the complete authorised WO-0025 path set, or remove the PR path filter when completeness cannot be guaranteed; keep `push`/`main` behaviour unchanged; no artificial technical touch may be required. |
+
+A bounded retry (maximum two attempts, short deterministic delay, fail-closed) may wrap the explicit bundle command to absorb the previously observed transient WiX download failure.
+
+## Preserved unchanged
+
+Accepted Prompt-34 native matrix behaviour (Windows `msi`+`nsis`, macOS `app`+`dmg`, Linux `appimage`+`deb`); canonical `tauri.conf.json` byte-unchanged with `bundle.active=false` and no tracked `bundle.icon`; runner-local non-tracked ephemeral overlay, never uploaded; no manifest/lockfile/dependency/plugin/runtime/permission/capability change; no signing, notarization, release or tag publication, updater network/download/install/restart, installer execution or production-distributable claim; no `HCODER-DIST-001C`.
+
+## HIVE-FIRST law (execution optimization only)
+
+HIVE is the primary project-context, retrieval and delta-memory layer for this Work Order: its project checkpoint, bounded context capsule, hybrid/lexical retrieval, impact set and required proofs are consulted before broad repository reads, and progressive disclosure widens reads only when HIVE returns UNKNOWN or insufficient evidence. **HIVE grants no product or runtime authority, is not elevated above Git, and never outranks Git, code, tests, approved decisions or hosted exact-head evidence.** Where HIVE and verified source conflict, the source wins and HIVE context is refreshed. No secrets, credentials, workflow artifacts or mutable CI run state are stored in HIVE as canonical project memory. Deltas `001` and the Prompt 33/35/36 history are preserved.
+
+## STOP CONDITION (Delta 002)
+STOP if a correction requires a tracked `tauri.conf.json` or icon-format change, a new dependency/plugin/runtime authority, a reduced package matrix, installer execution, or signing/notarization/release/updater/install/restart/secret authority; if fresh exact-head Governance, Desktop Shell or Native Package Matrix is not fully green; if any HIGH/CRITICAL finding remains unresolved; or if any step would merge PR #83 or begin `HCODER-DIST-001C`.

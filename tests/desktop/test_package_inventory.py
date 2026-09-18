@@ -304,7 +304,7 @@ class MutationAndDeterminismTests(unittest.TestCase):
             self.assertNotEqual(serialize_inventory(recomputed), payload)
             with self.assertRaises(InventoryError) as ctx:
                 validate_manifest(json.loads(payload), recomputed)
-            self.assertIn("digests do not match", str(ctx.exception))
+            self.assertIn("does not exactly match the recomputed inventory", str(ctx.exception))
 
     def test_directory_tree_mutation_invalidates_the_app_digest(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -348,6 +348,228 @@ class MutationAndDeterminismTests(unittest.TestCase):
             with self.assertRaises(InventoryError) as ctx:
                 validate_manifest(recorded, document)
             self.assertIn("mismatch", str(ctx.exception))
+
+
+
+class ClosedManifestVerificationTests(unittest.TestCase):
+    """H-34-01: recorded evidence passes only if it is the exact closed inventory."""
+
+    def _recorded(self, root: Path):
+        document = _inventory(root, "windows", ["msi", "nsis"])
+        return json.loads(serialize_inventory(document)), document
+
+    def _assert_rejected(self, recorded, expected, label: str) -> None:
+        with self.assertRaises(InventoryError, msg=label) as ctx:
+            validate_manifest(recorded, expected)
+        self.assertTrue(str(ctx.exception), label)
+
+    def test_untouched_manifest_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            validate_manifest(recorded, expected)
+
+    def test_tampered_schema_version_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            recorded["schemaVersion"] = "hive-package-inventory-v2"
+            self._assert_rejected(recorded, expected, "schemaVersion")
+
+    def test_tampered_byte_size_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            recorded["packages"][0]["byteSize"] += 1
+            self._assert_rejected(recorded, expected, "byteSize")
+
+    def test_tampered_digest_algorithm_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            recorded["packages"][0]["digestAlgorithm"] = "sha1"
+            self._assert_rejected(recorded, expected, "digestAlgorithm")
+
+    def test_tampered_structural_validation_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            recorded["packages"][0]["structuralValidation"] = ["bound_in_root"]
+            self._assert_rejected(recorded, expected, "structuralValidation")
+
+    def test_tampered_digest_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            recorded["packages"][0]["digest"] = "0" * 64
+            self._assert_rejected(recorded, expected, "digest")
+
+    def test_package_reordering_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            recorded["packages"] = list(reversed(recorded["packages"]))
+            self._assert_rejected(recorded, expected, "ordering")
+
+    def test_package_path_swap_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            recorded["packages"][1]["relativePath"] = recorded["packages"][0]["relativePath"]
+            self._assert_rejected(recorded, expected, "path swap")
+
+    def test_missing_entry_key_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            del recorded["packages"][0]["byteSize"]
+            self._assert_rejected(recorded, expected, "missing key")
+
+    def test_extra_entry_key_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            recorded["packages"][0]["extra"] = "payload"
+            self._assert_rejected(recorded, expected, "extra key")
+
+    def test_missing_top_level_key_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            del recorded["architecture"]
+            self._assert_rejected(recorded, expected, "missing top-level key")
+
+    def test_duplicate_recorded_entry_is_rejected_before_comparison(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            recorded["packages"].append(dict(recorded["packages"][0]))
+            with self.assertRaises(InventoryError) as ctx:
+                validate_manifest(recorded, expected)
+            self.assertIn("duplicate", str(ctx.exception))
+
+    def test_duplicate_entries_cannot_collapse_into_a_match(self) -> None:
+        """A collapsed (type, path) map would hide this; the closed law must not."""
+        with tempfile.TemporaryDirectory() as tmp:
+            recorded, expected = self._recorded(_windows_root(Path(tmp)))
+            duplicate = dict(recorded["packages"][0])
+            recorded["packages"] = [duplicate, dict(duplicate)]
+            with self.assertRaises(InventoryError) as ctx:
+                validate_manifest(recorded, expected)
+            self.assertIn("duplicate", str(ctx.exception))
+
+
+class AppSymlinkContainmentTests(unittest.TestCase):
+    """H-34-02: symlinks inside a bundle must stay inside the bundle."""
+
+    def _bundle_with_link(self, root: Path, target: str):
+        bundle = _make_app(root)
+        link = bundle / "Contents" / "MacOS" / "linked.bin"
+        try:
+            link.symlink_to(target)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlink creation is not permitted on this platform")
+        return bundle
+
+    def _digest(self, root: Path) -> str:
+        document = _inventory(root, "macos", ["app", "dmg"])
+        return next(entry["digest"] for entry in document["packages"] if entry["packageType"] == "app")
+
+    def test_valid_internal_relative_symlink_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle = self._bundle_with_link(root, "../Resources/inside.bin")
+            _write(bundle / "Contents" / "Resources" / "inside.bin", b"inside")
+            _write(root / "dmg" / f"Hive Coder_{VERSION}_aarch64.dmg", _dmg_payload())
+            self.assertEqual(len(self._digest(root)), 64)
+
+    def test_shallow_relative_escape_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._bundle_with_link(root, "../../outside.bin")
+            _write(root / "dmg" / f"Hive Coder_{VERSION}_aarch64.dmg", _dmg_payload())
+            with self.assertRaises(InventoryError) as ctx:
+                self._digest(root)
+            self.assertIn("escapes the bundle root", str(ctx.exception))
+
+    def test_deep_relative_escape_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._bundle_with_link(root, "../../../../../../../../etc/passwd")
+            _write(root / "dmg" / f"Hive Coder_{VERSION}_aarch64.dmg", _dmg_payload())
+            with self.assertRaises(InventoryError) as ctx:
+                self._digest(root)
+            self.assertIn("escapes the bundle root", str(ctx.exception))
+
+    def test_absolute_external_target_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._bundle_with_link(root, "/etc/passwd")
+            _write(root / "dmg" / f"Hive Coder_{VERSION}_aarch64.dmg", _dmg_payload())
+            with self.assertRaises(InventoryError) as ctx:
+                self._digest(root)
+            self.assertIn("absolute target", str(ctx.exception))
+
+    def test_retargeting_a_valid_internal_symlink_changes_the_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle = self._bundle_with_link(root, "../Resources/inside.bin")
+            _write(bundle / "Contents" / "Resources" / "inside.bin", b"inside")
+            _write(root / "dmg" / f"Hive Coder_{VERSION}_aarch64.dmg", _dmg_payload())
+            first = self._digest(root)
+            link = bundle / "Contents" / "MacOS" / "linked.bin"
+            link.unlink()
+            link.symlink_to("../Resources/other.bin")
+            self.assertNotEqual(first, self._digest(root))
+
+
+
+class PackageWorkflowTriggerTests(unittest.TestCase):
+    """M-34-04: a docs/governance-only correction head must still get package evidence.
+
+    A Work Order correction that moves the promotion head may touch only the
+    Context Lock, an ADR or the Decisions Ledger. If this workflow filtered
+    ``pull_request`` by path, such a head would receive no package evidence and
+    promotion would deadlock, so the trigger must stay unfiltered. Parsed with
+    the standard library only so the proof runs on every runner.
+    """
+
+    def _workflow_text(self) -> str:
+        path = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "native-package-matrix.yml"
+        return path.read_text(encoding="utf-8")
+
+    def _trigger_block(self) -> list[str]:
+        lines = self._workflow_text().splitlines()
+        start = next(index for index, line in enumerate(lines) if line.rstrip() == "on:")
+        end = next(index for index, line in enumerate(lines) if line.rstrip() == "jobs:")
+        return lines[start:end]
+
+    def test_pull_request_trigger_carries_no_path_filter(self) -> None:
+        block = self._trigger_block()
+        index = next(
+            position for position, line in enumerate(block) if line.strip() == "pull_request:"
+        )
+        indentation = len(block[index]) - len(block[index].lstrip())
+        # The very next non-empty line must sit at the same level, i.e. the
+        # `pull_request` key has no nested filter such as `paths:`.
+        following = next(line for line in block[index + 1 :] if line.strip())
+        self.assertEqual(
+            len(following) - len(following.lstrip()),
+            indentation,
+            "pull_request carries a nested filter, so a governance-only correction head "
+            "could receive no package evidence",
+        )
+        self.assertNotIn("paths:", "\n".join(block))
+
+    def test_push_to_main_trigger_is_unchanged(self) -> None:
+        block = self._trigger_block()
+        index = next(position for position, line in enumerate(block) if line.strip() == "push:")
+        self.assertIn("branches: [main]", block[index + 1])
+
+    def test_no_package_version_or_identifier_is_stored_in_the_workflow(self) -> None:
+        import json
+
+        root = Path(__file__).resolve().parents[2]
+        workflow_text = self._workflow_text()
+        config = json.loads(
+            (root / "apps" / "desktop" / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8")
+        )
+        self.assertNotIn(f'CANONICAL_VERSION: "{config["version"]}"', workflow_text)
+        self.assertNotIn(config["identifier"], workflow_text)
+
+    def test_every_lane_derives_the_canonical_values_at_runtime(self) -> None:
+        workflow_text = self._workflow_text()
+        self.assertEqual(workflow_text.count("Derive canonical version and identifier"), 3)
+        self.assertGreaterEqual(workflow_text.count("tools/desktop/version_drift.py"), 3)
+        self.assertIn("VERSION_DRIFT=LOCKED", workflow_text)
 
 
 if __name__ == "__main__":

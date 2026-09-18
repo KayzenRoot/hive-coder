@@ -3,13 +3,18 @@ name: Native Package Matrix
 # Additional exact-head proof lane for HCODER-WO-0025. It neither replaces nor
 # weakens Governance or Desktop Shell: those remain the canonical gates, and this
 # lane only adds bounded, unsigned internal package evidence.
+#
+# Trigger law: this lane deliberately carries NO `pull_request` path filter. A
+# Work Order correction that touches only governance, an ADR, the Decisions
+# Ledger or the Context Lock still moves the promotion head, and that head must
+# receive package evidence; a path filter cannot be proven complete against
+# future correction paths, and an unmatched head would deadlock promotion.
+#
+# Version law: no package version or identifier is stored in this workflow. Every
+# lane runs the existing version drift gate and derives both values from the
+# canonical Tauri config at runtime.
 on:
   pull_request:
-    paths:
-      - "apps/desktop/**"
-      - "tools/desktop/**"
-      - "tests/desktop/**"
-      - ".github/workflows/native-package-matrix.yml"
   push:
     branches: [main]
 
@@ -17,7 +22,6 @@ permissions:
   contents: read
 
 env:
-  CANONICAL_VERSION: "0.1.0"
   ARTIFACT_RETENTION_DAYS: "7"
 
 jobs:
@@ -63,6 +67,21 @@ jobs:
           foreach ($target in @('msi', 'nsis')) {
             if ($values -notmatch $target) { throw "TARGET_NOT_ADVERTISED=$target" }
           }
+      - name: Derive canonical version and identifier from Tauri config
+        shell: pwsh
+        run: |
+          $drift = (python tools/desktop/version_drift.py | Out-String)
+          Write-Output $drift.Trim()
+          if ($LASTEXITCODE -ne 0 -or $drift -notmatch "VERSION_DRIFT=LOCKED") { throw "version drift gate is not LOCKED" }
+          $config = Get-Content apps/desktop/src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          if ([string]::IsNullOrWhiteSpace($config.version)) { throw "canonical version missing from Tauri config" }
+          if ([string]::IsNullOrWhiteSpace($config.identifier)) { throw "canonical identifier missing from Tauri config" }
+          "CANONICAL_VERSION=$($config.version)" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+          "CANONICAL_IDENTIFIER=$($config.identifier)" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+          Write-Output "CANONICAL_CONFIG_SOURCE=apps/desktop/src-tauri/tauri.conf.json"
+          Write-Output "DERIVED_CANONICAL_VERSION=$($config.version)"
+          Write-Output "DERIVED_CANONICAL_IDENTIFIER=$($config.identifier)"
+
       - name: Native compile without bundling
         working-directory: apps/desktop
         run: npm run tauri -- build --no-bundle
@@ -87,8 +106,14 @@ jobs:
         run: |
           $overlay = Join-Path $env:RUNNER_TEMP "hive-bundle-overlay.json"
           Remove-Item -Recurse -Force src-tauri\target\release\bundle -ErrorAction SilentlyContinue
-          npm run tauri -- bundle --bundles msi,nsis --ci --config $overlay
-          if ($LASTEXITCODE -ne 0) { throw "bundle step failed: $LASTEXITCODE" }
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            Write-Output "BUNDLE_ATTEMPT=$attempt"
+            npm run tauri -- bundle --bundles msi,nsis --ci --config $overlay
+            if ($LASTEXITCODE -eq 0) { Write-Output "BUNDLE_RESULT=SUCCESS attempt=$attempt"; break }
+            if ($attempt -eq 2) { throw "bundle step failed after $attempt attempts: $LASTEXITCODE" }
+            Write-Output "BUNDLE_RESULT=RETRY attempt=$attempt"
+            Start-Sleep -Seconds 15
+          }
       - name: Guard tracked source and canonical config after bundling
         shell: pwsh
         run: |
@@ -196,6 +221,25 @@ jobs:
               *) echo "TARGET_NOT_ADVERTISED=$target"; exit 1 ;;
             esac
           done
+      - name: Derive canonical version and identifier from Tauri config
+        shell: bash
+        run: |
+          set -euo pipefail
+          DRIFT="$(python tools/desktop/version_drift.py)"
+          echo "$DRIFT"
+          case "$DRIFT" in
+            *"VERSION_DRIFT=LOCKED"*) ;;
+            *) echo "VERSION_DRIFT_NOT_LOCKED"; exit 1 ;;
+          esac
+          VERSION="$(python -c "import json;print(json.load(open('apps/desktop/src-tauri/tauri.conf.json',encoding='utf-8'))['version'])")"
+          IDENTIFIER="$(python -c "import json;print(json.load(open('apps/desktop/src-tauri/tauri.conf.json',encoding='utf-8'))['identifier'])")"
+          test -n "$VERSION"
+          test -n "$IDENTIFIER"
+          echo "CANONICAL_CONFIG_SOURCE=apps/desktop/src-tauri/tauri.conf.json"
+          echo "DERIVED_CANONICAL_VERSION=$VERSION"
+          echo "DERIVED_CANONICAL_IDENTIFIER=$IDENTIFIER"
+          { echo "CANONICAL_VERSION=$VERSION"; echo "CANONICAL_IDENTIFIER=$IDENTIFIER"; } >> "$GITHUB_ENV"
+
       - name: Native compile without bundling
         working-directory: apps/desktop
         run: npm run tauri -- build --no-bundle --features rfd/gtk3
@@ -217,7 +261,19 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf src-tauri/target/release/bundle
-          npm run tauri -- bundle --bundles appimage,deb --ci --config "$RUNNER_TEMP/hive-bundle-overlay.json"
+          for attempt in 1 2; do
+            echo "BUNDLE_ATTEMPT=$attempt"
+            if npm run tauri -- bundle --bundles appimage,deb --ci --config "$RUNNER_TEMP/hive-bundle-overlay.json"; then
+              echo "BUNDLE_RESULT=SUCCESS attempt=$attempt"
+              break
+            fi
+            if [ "$attempt" = "2" ]; then
+              echo "BUNDLE_RESULT=FAILED attempts=$attempt"
+              exit 1
+            fi
+            echo "BUNDLE_RESULT=RETRY attempt=$attempt"
+            sleep 15
+          done
       - name: Guard tracked source and canonical config after bundling
         shell: bash
         run: |
@@ -312,6 +368,25 @@ jobs:
               *) echo "TARGET_NOT_ADVERTISED=$target"; exit 1 ;;
             esac
           done
+      - name: Derive canonical version and identifier from Tauri config
+        shell: bash
+        run: |
+          set -euo pipefail
+          DRIFT="$(python3 tools/desktop/version_drift.py)"
+          echo "$DRIFT"
+          case "$DRIFT" in
+            *"VERSION_DRIFT=LOCKED"*) ;;
+            *) echo "VERSION_DRIFT_NOT_LOCKED"; exit 1 ;;
+          esac
+          VERSION="$(python3 -c "import json;print(json.load(open('apps/desktop/src-tauri/tauri.conf.json',encoding='utf-8'))['version'])")"
+          IDENTIFIER="$(python3 -c "import json;print(json.load(open('apps/desktop/src-tauri/tauri.conf.json',encoding='utf-8'))['identifier'])")"
+          test -n "$VERSION"
+          test -n "$IDENTIFIER"
+          echo "CANONICAL_CONFIG_SOURCE=apps/desktop/src-tauri/tauri.conf.json"
+          echo "DERIVED_CANONICAL_VERSION=$VERSION"
+          echo "DERIVED_CANONICAL_IDENTIFIER=$IDENTIFIER"
+          { echo "CANONICAL_VERSION=$VERSION"; echo "CANONICAL_IDENTIFIER=$IDENTIFIER"; } >> "$GITHUB_ENV"
+
       - name: Native compile without bundling
         working-directory: apps/desktop
         run: npm run tauri -- build --no-bundle
@@ -333,7 +408,19 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf src-tauri/target/release/bundle
-          npm run tauri -- bundle --bundles app,dmg --ci --config "$RUNNER_TEMP/hive-bundle-overlay.json"
+          for attempt in 1 2; do
+            echo "BUNDLE_ATTEMPT=$attempt"
+            if npm run tauri -- bundle --bundles app,dmg --ci --config "$RUNNER_TEMP/hive-bundle-overlay.json"; then
+              echo "BUNDLE_RESULT=SUCCESS attempt=$attempt"
+              break
+            fi
+            if [ "$attempt" = "2" ]; then
+              echo "BUNDLE_RESULT=FAILED attempts=$attempt"
+              exit 1
+            fi
+            echo "BUNDLE_RESULT=RETRY attempt=$attempt"
+            sleep 15
+          done
       - name: Guard tracked source and canonical config after bundling
         shell: bash
         run: |
@@ -366,7 +453,7 @@ jobs:
             --package-root apps/desktop/src-tauri/target/release/bundle \
             --platform macos --architecture "$(uname -m)" \
             --source-sha "$SOURCE_SHA" --canonical-version "$CANONICAL_VERSION" \
-            --expected-types app,dmg --expected-identifier dev.hive.coder \
+            --expected-types app,dmg --expected-identifier "$CANONICAL_IDENTIFIER" \
             --json-out "$RUNNER_TEMP/hive-package-inventory.json"
           echo "PACKAGE_INVENTORY_MANIFEST=$RUNNER_TEMP/hive-package-inventory.json"
           echo "OVERLAY_UPLOADED=NO"

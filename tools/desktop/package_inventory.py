@@ -127,15 +127,40 @@ def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _symlink_target(bundle_root: Path, link_path: Path) -> str:
+    """Return a symlink's target after proving it stays inside ``bundle_root``.
+
+    An absolute target anywhere outside the bundle is refused. A relative target
+    is normalized lexically against the symlink's own directory — without
+    following it — and the resulting destination must remain inside the bundle
+    root, so both a shallow ``../`` escape and a deep ``../../..`` escape are
+    refused. The target string itself is returned unchanged, so retargeting a
+    valid internal link still changes the tree digest.
+    """
+    target = os.readlink(link_path)
+    if os.path.isabs(target):
+        raise InventoryError(f"bundle symlink has an absolute target: {link_path} -> {target}")
+    resolved = os.path.normpath(os.path.join(str(link_path.parent), target))
+    try:
+        contained = Path(resolved).is_relative_to(bundle_root)
+    except (TypeError, ValueError):  # pragma: no cover - defensive on exotic paths
+        contained = False
+    if not contained:
+        raise InventoryError(f"bundle symlink escapes the bundle root: {link_path} -> {target}")
+    return target
+
+
 def tree_digest(root: Path) -> str:
     """Deterministic sorted-tree digest of a directory bundle.
 
     Records are ``relative_path \\0 entry_type \\0 byte_size \\0 entry_digest``,
     sorted by relative POSIX path, concatenated, and SHA-256 hashed. ``entry_type``
     is ``f`` for a regular file, ``d`` for a directory and ``l`` for a symlink
-    (whose entry digest is its link target). Only regular files, directories and
-    symlinks are permitted; any other entry type is refused.
+    (whose entry digest is its link target, after the containment proof above).
+    Only regular files, directories and symlinks are permitted; any other entry
+    type is refused.
     """
+    bundle_root = root.resolve()
     records: list[str] = []
     for current, directory_names, file_names in os.walk(root, followlinks=False):
         directory_names.sort()
@@ -146,7 +171,7 @@ def tree_digest(root: Path) -> str:
             path = current_path / name
             relative = path.relative_to(root).as_posix()
             if path.is_symlink():
-                target = os.readlink(path)
+                target = _symlink_target(bundle_root, path)
                 records.append(f"{relative}\0l\0{len(target.encode())}\0{target}")
             elif path.is_dir():
                 records.append(f"{relative}\0d\0{0}\0")
@@ -367,23 +392,64 @@ def serialize_inventory(document: dict[str, Any]) -> str:
     return json.dumps(document, indent=2, ensure_ascii=True, sort_keys=False) + "\n"
 
 
-def validate_manifest(document: Any, expected: dict[str, Any]) -> None:
-    """Compare a recomputed inventory against a previously produced manifest."""
+def _validate_closed_document(document: Any, *, label: str) -> None:
+    """Require an object that is exactly the closed inventory schema.
+
+    Presence and order of the declared keys are both enforced, entries must be
+    closed entry dictionaries, and duplicate ``(packageType, relativePath)``
+    pairs are refused **before** any comparison so no dictionary collapse can
+    hide them.
+    """
     if not isinstance(document, dict):
-        raise InventoryError("manifest is not a JSON object")
+        raise InventoryError(f"{label} is not a JSON object")
     if tuple(document.keys()) != DOCUMENT_KEYS:
-        raise InventoryError("manifest document keys do not match the closed schema")
+        raise InventoryError(
+            f"{label} keys are not the exact closed schema (expected {list(DOCUMENT_KEYS)})"
+        )
+    if document["schemaVersion"] != SCHEMA_VERSION:
+        raise InventoryError(f"{label} schemaVersion {document['schemaVersion']!r} != {SCHEMA_VERSION!r}")
+    packages = document["packages"]
+    if not isinstance(packages, list):
+        raise InventoryError(f"{label} packages must be a list")
+    seen: set[tuple[str, str]] = set()
+    for entry in packages:
+        if not isinstance(entry, dict):
+            raise InventoryError(f"{label} package entry is not a JSON object")
+        if tuple(entry.keys()) != ENTRY_KEYS:
+            raise InventoryError(
+                f"{label} package entry keys are not the exact closed schema (expected {list(ENTRY_KEYS)})"
+            )
+        if not isinstance(entry["structuralValidation"], list) or not all(
+            isinstance(item, str) for item in entry["structuralValidation"]
+        ):
+            raise InventoryError(f"{label} structuralValidation must be a list of strings")
+        identity = (entry["packageType"], entry["relativePath"])
+        if identity in seen:
+            raise InventoryError(f"{label} records duplicate package entry: {identity[0]} {identity[1]}")
+        seen.add(identity)
+
+
+def validate_manifest(document: Any, expected: dict[str, Any]) -> None:
+    """Accept recorded evidence only if it is exactly the recomputed inventory.
+
+    Both the recorded document and the expected inventory are validated as closed
+    schemas, then compared by canonical serialization. That compares package
+    count, package order, every evidence-significant entry field
+    (``packageType``, ``relativePath``, ``byteSize``, ``digestAlgorithm``,
+    ``digest``, ``structuralValidation``) and every document field
+    (``sourceSha``, ``canonicalVersion``, ``platform``, ``architecture``) in one
+    exact operation, so a tampered or lossy recording cannot pass.
+    """
+    _validate_closed_document(document, label="recorded manifest")
+    _validate_closed_document(expected, label="recomputed inventory")
     for key in ("sourceSha", "canonicalVersion", "platform", "architecture"):
-        if document.get(key) != expected[key]:
-            raise InventoryError(f"manifest {key} mismatch: {document.get(key)!r} != {expected[key]!r}")
-    actual_packages = {
-        (entry["packageType"], entry["relativePath"]): entry["digest"] for entry in document.get("packages", [])
-    }
-    expected_packages = {
-        (entry["packageType"], entry["relativePath"]): entry["digest"] for entry in expected["packages"]
-    }
-    if actual_packages != expected_packages:
-        raise InventoryError("manifest package digests do not match the discovered artifacts")
+        if document[key] != expected[key]:
+            raise InventoryError(f"manifest {key} mismatch: {document[key]!r} != {expected[key]!r}")
+    if serialize_inventory(document) != serialize_inventory(expected):
+        raise InventoryError(
+            "recorded manifest does not exactly match the recomputed inventory "
+            "(package count, order, byte size, digest algorithm, digest or structural validation differs)"
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
