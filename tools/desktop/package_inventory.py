@@ -127,21 +127,33 @@ def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+#: Absolute-looking targets that only one platform's ``os.path.isabs`` recognises.
+#: A bundle is portable evidence, so a drive-letter path or a UNC path is refused
+#: on every platform rather than being reinterpreted as a relative name.
+_FOREIGN_ABSOLUTE = re.compile(r"^(?:[A-Za-z]:[\\/]|[\\/]{2})")
+
+
+def is_absolute_link_target(target: str) -> bool:
+    """True for any target that names an absolute location on any platform."""
+    return os.path.isabs(target) or _FOREIGN_ABSOLUTE.match(target) is not None
+
+
 def validate_link_target(bundle_root: Path, link_parent: Path, target: str) -> str:
     """Prove a link target stays inside ``bundle_root``; return the target string.
 
     An absolute target is refused even when it happens to resolve inside the
-    bundle, because an absolute link is not portable evidence. A relative target
-    is normalized lexically against the symlink's own directory — never
-    followed — and the resulting destination must remain inside the bundle root,
-    so both a shallow ``../`` escape and a deep ``../../..`` escape are refused.
-    The target string is returned unchanged, so retargeting a valid internal link
-    still changes the tree digest.
+    bundle, because an absolute link is not portable evidence; the check is
+    platform-independent, so a Windows-style drive or UNC target is refused on
+    POSIX too. A relative target is normalized lexically against the symlink's
+    own directory — never followed — and the resulting destination must remain
+    inside the bundle root, so both a shallow ``../`` escape and a deep
+    ``../../..`` escape are refused. The target string is returned unchanged, so
+    retargeting a valid internal link still changes the tree digest.
 
     The decision is pure path arithmetic so it can be tested without creating
     real symlinks, on every platform.
     """
-    if os.path.isabs(target):
+    if is_absolute_link_target(target):
         raise InventoryError(f"bundle symlink has an absolute target: {link_parent} -> {target}")
     resolved = Path(os.path.normpath(os.path.join(str(link_parent), target)))
     if not resolved.is_relative_to(bundle_root):

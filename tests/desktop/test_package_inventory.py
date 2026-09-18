@@ -22,6 +22,7 @@ from tools.desktop.package_inventory import (
     SCHEMA_VERSION,
     InventoryError,
     build_inventory,
+    is_absolute_link_target,
     serialize_inventory,
     validate_link_target,
     validate_manifest,
@@ -484,11 +485,29 @@ class AppSymlinkContainmentTests(unittest.TestCase):
     def test_absolute_targets_are_refused_even_when_they_resolve_inside(self) -> None:
         bundle = Path("/pkg/Hive Coder.app")
         parent = bundle / "Contents" / "MacOS"
-        for target in ("/etc/passwd", "/pkg/Hive Coder.app/Contents/Resources/x.bin", "C:/Windows/x.bin"):
+        targets = (
+            "/etc/passwd",
+            "/pkg/Hive Coder.app/Contents/Resources/x.bin",
+            "C:/Windows/x.bin",
+            "C:\\Windows\\x.bin",
+            "\\\\server\\share\\x.bin",
+        )
+        for target in targets:
             with self.subTest(target=target):
                 with self.assertRaises(InventoryError) as ctx:
                     validate_link_target(bundle, parent, target)
                 self.assertIn("absolute target", str(ctx.exception))
+
+    def test_absolute_detection_is_platform_independent(self) -> None:
+        """A drive or UNC target is refused on POSIX too, not reinterpreted."""
+        bundle = Path("/pkg/Hive Coder.app")
+        parent = bundle / "Contents" / "MacOS"
+        for target in ("C:/Windows/x.bin", "C:\\Windows\\x.bin", "\\\\server\\share\\x.bin"):
+            with self.subTest(target=target):
+                self.assertTrue(is_absolute_link_target(target))
+        for target in ("inside.bin", "../Resources/x.bin", "C:x.bin"):
+            with self.subTest(target=target):
+                self.assertFalse(is_absolute_link_target(target))
 
     def _bundle_with_link(self, root: Path, target: str):
         bundle = _make_app(root)
