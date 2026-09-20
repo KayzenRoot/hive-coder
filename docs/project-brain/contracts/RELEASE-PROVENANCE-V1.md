@@ -141,6 +141,23 @@ status, verification, signerWorkflow, sourceRef, runId, bundleDigest
 
 `generated` requires `signerWorkflow`, `sourceRef`, a non-zero `runId` and a `bundleDigest`, and must not carry `verification = passed` — an achieved verification is the `verified` state, not an attribute of a lower one. It may keep `verification = none`, and `failed` is legal here so a failed verification stays visible. `verified` additionally requires `verification = passed`. **Generating an attestation is not a security success; only verification is.** `unavailable` requires every other field empty or `0`.
 
+### What the bundle is about
+
+The block above records the *identity* of an attestation, not its contents: `bundleDigest` hashes the envelope, and a hash says nothing about which artifacts the signature covers. That question is decided separately, because an attestation over the wrong subject set is a genuine, verifiable statement about something other than this release.
+
+The subject set of a build-provenance attestation for a Hive Coder release is the release's package list, and it has exactly one source: the `packages` entries of the validated `hive-package-inventory-v1` document. `attestation_subjects()` derives it through `serialize_inventory()`, so a document that fails canonical re-serialization yields no subjects, and it never consults the filesystem — a walk over a bundle directory would be a rival definition of what the release contains and would attest whatever the runner happened to hold. Per entry:
+
+- the subject **name** is the inventory's `relativePath`, verbatim, with the platform directory prefix retained. A name beginning with a space or `*` is refused because the `actions/attest` checksums grammar would rewrite it, and a name carrying a line ending is refused because records are separated by line endings;
+- the subject **digest** is the inventory's recorded `digest`, which must be `sha256` and 64 lowercase hex characters;
+- a package whose `structuralValidation` declares `tree_digest` — the macOS `.app`, the only directory package in the matrix — is identified as `sorted-tree`, and one that does not as `file-bytes`. A declaration that disagrees with the package type in either direction is refused: a directory bundle claimed as file bytes, or a file claimed as a tree, would attest an identity that no verifier can recompute;
+- the set is capped at 1024 subjects, which is the ceiling the verification tooling itself imposes, and the ordering follows the inventory's sorted order so the rendering is byte-stable.
+
+The inventory manifest file is **never** a subject. Attesting `hive-package-inventory.json` describes the packages instead of binding them, and a manifest is a document an attacker can also produce, so such an attestation would prove provenance for a JSON file while leaving the six binaries unattested.
+
+`verify_attestation_subjects()` then compares a signed statement's subjects against that expectation as a whole. It reads the statement out of the DSSE envelope's base64 payload and requires `https://in-toto.io/Statement/v1` and a predicate of SLSA provenance v1 or Deep Rune v1alpha1 — a bundle carrying some other predicate is real evidence about something else. An in-toto Statement v1 payload already declares its own type, so the envelope's `payloadType` is deliberately not restated as a separate rule: the type check on the decoded statement is the substantive one, and it cannot be bypassed by an envelope that labels the payload differently. Comparison is keyed by subject name, so three distinct failures are each reported rather than collapsed: a package with no subject, a subject the inventory never recorded, and a name present on both sides with a different digest. Repeated names are refused, because a name appearing twice is not a package identity. Empty or non-list subject sets are refused, and equality is required — a superset is not a match.
+
+None of this is a field of the document. `--attest-subjects` is a read-only comparison of two inputs; it emits no provenance document, advances no ladder and adds no key to any tuple, so it is a validator surface rather than a schema change.
+
 ## Publication block
 
 Exact keys:
@@ -234,9 +251,10 @@ One exception type, `ProvenanceError`, with a lowercase human-readable reason. U
 --transition --before --after
 --channel-gate --release-channel
 --environment-protection --environment-record --environment-name
+--attest-subjects --attest-bundle --inventory
 ```
 
-Machine-readable results: `RELEASE_PROVENANCE=VALID|INVALID`, `RELEASE_GATE=ALLOW|DENY`, `RELEASE_TRANSITION=LEGAL|ILLEGAL`, `RELEASE_CHANNEL=COHERENT|INCOHERENT`, `RELEASE_PROTECTION=PROTECTED|UNPROTECTED|UNPROVEN`, each refusal followed by `REASON=` or `UNPROVEN_BECAUSE=` and a non-zero exit.
+Machine-readable results: `RELEASE_PROVENANCE=VALID|INVALID`, `RELEASE_GATE=ALLOW|DENY`, `RELEASE_TRANSITION=LEGAL|ILLEGAL`, `RELEASE_CHANNEL=COHERENT|INCOHERENT`, `RELEASE_PROTECTION=PROTECTED|UNPROTECTED|UNPROVEN`, each refusal followed by `REASON=` or `UNPROVEN_BECAUSE=` and a non-zero exit. `--attest-subjects` answers the subject-set question instead: on equality it prints `ATTESTATION_SUBJECT_SET=MATCHES_PACKAGES` and one `ATTESTATION_SUBJECT_BOUND=<name> identity=<identityKind>` line per package, and on any inequality it prints the refusal reason and exits non-zero. It requires both inputs — a subject comparison with one side missing is not a comparison — and it neither reads nor writes a provenance document.
 
 **The verifier is an admission authority, not a claim-minting authority.** `--build` emits only the honest credential-free baseline: it hardcodes `unavailable`/`unsigned-candidate` signing, `not-applicable` notarization, `unavailable` attestation and `not-published` publication, and offers no flag capable of producing a signing, notarization, attestation or publication claim. A later credentialed stage produces candidate documents by transformation; this tool alone decides whether they are admissible.
 
@@ -244,6 +262,7 @@ Machine-readable results: `RELEASE_PROVENANCE=VALID|INVALID`, `RELEASE_GATE=ALLO
 
 - `packages` length 1..8; `relativePath` ≤ 512 characters; `sourceRef` ≤ 255; `releaseTag` ≤ 128; `certificateSubject` ≤ 256; `timestampAuthority` ≤ 256; digests 64-character lowercase hex; `sourceSha` 40-character lowercase hex; `certificateFingerprint` 40..64-character lowercase hex; `runId`/`releaseId` bounded Python integers;
 - input files are read as bytes and rejected before parsing if they exceed 262,144 bytes;
+- an attestation subject set is capped at 1024 entries on both sides of the comparison — the expectation derived from the inventory and the set read out of the bundle — because that is the ceiling the verification tooling applies at verify time, and a set the verifier would silently truncate is not a set this contract can claim to have matched;
 - a document that exceeds a ceiling is refused, not truncated.
 
 No separate total-document ceiling is claimed. Every field length and the package count are bounded above, so the serialized size is already bounded by their composition, and a ceiling that no admissible-shape document can reach would be an unfalsifiable claim rather than a bound.

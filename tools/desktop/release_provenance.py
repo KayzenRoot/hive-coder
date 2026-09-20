@@ -30,6 +30,7 @@ notarization credentials and tokens are structurally unrepresentable.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import re
@@ -118,6 +119,33 @@ MAX_PACKAGES = 8
 MAX_RELATIVE_PATH = 512
 MAX_RELEASE_TAG = 128
 MAX_SUBJECT = 256
+SUBJECT_DIGEST_ALGORITHM = "sha256"
+#: ``sigstore-go`` refuses to verify a statement holding more than this many subjects,
+#: so an over-cap set would produce an attestation that stays green at generation time
+#: and can never be confirmed by anyone downstream.
+MAX_ATTESTATION_SUBJECTS = 1024
+#: Package types that are directory bundles rather than one file. This is the same
+#: distinction the packaging model draws with its ``is_directory`` spec, and a subject
+#: that contradicts it is refused rather than guessed.
+DIRECTORY_PACKAGES = ("app",)
+#: The inventory records this structural check for a directory bundle, whose digest is
+#: the canonical sorted-tree encoding rather than a hash of one file. It is what lets
+#: the subject model state each subject's identity kind from data instead of prose.
+TREE_DIGEST_CHECK = "tree_digest"
+#: ``actions/attest`` reads a checksums file as ``<hex> <flag><name>`` and strips one
+#: leading flag character, so a name beginning with a space or an asterisk would be
+#: silently rewritten before it ever became a subject.
+SUBJECT_NAME_UNSAFE_START = (" ", "*")
+#: The subject model is an in-toto statement, so a bundle payload must say so. Without
+#: that check any signed JSON could stand in for provenance.
+IN_TOTO_STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
+#: Either predicate binds the statement's subjects to a build. A bundle holding some
+#: other predicate is genuine evidence about something else, and this contract does not
+#: let it be counted as provenance for these packages.
+ATTESTATION_PREDICATE_TYPES = (
+    "https://slsa.dev/provenance/v1",
+    "https://payments.developers.google.com/cloud/deep-rune/v1alpha1/schema/v1.0",
+)
 MAX_TIMESTAMP_AUTHORITY = 256
 MAX_INPUT_BYTES = 262144
 
@@ -217,6 +245,181 @@ def inventory_binding_digest(inventory_document: dict[str, Any]) -> str:
 def asset_set_digest(packages: list[dict[str, Any]]) -> str:
     """Immutable identity of the released package set as recorded by this document."""
     return hashlib.sha256(canonical_bytes(packages)).hexdigest()
+
+
+def attestation_subjects(inventory_document: Any) -> list[dict[str, str]]:
+    """The exact attestation subject set this release must attest, from validated inventory.
+
+    One subject per package, named by the inventory's own ``relativePath`` and digested
+    by the inventory's own ``digest``: the packaging model already authored this
+    identity, so re-discovering it from the filesystem would create a second, rival
+    package inventory and silently allow the two to disagree.
+
+    ``identityKind`` separates the two ways a CP-0025 digest is computed. A macOS
+    ``.app`` is a directory bundle whose digest is a sorted-tree encoding, and no GitHub
+    attestation surface hashes a directory; recording that fact per subject is what
+    keeps the tree digest from being read as a file digest downstream.
+    """
+    if not isinstance(inventory_document, dict):
+        raise ProvenanceError("upstream inventory is not a JSON object")
+    try:
+        serialize_inventory(inventory_document)
+    except InventoryError as exc:
+        raise ProvenanceError(f"upstream inventory is not a valid hive-package-inventory-v1 document: {exc}") from exc
+
+    entries = inventory_document["packages"]
+    if not entries:
+        raise ProvenanceError("an attestation subject set needs at least one package")
+    if len(entries) > MAX_ATTESTATION_SUBJECTS:
+        raise ProvenanceError(f"package count exceeds the {MAX_ATTESTATION_SUBJECTS}-subject ceiling")
+
+    subjects: list[dict[str, str]] = []
+    for entry in sorted(entries, key=lambda item: (item["packageType"], item["relativePath"])):
+        relative = _validate_relative(entry["relativePath"])
+        if relative.startswith(SUBJECT_NAME_UNSAFE_START):
+            raise ProvenanceError(f"relativePath would be rewritten by the checksums grammar: {relative!r}")
+        if "\r" in relative or "\n" in relative:
+            raise ProvenanceError(f"subject names may not contain a line ending: {relative!r}")
+        if entry["digestAlgorithm"] != SUBJECT_DIGEST_ALGORITHM:
+            raise ProvenanceError(
+                f"subject digest algorithm must be {SUBJECT_DIGEST_ALGORITHM!r}: {entry['digestAlgorithm']!r}"
+            )
+        digest = entry["digest"]
+        if not HEX64.match(digest):
+            raise ProvenanceError(f"subject digest is not a lowercase 64-character hex SHA-256: {digest!r}")
+        declared_tree = TREE_DIGEST_CHECK in entry["structuralValidation"]
+        actual_tree = entry["packageType"] in DIRECTORY_PACKAGES
+        if declared_tree != actual_tree:
+            raise ProvenanceError(
+                f"package {entry['packageType']} declares a {'tree' if declared_tree else 'file'} digest "
+                f"but is a {'directory bundle' if actual_tree else 'file'}"
+            )
+        subjects.append(
+            {
+                "name": relative,
+                "digest": f"{SUBJECT_DIGEST_ALGORITHM}:{digest}",
+                "identityKind": "sorted-tree" if declared_tree else "file-bytes",
+            }
+        )
+    return subjects
+
+
+def render_attestation_checksums(inventory_document: Any) -> str:
+    """The ``actions/attest`` ``subject-checksums`` body for exactly this release's packages.
+
+    Two spaces separate digest from name: the first is the delimiter and the second is
+    the text-mode flag the parser consumes. A trailing newline is required because the
+    parser splits on line endings and a last record without one is still a record, but
+    an empty line between records would be dropped rather than reported.
+    """
+    lines = []
+    for subject in attestation_subjects(inventory_document):
+        algorithm, separator, digest = subject["digest"].partition(":")
+        if not separator or algorithm != SUBJECT_DIGEST_ALGORITHM:
+            raise ProvenanceError(f"unsupported subject digest: {subject['digest']!r}")
+        lines.append(f"{digest}  {subject['name']}")
+    return "\n".join(lines) + "\n"
+
+
+def bundle_subjects(bundle_document: Any) -> list[dict[str, Any]]:
+    """The subjects an attestation bundle actually signed, read from its own statement.
+
+    A DSSE envelope carries the statement as a base64 payload, and that payload is the
+    only place a subject lives. Signatures, certificate identity and timestamps say that
+    someone signed *something*; only the payload says *what*. So the subject set can be
+    judged from the bundle document offline, with no signature and no network.
+    """
+    if not isinstance(bundle_document, dict):
+        raise ProvenanceError("attestation bundle is not a JSON object")
+    envelope = bundle_document.get("dsseEnvelope")
+    if not isinstance(envelope, dict):
+        raise ProvenanceError("attestation bundle carries no dsseEnvelope")
+    payload = envelope.get("payload")
+    if not isinstance(payload, str) or not payload:
+        raise ProvenanceError("attestation envelope carries no payload")
+    try:
+        statement_bytes = base64.b64decode(payload, validate=True)
+    except ValueError as exc:
+        raise ProvenanceError(f"attestation envelope payload is not base64: {exc}") from exc
+    try:
+        statement = json.loads(statement_bytes)
+    except ValueError as exc:
+        raise ProvenanceError(f"attestation statement is not JSON: {exc}") from exc
+    if not isinstance(statement, dict):
+        raise ProvenanceError("attestation statement is not a JSON object")
+    if statement.get("_type") != IN_TOTO_STATEMENT_TYPE:
+        raise ProvenanceError(
+            f"attestation statement is not an in-toto statement: {statement.get('_type')!r}"
+        )
+    if statement.get("predicateType") not in ATTESTATION_PREDICATE_TYPES:
+        raise ProvenanceError(
+            f"attestation predicate is not build provenance this contract can read: "
+            f"{statement.get('predicateType')!r}"
+        )
+    subjects = statement.get("subject")
+    if not isinstance(subjects, list):
+        raise ProvenanceError("attestation statement carries no subject list")
+    return subjects
+
+
+def verify_attestation_subjects(observed: Any, inventory_document: Any) -> list[dict[str, str]]:
+    """Require the subjects a bundle actually signed to be exactly this release's packages.
+
+    ``gh attestation verify`` matches a supplied artifact against the statement by digest
+    alone and reports nothing about the other subjects, so verifying one package is not
+    evidence about the set. This is the check that closes that gap: no missing subject, no
+    unexpected subject, no digest bound to a name that the inventory never recorded.
+    """
+    expected = attestation_subjects(inventory_document)
+    if not isinstance(observed, list):
+        raise ProvenanceError("attestation subjects are not a list")
+    if not observed:
+        raise ProvenanceError("attestation holds no subject, so it attests nothing")
+    if len(observed) > MAX_ATTESTATION_SUBJECTS:
+        raise ProvenanceError(f"attestation exceeds the {MAX_ATTESTATION_SUBJECTS}-subject ceiling")
+
+    expected_by_name = {subject["name"]: subject["digest"] for subject in expected}
+    observed_by_name: dict[str, str] = {}
+    for subject in observed:
+        if not isinstance(subject, dict) or set(subject) != {"name", "digest"}:
+            raise ProvenanceError(f"attestation subject is not a name/digest pair: {subject!r}")
+        if not isinstance(subject["name"], str) or not isinstance(subject["digest"], dict):
+            raise ProvenanceError(f"attestation subject fields are the wrong shape: {subject!r}")
+        if not subject["digest"]:
+            raise ProvenanceError(f"attestation subject carries no digest: {subject['name']!r}")
+        for algorithm, digest in subject["digest"].items():
+            if algorithm != SUBJECT_DIGEST_ALGORITHM or not HEX64.match(str(digest)):
+                raise ProvenanceError(
+                    f"attestation subject {subject['name']!r} has an unexpected digest: {algorithm}={digest!r}"
+                )
+        name = subject["name"]
+        digest = f"{SUBJECT_DIGEST_ALGORITHM}:{subject['digest'][SUBJECT_DIGEST_ALGORITHM]}"
+        if name in observed_by_name:
+            raise ProvenanceError(
+                f"attestation repeats a subject name, so the set is not a package identity: {name!r}"
+            )
+        observed_by_name[name] = digest
+
+    if observed_by_name == expected_by_name:
+        return expected
+    details = []
+    missing = sorted(name for name in expected_by_name if name not in observed_by_name)
+    unexpected = sorted(name for name in observed_by_name if name not in expected_by_name)
+    differing = sorted(
+        name
+        for name, digest in observed_by_name.items()
+        if name in expected_by_name and expected_by_name[name] != digest
+    )
+    if missing:
+        details.append(f"missing {missing}")
+    if unexpected:
+        details.append(f"unexpected {unexpected}")
+    if differing:
+        details.append(f"a digest differs on {differing}")
+    raise ProvenanceError(
+        "attestation subject set is not this release's package set: "
+        f"{'; '.join(details)} (expected {sorted(expected_by_name)})"
+    )
 
 
 def _validate_signing(signing: Any, *, label: str) -> str:
@@ -733,8 +936,14 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="judge a fetched deployment-environment record as a gate or not a gate",
     )
+    mode.add_argument(
+        "--attest-subjects",
+        action="store_true",
+        help="emit the exact attestation subjects an inventory requires, and confirm a signed bundle holds them",
+    )
     parser.add_argument("--provenance", type=Path, default=None, help="release-provenance document to judge")
     parser.add_argument("--inventory", type=Path, default=None, help="upstream hive-package-inventory-v1 document")
+    parser.add_argument("--attest-bundle", type=Path, default=None, help="attestation bundle whose subjects to judge")
     parser.add_argument("--before", type=Path, default=None, help="earlier provenance document")
     parser.add_argument("--after", type=Path, default=None, help="later provenance document")
     parser.add_argument("--environment-record", type=Path, default=None, help="deployment-environment record to judge")
@@ -794,6 +1003,15 @@ def main(argv: list[str] | None = None) -> int:
             for reason in verdict["reasons"]:
                 print(f"UNPROVEN_BECAUSE={reason}")
             return 0 if verdict["protected"] else 2
+
+        if args.attest_subjects:
+            if args.inventory is None or args.attest_bundle is None:
+                raise ProvenanceError("--attest-subjects requires --inventory and --attest-bundle")
+            expected = verify_attestation_subjects(bundle_subjects(_load(args.attest_bundle)), _load(args.inventory))
+            print("ATTESTATION_SUBJECT_SET=MATCHES_PACKAGES")
+            for subject in expected:
+                print(f"ATTESTATION_SUBJECT_BOUND={subject['name']} identity={subject['identityKind']}")
+            return 0
 
         if args.transition:
             if args.before is None or args.after is None:

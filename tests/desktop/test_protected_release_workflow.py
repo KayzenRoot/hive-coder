@@ -206,21 +206,9 @@ def validator_invocations(job_text: str) -> list[str]:
     The heredoc bodies of the packaging steps import the same module without invoking
     its CLI, and a comment naming a mode is not a mode being executed.
     """
-    statements: list[str] = []
-    for body in run_bodies(job_text):
-        pending = ""
-        for raw in body.split("\n"):
-            line = raw.strip()
-            if pending:
-                line, pending = (pending + " " + line), ""
-            if not line or line.startswith("#"):
-                continue
-            if line.endswith("\\"):
-                pending = line[:-1].strip()
-                continue
-            if "-m tools.desktop.release_provenance" in line:
-                statements.append(line)
-    return statements
+    return [
+        statement for statement in statements(job_text) if "-m tools.desktop.release_provenance" in statement
+    ]
 
 
 def validator_modes(job_text: str) -> list[str]:
@@ -274,6 +262,54 @@ def step_index(job_text: str, needle: str) -> int:
         if needle in step:
             return index
     raise AssertionError(f"no step mentioning {needle!r}")
+
+
+#: What a signing stage may execute, and nothing else. A whitelist rather than a
+#: blacklist is the deliberate shape: the claim under audit is that this substrate cannot
+#: resolve or act on signing material at all, and a list of banned tool names would stay
+#: green through a cloud login, a certificate import or a curl of a signing service until
+#: somebody happened to think of naming each one.
+ALLOWED_BARE_STATEMENTS = frozenset({"set -euo pipefail", "exit 1", 'test "$PROVEN" = "true"'})
+#: A static literal: no parameter expansion, no command substitution, no escapes. The
+#: moment an echo can expand something it stops being documentation of a requirement and
+#: becomes a read of a value.
+STATIC_ECHO = re.compile(r'echo "[^"$\\]*"')
+VALIDATOR_CALL = re.compile(r"^python3? -m tools\.desktop\.release_provenance\b")
+
+
+def statements(text: str) -> list[str]:
+    """Each executed command in every ``run:`` body, continuations joined, comments dropped."""
+    found: list[str] = []
+    for body in run_bodies(text):
+        pending = ""
+        for raw in body.split("\n"):
+            line = raw.strip()
+            if pending:
+                line, pending = pending + " " + line, ""
+            if not line or line.startswith("#"):
+                continue
+            if line.endswith("\\"):
+                pending = line[:-1].strip()
+                continue
+            found.append(line)
+    return found
+
+
+def unallowed_signing_statements(block: str) -> list[str]:
+    """The signing-stage commands that fall outside the whitelist, so a failure names the intruder."""
+    offenders: list[str] = []
+    for statement in statements(block):
+        if statement in ALLOWED_BARE_STATEMENTS or STATIC_ECHO.fullmatch(statement):
+            continue
+        if VALIDATOR_CALL.match(statement):
+            arguments = statement.split()[3:]
+            if all(
+                token.startswith("--") or token.startswith("release-evidence/")
+                for token in arguments
+            ):
+                continue
+        offenders.append(statement)
+    return offenders
 
 
 def imported_modules(source: str) -> set[str]:
@@ -504,8 +540,8 @@ class CredentialReachabilityTests(unittest.TestCase):
             for body in run_bodies(block):
                 self.assertNotIn("secrets.", body, name)
         interpolated = self.jobs["sign-windows"].replace(
-            "for slot in AZURE_ARTIFACT_SIGNING_ENDPOINT",
-            'gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"\n          for slot in AZURE_ARTIFACT_SIGNING_ENDPOINT',
+            'echo "SLOT_REQUIRED=AZURE_ARTIFACT_SIGNING_ENDPOINT"',
+            'echo "SLOT_VALUE=${{ secrets.AZURE_ARTIFACT_SIGNING_ENDPOINT }}"',
             1,
         )
         widened = self.text.replace(self.jobs["sign-windows"], interpolated, 1)
@@ -618,18 +654,79 @@ class ProvenanceStageTests(unittest.TestCase):
                 "gh attestation verify",
             )
 
-    def test_the_attested_subject_is_the_bound_inventory_bytes(self) -> None:
+    def test_the_attested_subjects_are_the_packages_not_the_manifest(self) -> None:
+        """Attesting the manifest is evidence about the manifest, not package provenance.
+
+        Mutation: point the input back at ``subject-path`` of the inventory JSON and this
+        fails, which is the exact regression ``M-43-02`` names — a green lane whose
+        attestation silently covers one document instead of the released packages.
+        """
         for name in BUILD_JOBS:
-            self.assertIn("canonical_bytes", self.jobs[name], name)
-            self.assertIn("ATTESTATION_SUBJECT_IS_NOT_CANONICAL_INVENTORY_BYTES", self.jobs[name], name)
-            self.assertIn("subject-path:", self.jobs[name], name)
-        unbound = self.jobs["build-attest-linux"].replace(
-            "ATTESTATION_SUBJECT_IS_NOT_CANONICAL_INVENTORY_BYTES", "echo fine"
+            block = self.jobs[name]
+            self.assertNotIn("subject-path:", block, name)
+            self.assertIn("subject-checksums: ${{ runner.temp }}/hive-attestation-subjects.txt", block, name)
+            self.assertIn("INVENTORY_BYTES_ARE_CANONICAL=PASS", block, name)
+            self.assertIn("canonical_bytes", block, name)
+            derivation = step_texts(block)[step_index(block, "Derive the attestation subjects")]
+            self.assertIn("attestation_subjects(inventory)", derivation, name)
+            self.assertIn("render_attestation_checksums(inventory)", derivation, name)
+            self.assertIn("ATTESTATION_SUBJECTS_FILE=", block, name)
+        narrowed = self.jobs["build-attest-linux"].replace(
+            "subject-checksums: ${{ runner.temp }}/hive-attestation-subjects.txt",
+            "subject-path: ${{ runner.temp }}/hive-package-inventory.json",
+            1,
         )
-        widened = self.text.replace(self.jobs["build-attest-linux"], unbound, 1)
-        self.assertNotIn(
-            "ATTESTATION_SUBJECT_IS_NOT_CANONICAL_INVENTORY_BYTES",
-            job_blocks(widened)["build-attest-linux"],
+        widened = self.text.replace(self.jobs["build-attest-linux"], narrowed, 1)
+        self.assertIn("subject-path:", job_blocks(widened)["build-attest-linux"])
+
+    def test_the_attested_subject_set_is_proved_equal_to_the_package_set(self) -> None:
+        """``gh attestation verify`` matches by digest alone, so the set needs its own proof.
+
+        Mutation: delete the subject-set step, and a bundle that signed only one of the
+        packages — or an extra neighbor — would still leave the lane green.
+        """
+        for name in BUILD_JOBS:
+            block = self.jobs[name]
+            proof = step_texts(block)[step_with_command(block, " --attest-subjects")]
+            self.assertIn("--attest-bundle \"$ATTESTATION_BUNDLE\"", proof, name)
+            self.assertIn('--inventory "$PACKAGE_INVENTORY_MANIFEST"', proof, name)
+            self.assertLess(
+                step_with_command(block, "gh attestation verify"),
+                step_texts(block).index(proof),
+                name,
+            )
+            self.assertIn("ATTESTATION_VERIFY_TARGET", step_texts(block)[step_with_command(block, "gh attestation verify")], name)
+            self.assertNotIn(
+                "gh attestation verify \"$PACKAGE_INVENTORY_MANIFEST\"", block, name
+            )
+        removed = self.jobs["build-attest-macos"].replace(proof, "", 1)
+        widened = self.text.replace(self.jobs["build-attest-macos"], removed, 1)
+        with self.assertRaises(AssertionError):
+            step_with_command(job_blocks(widened)["build-attest-macos"], " --attest-subjects")
+
+    def test_the_subjects_are_derived_from_inventory_and_never_discovered(self) -> None:
+        """One packaging model: subject names come from the validated inventory document.
+
+        A filesystem walk over the bundle directory would be a second, rival definition of
+        what this release contains, and it would attest whatever the runner happens to hold
+        rather than what was declared. Mutation: derive the set by ``rglob`` instead.
+        """
+        for name in BUILD_JOBS:
+            derivation = step_texts(self.jobs[name])[step_index(self.jobs[name], "Derive the attestation subjects")]
+            for form in ("rglob", "glob(", "iterdir", "os.walk", "listdir"):
+                self.assertNotIn(form, derivation, f"{name}: {form}")
+            self.assertIn("PACKAGE_INVENTORY_MANIFEST", derivation, name)
+        discovered = self.jobs["build-attest-windows"].replace(
+            "          subjects = attestation_subjects(inventory)",
+            '          subjects = [{"name": p.name} for p in pathlib.Path("bundle").rglob("*")]',
+            1,
+        )
+        widened = self.text.replace(self.jobs["build-attest-windows"], discovered, 1)
+        self.assertIn(
+            "rglob",
+            step_texts(job_blocks(widened)["build-attest-windows"])[
+                step_index(job_blocks(widened)["build-attest-windows"], "Derive the attestation subjects")
+            ],
         )
 
     def test_the_attestation_state_advances_in_two_proved_steps(self) -> None:
@@ -791,28 +888,74 @@ class SigningBarrierTests(unittest.TestCase):
             self.assertEqual(0, len(re.findall(r"if ", refusal)), name)
 
     def test_slots_are_reported_as_class_name_and_condition_without_values(self) -> None:
+        """Every reported line is a literal, because an echo that expands can only expand a value."""
         for name in CREDENTIAL_JOBS:
             block = self.jobs[name]
             self.assertIn("CREDENTIAL_CLASS=", block, name)
             self.assertIn("VERIFICATION_CONDITION=", block, name)
+            self.assertIn("SLOT_REQUIRED=", block, name)
             self.assertIn("VALUES_READ=NO VALUES_PRINTED=NO VALUES_PERSISTED=NO", block, name)
-            bodies = "\n".join(run_bodies(block))
-            self.assertNotIn("echo \"$APPLE", bodies)
-            self.assertNotIn("echo \"$AZURE", bodies)
-            self.assertIsNone(re.search(r"echo \$\{?[A-Z_]*CERTIFICATE", bodies))
-        printing = self.jobs["sign-and-notarize-macos"].replace(
-            "if [ -z \"$(printenv \"$slot\")\" ]",
-            "if [ -z \"$(printenv \"$slot\")\" ]; then echo \"$slot\"",
+            self.assertNotIn("SLOT_PRESENT", block, name)
+            for statement in statements(block):
+                if statement.startswith("echo "):
+                    self.assertIsNotNone(STATIC_ECHO.fullmatch(statement), f"{name}: {statement}")
+        resolved = self.jobs["sign-and-notarize-macos"].replace(
+            'echo "SLOT_REQUIRED=APPLE_SIGNING_IDENTITY"',
+            'echo "SLOT_PRESENT=${APPLE_SIGNING_IDENTITY:-absent}"',
             1,
         )
-        self.assertIn('echo "$slot"', printing)
+        widened = job_blocks(self.text.replace(self.jobs["sign-and-notarize-macos"], resolved, 1))[
+            "sign-and-notarize-macos"
+        ]
+        self.assertTrue(
+            any(
+                statement.startswith("echo ") and not STATIC_ECHO.fullmatch(statement)
+                for statement in statements(widened)
+            )
+        )
+
+    def test_a_signing_stage_executes_only_the_whitelisted_verifier_and_literals(self) -> None:
+        """A whitelist, because the claim is inability rather than abstinence.
+
+        ``VALUES_READ=NO`` is only true by construction if nothing in the stage can
+        resolve a value at all: no cloud login, no certificate import, no vendor
+        signing tool, no presence probe, no download of a signing service's output.
+        Naming each of those as a forbidden tool would leave the next spelling green.
+
+        Mutations: a login, an import and a value probe each add an off-whitelist
+        statement, and the refusal stands for the substrate as written.
+        """
+        for name in CREDENTIAL_JOBS:
+            self.assertEqual([], unallowed_signing_statements(self.jobs[name]), name)
+            self.assertNotIn("id-token", self.jobs[name], name)
+            self.assertNotIn("secrets.", self.jobs[name], name)
+            for form in ("GH_TOKEN", "GITHUB_TOKEN"):
+                self.assertNotIn(form, self.jobs[name], f"{name}: {form}")
+        for addition in (
+            "az login --federated-token \"$(cat /run/token)\"",
+            "Security::Import-PfxCertificate -CertStoreLocation Cert:\\CurrentUser\\My",
+            "printenv | grep -c APPLE_",
+        ):
+            injected = self.jobs["sign-windows"].replace(
+                'echo "SLOT_REQUIRED=AZURE_ARTIFACT_SIGNING_ENDPOINT"',
+                addition,
+                1,
+            )
+            widened = job_blocks(self.text.replace(self.jobs["sign-windows"], injected, 1))[
+                "sign-windows"
+            ]
+            self.assertIn(
+                addition.split()[0],
+                "\n".join(unallowed_signing_statements(widened)),
+                addition,
+            )
 
     def test_the_handover_is_reverified_before_any_credential_is_reachable(self) -> None:
         for name in CREDENTIAL_JOBS:
             block = self.jobs[name]
             judged = [index for index, mode in invocation_step_indexes(block)]
             download = step_index(block, "download-artifact")
-            slots = step_index(block, "SLOT_ABSENT")
+            slots = step_index(block, "SLOT_REQUIRED=")
             self.assertEqual(2, len(judged), name)
             self.assertLess(download, min(judged), name)
             self.assertLess(max(judged), slots, name)

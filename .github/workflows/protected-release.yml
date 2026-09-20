@@ -365,7 +365,7 @@ jobs:
           test -s "$RUNNER_TEMP/hive-package-inventory.json"
           echo "PACKAGE_INVENTORY_MANIFEST=$RUNNER_TEMP/hive-package-inventory.json" >> "$GITHUB_ENV"
           echo "OVERLAY_UPLOADED=NO"
-      - name: Prove the attestation subject is the bound inventory bytes
+      - name: Prove the bound inventory bytes are canonical
         shell: bash
         run: |
           set -euo pipefail
@@ -378,8 +378,8 @@ jobs:
           raw = pathlib.Path(os.environ["PACKAGE_INVENTORY_MANIFEST"]).read_bytes()
           canonical = canonical_bytes(json.loads(raw))
           if raw != canonical:
-              raise SystemExit("ATTESTATION_SUBJECT_IS_NOT_CANONICAL_INVENTORY_BYTES")
-          print("ATTESTATION_SUBJECT_BYTES_ARE_CANONICAL_INVENTORY=PASS")
+              raise SystemExit("INVENTORY_BYTES_ARE_NOT_CANONICAL")
+          print("INVENTORY_BYTES_ARE_CANONICAL=PASS")
           PY
       - name: Build credential-free provenance baseline
         shell: bash
@@ -394,15 +394,40 @@ jobs:
             --provenance "$RUNNER_TEMP/hive-release-provenance-baseline.json" \
             --inventory "$PACKAGE_INVENTORY_MANIFEST"
           echo "PROVENANCE_BASELINE=$RUNNER_TEMP/hive-release-provenance-baseline.json" >> "$GITHUB_ENV"
-      # actions/attest@v4.2.2 — build provenance over the inventory manifest, which is
-      # the document every package digest in this release descends from. The step
-      # proves nothing about publisher authenticity, and the next steps refuse to let
-      # it be read that way.
-      - name: Attest the packaging evidence
+      # actions/attest@v4.2.2 — build provenance over the native packages themselves.
+      # The subject set is derived from the validated inventory rather than rediscovered
+      # from the filesystem, so the attested identities are exactly the CP-0025 package
+      # identities and no rival packaging model exists. This proves nothing about
+      # publisher authenticity, and the next steps refuse to let it be read that way.
+      - name: Derive the attestation subjects from the validated inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUBJECT_NAME="$("$PYTHON_BIN" - <<'PY'
+          import json, os, pathlib, sys
+
+          sys.path.insert(0, os.getcwd())
+          from tools.desktop.release_provenance import attestation_subjects, render_attestation_checksums
+
+          manifest = pathlib.Path(os.environ["PACKAGE_INVENTORY_MANIFEST"])
+          inventory = json.loads(manifest.read_text(encoding="utf-8"))
+          subjects = attestation_subjects(inventory)
+          checksums = pathlib.Path(os.environ["RUNNER_TEMP"], "hive-attestation-subjects.txt")
+          checksums.write_text(render_attestation_checksums(inventory), encoding="utf-8", newline="\n")
+          print(f"ATTESTATION_SUBJECT_COUNT={len(subjects)}", file=sys.stderr)
+          for subject in subjects:
+              print(f"ATTESTATION_SUBJECT={subject['name']} identity={subject['identityKind']}", file=sys.stderr)
+          print(next(subject["name"] for subject in subjects if subject["identityKind"] == "file-bytes"))
+          PY
+          )"
+          echo "ATTESTATION_SUBJECTS_FILE=$RUNNER_TEMP/hive-attestation-subjects.txt" >> "$GITHUB_ENV"
+          echo "ATTESTATION_VERIFY_TARGET=$PACKAGE_ROOT/$SUBJECT_NAME" >> "$GITHUB_ENV"
+          test -s "$RUNNER_TEMP/hive-attestation-subjects.txt"
+      - name: Attest the release packages
         id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
-          subject-path: ${{ runner.temp }}/hive-package-inventory.json
+          subject-checksums: ${{ runner.temp }}/hive-attestation-subjects.txt
       - name: Independently verify the attestation
         shell: bash
         env:
@@ -416,7 +441,11 @@ jobs:
           set -euo pipefail
           # The bundle path is handed straight to the verifier. On a Windows runner it
           # is a native path, and copying it through cp/test -s is how lanes break there.
-          gh attestation verify "$PACKAGE_INVENTORY_MANIFEST" \
+          # The target is one of the attested packages, not the manifest: the verifier
+          # matches a supplied file against the statement by digest alone, so this step
+          # proves the signature, the transparency record and the identity policy, and
+          # says nothing about the other subjects. The next step proves the whole set.
+          gh attestation verify "$ATTESTATION_VERIFY_TARGET" \
             --repo "$GITHUB_REPOSITORY" --bundle "$BUNDLE" \
             --signer-repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW_ID" \
             --source-ref "$SOURCE_REF" --deny-self-hosted-runners
@@ -424,6 +453,17 @@ jobs:
           echo "ATTESTATION_ID=$ATTESTATION_ID"
           echo "SIGNER_IDENTITY=$SIGNER_IDENTITY" >> "$GITHUB_ENV"
           echo "ATTESTATION_BUNDLE=$BUNDLE" >> "$GITHUB_ENV"
+      - name: Prove the attestation subjects are exactly this release's packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The verifier above matched one artifact against the statement by digest and
+          # said nothing about the rest of the set, so the bundle is decoded and compared
+          # here: a statement missing a package, carrying one the inventory never
+          # recorded, or signed over something other than build provenance fails this
+          # step instead of passing unnoticed.
+          "$PYTHON_BIN" -m tools.desktop.release_provenance --attest-subjects \
+            --attest-bundle "$ATTESTATION_BUNDLE" --inventory "$PACKAGE_INVENTORY_MANIFEST"
       - name: Record the attestation as generated, proving the advance is legal
         shell: bash
         env:
@@ -672,7 +712,7 @@ jobs:
           test -s "$RUNNER_TEMP/hive-package-inventory.json"
           echo "PACKAGE_INVENTORY_MANIFEST=$RUNNER_TEMP/hive-package-inventory.json" >> "$GITHUB_ENV"
           echo "OVERLAY_UPLOADED=NO"
-      - name: Prove the attestation subject is the bound inventory bytes
+      - name: Prove the bound inventory bytes are canonical
         shell: bash
         run: |
           set -euo pipefail
@@ -685,8 +725,8 @@ jobs:
           raw = pathlib.Path(os.environ["PACKAGE_INVENTORY_MANIFEST"]).read_bytes()
           canonical = canonical_bytes(json.loads(raw))
           if raw != canonical:
-              raise SystemExit("ATTESTATION_SUBJECT_IS_NOT_CANONICAL_INVENTORY_BYTES")
-          print("ATTESTATION_SUBJECT_BYTES_ARE_CANONICAL_INVENTORY=PASS")
+              raise SystemExit("INVENTORY_BYTES_ARE_NOT_CANONICAL")
+          print("INVENTORY_BYTES_ARE_CANONICAL=PASS")
           PY
       - name: Build credential-free provenance baseline
         shell: bash
@@ -701,13 +741,38 @@ jobs:
             --provenance "$RUNNER_TEMP/hive-release-provenance-baseline.json" \
             --inventory "$PACKAGE_INVENTORY_MANIFEST"
           echo "PROVENANCE_BASELINE=$RUNNER_TEMP/hive-release-provenance-baseline.json" >> "$GITHUB_ENV"
-      # actions/attest@v4.2.2 — see the Windows lane for why the subject is the
-      # canonical inventory manifest rather than a second packaging model.
-      - name: Attest the packaging evidence
+      # actions/attest@v4.2.2 — see the Windows lane for why the subjects are the
+      # package identities derived from the validated inventory rather than a
+      # filesystem glob that could silently add or drop an adjacent artifact.
+      - name: Derive the attestation subjects from the validated inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUBJECT_NAME="$("$PYTHON_BIN" - <<'PY'
+          import json, os, pathlib, sys
+
+          sys.path.insert(0, os.getcwd())
+          from tools.desktop.release_provenance import attestation_subjects, render_attestation_checksums
+
+          manifest = pathlib.Path(os.environ["PACKAGE_INVENTORY_MANIFEST"])
+          inventory = json.loads(manifest.read_text(encoding="utf-8"))
+          subjects = attestation_subjects(inventory)
+          checksums = pathlib.Path(os.environ["RUNNER_TEMP"], "hive-attestation-subjects.txt")
+          checksums.write_text(render_attestation_checksums(inventory), encoding="utf-8", newline="\n")
+          print(f"ATTESTATION_SUBJECT_COUNT={len(subjects)}", file=sys.stderr)
+          for subject in subjects:
+              print(f"ATTESTATION_SUBJECT={subject['name']} identity={subject['identityKind']}", file=sys.stderr)
+          print(next(subject["name"] for subject in subjects if subject["identityKind"] == "file-bytes"))
+          PY
+          )"
+          echo "ATTESTATION_SUBJECTS_FILE=$RUNNER_TEMP/hive-attestation-subjects.txt" >> "$GITHUB_ENV"
+          echo "ATTESTATION_VERIFY_TARGET=$PACKAGE_ROOT/$SUBJECT_NAME" >> "$GITHUB_ENV"
+          test -s "$RUNNER_TEMP/hive-attestation-subjects.txt"
+      - name: Attest the release packages
         id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
-          subject-path: ${{ runner.temp }}/hive-package-inventory.json
+          subject-checksums: ${{ runner.temp }}/hive-attestation-subjects.txt
       - name: Independently verify the attestation
         shell: bash
         env:
@@ -721,7 +786,11 @@ jobs:
           set -euo pipefail
           # The bundle path is handed straight to the verifier. On a Windows runner it
           # is a native path, and copying it through cp/test -s is how lanes break there.
-          gh attestation verify "$PACKAGE_INVENTORY_MANIFEST" \
+          # The target is one of the attested packages, not the manifest: the verifier
+          # matches a supplied file against the statement by digest alone, so this step
+          # proves the signature, the transparency record and the identity policy, and
+          # says nothing about the other subjects. The next step proves the whole set.
+          gh attestation verify "$ATTESTATION_VERIFY_TARGET" \
             --repo "$GITHUB_REPOSITORY" --bundle "$BUNDLE" \
             --signer-repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW_ID" \
             --source-ref "$SOURCE_REF" --deny-self-hosted-runners
@@ -729,6 +798,17 @@ jobs:
           echo "ATTESTATION_ID=$ATTESTATION_ID"
           echo "SIGNER_IDENTITY=$SIGNER_IDENTITY" >> "$GITHUB_ENV"
           echo "ATTESTATION_BUNDLE=$BUNDLE" >> "$GITHUB_ENV"
+      - name: Prove the attestation subjects are exactly this release's packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The verifier above matched one artifact against the statement by digest and
+          # said nothing about the rest of the set, so the bundle is decoded and compared
+          # here: a statement missing a package, carrying one the inventory never
+          # recorded, or signed over something other than build provenance fails this
+          # step instead of passing unnoticed.
+          "$PYTHON_BIN" -m tools.desktop.release_provenance --attest-subjects \
+            --attest-bundle "$ATTESTATION_BUNDLE" --inventory "$PACKAGE_INVENTORY_MANIFEST"
       - name: Record the attestation as generated, proving the advance is legal
         shell: bash
         env:
@@ -977,7 +1057,7 @@ jobs:
           test -s "$RUNNER_TEMP/hive-package-inventory.json"
           echo "PACKAGE_INVENTORY_MANIFEST=$RUNNER_TEMP/hive-package-inventory.json" >> "$GITHUB_ENV"
           echo "OVERLAY_UPLOADED=NO"
-      - name: Prove the attestation subject is the bound inventory bytes
+      - name: Prove the bound inventory bytes are canonical
         shell: bash
         run: |
           set -euo pipefail
@@ -990,8 +1070,8 @@ jobs:
           raw = pathlib.Path(os.environ["PACKAGE_INVENTORY_MANIFEST"]).read_bytes()
           canonical = canonical_bytes(json.loads(raw))
           if raw != canonical:
-              raise SystemExit("ATTESTATION_SUBJECT_IS_NOT_CANONICAL_INVENTORY_BYTES")
-          print("ATTESTATION_SUBJECT_BYTES_ARE_CANONICAL_INVENTORY=PASS")
+              raise SystemExit("INVENTORY_BYTES_ARE_NOT_CANONICAL")
+          print("INVENTORY_BYTES_ARE_CANONICAL=PASS")
           PY
       - name: Build credential-free provenance baseline
         shell: bash
@@ -1008,12 +1088,39 @@ jobs:
           echo "PROVENANCE_BASELINE=$RUNNER_TEMP/hive-release-provenance-baseline.json" >> "$GITHUB_ENV"
       # actions/attest@v4.2.2 — macOS provenance is not platform trust. Nothing in
       # this lane runs codesign or notarytool, and the gate below proves that a
-      # verified attestation clears neither requirement.
-      - name: Attest the packaging evidence
+      # verified attestation clears neither requirement. The `.app` is a directory
+      # bundle, so it is attested under the sorted-tree identity the inventory already
+      # recorded for it; the subject-set proof states that kind per subject instead of
+      # letting a tree digest be read downstream as a file hash.
+      - name: Derive the attestation subjects from the validated inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUBJECT_NAME="$("$PYTHON_BIN" - <<'PY'
+          import json, os, pathlib, sys
+
+          sys.path.insert(0, os.getcwd())
+          from tools.desktop.release_provenance import attestation_subjects, render_attestation_checksums
+
+          manifest = pathlib.Path(os.environ["PACKAGE_INVENTORY_MANIFEST"])
+          inventory = json.loads(manifest.read_text(encoding="utf-8"))
+          subjects = attestation_subjects(inventory)
+          checksums = pathlib.Path(os.environ["RUNNER_TEMP"], "hive-attestation-subjects.txt")
+          checksums.write_text(render_attestation_checksums(inventory), encoding="utf-8", newline="\n")
+          print(f"ATTESTATION_SUBJECT_COUNT={len(subjects)}", file=sys.stderr)
+          for subject in subjects:
+              print(f"ATTESTATION_SUBJECT={subject['name']} identity={subject['identityKind']}", file=sys.stderr)
+          print(next(subject["name"] for subject in subjects if subject["identityKind"] == "file-bytes"))
+          PY
+          )"
+          echo "ATTESTATION_SUBJECTS_FILE=$RUNNER_TEMP/hive-attestation-subjects.txt" >> "$GITHUB_ENV"
+          echo "ATTESTATION_VERIFY_TARGET=$PACKAGE_ROOT/$SUBJECT_NAME" >> "$GITHUB_ENV"
+          test -s "$RUNNER_TEMP/hive-attestation-subjects.txt"
+      - name: Attest the release packages
         id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
-          subject-path: ${{ runner.temp }}/hive-package-inventory.json
+          subject-checksums: ${{ runner.temp }}/hive-attestation-subjects.txt
       - name: Independently verify the attestation
         shell: bash
         env:
@@ -1027,7 +1134,11 @@ jobs:
           set -euo pipefail
           # The bundle path is handed straight to the verifier. On a Windows runner it
           # is a native path, and copying it through cp/test -s is how lanes break there.
-          gh attestation verify "$PACKAGE_INVENTORY_MANIFEST" \
+          # The target is one of the attested packages, not the manifest: the verifier
+          # matches a supplied file against the statement by digest alone, so this step
+          # proves the signature, the transparency record and the identity policy, and
+          # says nothing about the other subjects. The next step proves the whole set.
+          gh attestation verify "$ATTESTATION_VERIFY_TARGET" \
             --repo "$GITHUB_REPOSITORY" --bundle "$BUNDLE" \
             --signer-repo "$GITHUB_REPOSITORY" --signer-workflow "$SIGNER_WORKFLOW_ID" \
             --source-ref "$SOURCE_REF" --deny-self-hosted-runners
@@ -1035,6 +1146,17 @@ jobs:
           echo "ATTESTATION_ID=$ATTESTATION_ID"
           echo "SIGNER_IDENTITY=$SIGNER_IDENTITY" >> "$GITHUB_ENV"
           echo "ATTESTATION_BUNDLE=$BUNDLE" >> "$GITHUB_ENV"
+      - name: Prove the attestation subjects are exactly this release's packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The verifier above matched one artifact against the statement by digest and
+          # said nothing about the rest of the set, so the bundle is decoded and compared
+          # here: a statement missing a package, carrying one the inventory never
+          # recorded, or signed over something other than build provenance fails this
+          # step instead of passing unnoticed.
+          "$PYTHON_BIN" -m tools.desktop.release_provenance --attest-subjects \
+            --attest-bundle "$ATTESTATION_BUNDLE" --inventory "$PACKAGE_INVENTORY_MANIFEST"
       - name: Record the attestation as generated, proving the advance is legal
         shell: bash
         env:
@@ -1132,9 +1254,11 @@ jobs:
   # bound to the environment whose protection was objectively probed above, holds
   # read-only contents permission, and reaches no vendor tool: the signing
   # operation itself is not implemented in this increment, and the last step says
-  # so by failing. That failure is deliberately independent of whether the slots
-  # below have been provisioned, so a provisioned credential can never be mistaken
-  # for a completed signature.
+  # so by failing. That failure is deliberately independent of whether the
+  # requirement has been provisioned, so a provisioned credential can never be
+  # mistaken for a completed signature. Neither stage resolves a signing slot at
+  # all: the requirement is printed as literal text, which is what keeps the
+  # no-value-read claim true after provisioning rather than only before it.
   #
   # Linux has no stage here by design: its package formats offer no enforceable
   # publisher-trust model at install time, so inventing one would be a fabricated
@@ -1178,20 +1302,28 @@ jobs:
           python -m tools.desktop.release_provenance --transition \
             --before release-evidence/hive-release-provenance-baseline.json \
             --after release-evidence/hive-release-provenance-verified.json
-      - name: Report required signing slots by name, never by value
+      # Requirement reporting. This substrate has no credential-read authority, so the
+      # requirement is declared as literal text: nothing here is an expression, an
+      # environment binding or a presence test, so no value is resolved even after
+      # someone provisions one. A binding plus a probe would read a real credential the
+      # moment provisioning existed, which is the difference between "no secrets today"
+      # and "structurally unable to resolve one here".
+      - name: Report the signing requirement without resolving any slot
         shell: bash
-        env:
-          AZURE_ARTIFACT_SIGNING_ENDPOINT: ${{ secrets.AZURE_ARTIFACT_SIGNING_ENDPOINT }}
-          AZURE_ARTIFACT_SIGNING_ACCOUNT: ${{ secrets.AZURE_ARTIFACT_SIGNING_ACCOUNT }}
-          AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE: ${{ secrets.AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE }}
         run: |
           set -euo pipefail
-          for slot in AZURE_ARTIFACT_SIGNING_ENDPOINT AZURE_ARTIFACT_SIGNING_ACCOUNT AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE; do
-            if [ -z "$(printenv "$slot")" ]; then echo "SLOT_ABSENT=$slot"; else echo "SLOT_PRESENT=$slot"; fi
-          done
-          echo "CREDENTIAL_CLASS=Azure Artifact Signing certificate profile, reached by federated OIDC identity"
+          echo "SLOT_REQUIRED=AZURE_ARTIFACT_SIGNING_ENDPOINT"
+          echo "SLOT_REQUIRED=AZURE_ARTIFACT_SIGNING_ACCOUNT"
+          echo "SLOT_REQUIRED=AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE"
+          echo "CONFIG_IDENTITY_REQUIRED=ENTRA_APPLICATION_CLIENT_ID"
+          echo "CONFIG_IDENTITY_REQUIRED=ENTRA_DIRECTORY_TENANT_ID"
+          echo "CONFIG_IDENTITY_REQUIRED=ARTIFACT_SIGNING_SUBSCRIPTION_ID"
+          echo "CONFIG_IDENTITY_REQUIRED=FEDERATED_CREDENTIAL_SUBJECT_REPO_ENVIRONMENT_IDENTITY"
+          echo "CONFIG_IDENTITY_REQUIRED=CERTIFICATE_PROFILE_SIGNER_ROLE_ASSIGNMENT"
+          echo "CREDENTIAL_CLASS=Azure Artifact Signing certificate profile reached by a federated Microsoft Entra identity; the private key never exists on the runner and the five entries above are configuration identities, not secret values"
+          echo "CREDENTIAL_MECHANISM=federated credential trusting this repository and release environment, role assigned at certificate-profile scope, short-lived OIDC token exchanged per signing operation"
           echo "VERIFICATION_CONDITION=each package's signature verifies with an independent authenticode verification whose signer identity matches the recorded certificate subject and fingerprint"
-          echo "VALUES_READ=NO VALUES_PRINTED=NO VALUES_PERSISTED=NO"
+          echo "VALUES_RESOLVED=NOTHING VALUES_READ=NO VALUES_PRINTED=NO VALUES_PERSISTED=NO"
       - name: Refuse to present an unsigned stage as a signed one
         shell: bash
         run: |
@@ -1199,7 +1331,7 @@ jobs:
           echo "RELEASE_SUBSTRATE_STOPPED=BLOCKED_EXTERNAL_CREDENTIALS_AND_UNIMPLEMENTED_SIGNING"
           echo "This increment implements no Windows signing operation. Succeeding here"
           echo "without one would assert publisher authenticity that nothing produced, so"
-          echo "the stage fails regardless of whether the slots above now exist."
+          echo "the stage fails regardless of whether the requirement above is provisioned."
           exit 1
 
   sign-and-notarize-macos:
@@ -1240,23 +1372,26 @@ jobs:
           python3 -m tools.desktop.release_provenance --transition \
             --before release-evidence/hive-release-provenance-baseline.json \
             --after release-evidence/hive-release-provenance-verified.json
-      - name: Report required signing and notarization slots by name, never by value
+      # Same law as the Windows stage: the requirement is declared, never evaluated. The
+      # notarization mechanism selected by DEC-030 is an App Store Connect API key, whose
+      # three inputs are two identifiers and a key file path, so the developer Team ID is
+      # not on this list: it authenticates the Apple-ID flow, and substituting it for the
+      # issuer would produce a submission that cannot be authorized.
+      - name: Report the signing and notarization requirement without resolving any slot
         shell: bash
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
         run: |
           set -euo pipefail
-          for slot in APPLE_SIGNING_IDENTITY APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_TEAM_ID APPLE_API_KEY_ID APPLE_API_KEY; do
-            if [ -z "$(printenv "$slot")" ]; then echo "SLOT_ABSENT=$slot"; else echo "SLOT_PRESENT=$slot"; fi
-          done
-          echo "CREDENTIAL_CLASS=Apple Developer ID certificate plus App Store Connect API key for notarytool"
+          echo "SLOT_REQUIRED=APPLE_SIGNING_IDENTITY"
+          echo "SLOT_REQUIRED=APPLE_CERTIFICATE"
+          echo "SLOT_REQUIRED=APPLE_CERTIFICATE_PASSWORD"
+          echo "SLOT_REQUIRED=APPLE_API_KEY"
+          echo "SLOT_REQUIRED=APPLE_API_ISSUER"
+          echo "SLOT_REQUIRED=APPLE_API_KEY_PATH"
+          echo "CREDENTIAL_CLASS=Apple Developer ID Application certificate for publisher signing plus an App Store Connect team API key for notarytool platform trust; the certificate private key and the .p8 key material stay external, and Tauri reads the .p8 by path rather than by value"
+          echo "CREDENTIAL_MECHANISM=codesign with Hardened Runtime and an RFC 3161 timestamp, then notarytool submit over the API-key authentication triple: APPLE_API_KEY is the Key ID, APPLE_API_ISSUER is the App Store Connect issuer UUID and APPLE_API_KEY_PATH is the path to the .p8 file, then staple the ticket"
+          echo "NON_SUBSTITUTABLE=APPLE_TEAM_ID authenticates the Apple-ID notarization mode and is not the App Store Connect issuer, so it satisfies neither APPLE_API_ISSUER nor APPLE_API_KEY"
           echo "VERIFICATION_CONDITION=codesign --verify --strict --deep passes and xcrun notarytool information reports Acceptance for the submitted artifact"
-          echo "VALUES_READ=NO VALUES_PRINTED=NO VALUES_PERSISTED=NO"
+          echo "VALUES_RESOLVED=NOTHING VALUES_READ=NO VALUES_PRINTED=NO VALUES_PERSISTED=NO"
       - name: Refuse to present an unsigned stage as a signed or notarized one
         shell: bash
         run: |
@@ -1264,7 +1399,7 @@ jobs:
           echo "RELEASE_SUBSTRATE_STOPPED=BLOCKED_EXTERNAL_CREDENTIALS_AND_UNIMPLEMENTED_SIGNING"
           echo "Publisher signing and platform trust are two separate requirements and"
           echo "neither is produced by this increment, so the stage fails regardless of"
-          echo "whether the slots above now exist."
+          echo "whether the requirement above is provisioned."
           exit 1
 
   # Publication is its own act, behind its own environment and its own explicit

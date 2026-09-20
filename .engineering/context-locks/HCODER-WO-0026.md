@@ -146,3 +146,45 @@ STOP if the appended entry would read as canonical, or if any pre-existing ledge
 ## STOP CONDITION (Delta 002)
 
 STOP if the authorized test would need to relax an assertion to stay green, or if it requires a YAML parser dependency, network access, or any write into `.github/`. STOP if proving a policy claim would require executing a credentialed job — the test is a static audit of text, and the objective protection evidence belongs to the in-workflow probe, not to the test suite.
+
+---
+
+# Context Lock Delta 003
+
+**Status:** CORRECTION-SCOPE AUTHORIZATION — same Work Order, same Draft PR, no authority expansion  
+**Trigger:** Independent review `5261683447` of candidate head `374e642fb901ce21e1b8886fb80addccbfe89add` returned `CORRECTION_REQUIRED` with counts CRITICAL `0` / HIGH `1` / MEDIUM `2` / LOW `0`. The findings are `H-43-01` (the signing jobs bound external signing material through `${{ secrets.* }}` and tested presence with `printenv`, so a real credential value would be resolved before the unconditional barrier and `VALUES_READ=NO` was not structurally true), `M-43-02` (the attestation named only `hive-package-inventory.json` as its subject, so provenance bound the manifest rather than the native package identities), and `M-43-03` (the external provisioning map was incomplete and partly invented: an Apple App Store Connect API-key flow was recorded without its issuer identity and with `APPLE_TEAM_ID` standing in for it, and the OIDC-federated Azure path was recorded as three identifiers without the Entra application, federated trust, role assignment or service instances that make it exist).  
+**Authority granted:** the smallest edits that close exactly those three findings, within paths this Work Order already governs, plus one reauthorization (below). It grants no new capability, credential, environment, permission scope, product surface or checkpoint claim, and it does not reopen any property the review accepted.
+
+**Reauthorization, stated explicitly because it is the only real change in law.** `tests/desktop/test_protected_release_workflow.py` was authorized by Delta 002 as a file to be *created*. Closing `H-43-01` requires it to be *modified*, so this delta reauthorizes it as a live audit surface: assertions may be added and strengthened, and an assertion whose mechanism has been deleted by `H-43-01` may be replaced only by an equal-or-stronger check over the new mechanism. No pre-existing test method may be deleted, no expectation relaxed, and no case skipped or commented out. An existing anchor string may disappear only when the workflow line it anchored is itself removed under `H-43-01`, and the removal must be named in this Work Order's evidence file.
+
+**Allowed paths, exactly:**
+
+| Path | Why this finding requires it |
+| --- | --- |
+| `.engineering/context-locks/HCODER-WO-0026.md` | This record. |
+| `.github/workflows/protected-release.yml` | `H-43-01` deletes the secret bindings and value probes from the two signing jobs; `M-43-02` re-derives the attestation subject set from the already validated inventory. |
+| `tests/desktop/test_protected_release_workflow.py` | The audit must kill reintroduction of an external-signing-secret expression, a value probe, a certificate/key import, a cloud login or a real signing command, and must assert the exact subject set. |
+| `tools/desktop/release_provenance.py` | Only to make the attestation-subject chain determinable and checkable offline; not for prose. |
+| `tests/desktop/test_release_provenance.py` | Only where validator subject semantics change. |
+| `docs/project-brain/contracts/RELEASE-PROVENANCE-V1.md` | The contract must state truthfully what the attestation subjects are. |
+| `docs/project-brain/adrs/DEC-030-SIGNING-NOTARIZATION-RELEASE-PROVENANCE.md` | `M-43-03` corrects the Apple and Azure external-identity material; `M-43-02` corrects the subject-model material. |
+| `.engineering/prebuilt/HCODER-WO-0026-EXECUTOR-BRIEF.md` | The external provisioning table is the source of truth for `M-43-03`. |
+| `.engineering/prebuilt/HCODER-WO-0026-ACCEPTANCE-SECURITY-MAP.md` | Rows describing slot reporting and attestation subject scope must match the corrected source. |
+| `.engineering/prebuilt/HCODER-WO-0026-IMPLEMENTATION-PACK.md` | Only where it describes the changed mechanism. |
+| `.engineering/evidence/HCODER-WO-0026.md` | Correction evidence. |
+| `.engineering/work-orders/HCODER-WO-0026.md` | Only where its text would otherwise contradict the corrected source. |
+
+**Not authorized, and why.** `docs/project-brain/10-DECISIONS-LEDGER.md` is **not** used by this delta: the Delta 001 `DEC-030` ledger entry names no Apple or Azure slot and makes no manifest-subject claim, so no finding requires an edit there, and the append-only grant of Delta 001 remains the only ledger authority. `AGENTS.md` and `docs/project-brain/07-DEPLOYMENT.md` stay byte-identical: their accepted source-truth corrections are not reopened by any of the three findings. `docs/project-brain/11-CHECKPOINT.md` and every `.engineering/checkpoint-deltas/` file remain forbidden, `tools/desktop/package_inventory.py` and the six-target packaging matrix remain out of reach, and `governance.yml`, `desktop-shell.yml`, `native-package-matrix.yml`, `apps/desktop/**`, `hive_runtime/**`, `foundations/**`, every manifest and every lockfile remain immutable. No new repository path is created by this correction: the attestation-subject input is a runner-temporary file derived at run time from the validated inventory, so no second inventory model and no new tracked file is introduced.
+
+**Law carried by this delta.**
+
+1. `H-43-01` is closed by construction, not by today's having zero secrets: the signing jobs resolve no external signing or notarization expression of any kind, contain no presence test, indirect expansion or parameter inspection of a named credential, and report required slot names, credential classes and verification conditions as static literals that a `workflow_dispatch` run prints without evaluating them.
+2. This delta grants no credential-read, import, login or signing-execution authority. `id-token: write` is **not** added to `sign-windows` or `sign-and-notarize-macos`, cloud login steps, certificate or keychain import, `signtool`, `codesign`, `notarytool` and signing action execution all remain absent, and the signing jobs still end in an unconditional refusal that does not depend on provisioning state.
+3. `M-43-02` preserves `hive-package-inventory-v1` as the single packaging model: the subject set is derived from the validated canonical inventory, never rediscovered from the repository, never broadened by a glob, and never silently narrowed. Attestation over the manifest bytes remains a separate integrity/upstream-evidence guarantee and must not be relabelled as package provenance. If an expected package identity cannot be represented truthfully as a GitHub attestation subject under the pinned official action's documented input model, `H-43-01`-grade honesty requires returning `BLOCKED_ATTESTATION_SUBJECT_MODEL` with the exact official-tool evidence rather than omitting the subject, substituting another artifact, or claiming a directory-tree digest as a file digest.
+4. `M-43-03` is documentation and guard accuracy. Nothing is provisioned, no credential value or request appears, and every recorded name is a configuration identity or a slot name verified against current official Apple, Azure and pinned-Tauri documentation at execution time.
+5. The four-guarantee separation (integrity ≠ provenance ≠ publisher signing ≠ platform trust) and publication as a fifth act survive the correction unchanged.
+6. Evidence discipline: a new head invalidates run receipts `35533966793`, `35533966836`, `35533966792` and `35533966857` as current evidence, which are retained only as historical Prompt 43 receipts. `SKIPPED` and `UNKNOWN` are never reported as `PASS`.
+
+## STOP CONDITION (Delta 003)
+
+STOP if closing a finding would require reading or provisioning a real signing or notarization credential, weakening the six-target package matrix, weakening environment protection, reducing attestation subject coverage, changing canonical Tauri configuration, adding a product dependency, plugin, permission or capability, introducing updater, install, restart or rollback authority, publishing anything, or touching any historical canonical Decision or Checkpoint. STOP on any unresolved HIGH or CRITICAL, any red required exact-head gate, any stale-head mismatch, or any inability to represent a package attestation subject truthfully. `DEC-030` remains PROPOSED, no `HCODER-CP-0026` may be claimed from this delta, and the PR remains Draft: this delta authorizes correction, never promotion.

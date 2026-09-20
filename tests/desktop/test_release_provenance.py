@@ -10,6 +10,8 @@ verification result must fail closed. Each refusal below is written so that remo
 the guard it tests makes the test fail: a guard that never fires is not a guard.
 """
 
+import ast
+import base64
 import contextlib
 import copy
 import io
@@ -27,21 +29,26 @@ from tools.desktop.package_inventory import build_inventory, serialize_inventory
 from tools.desktop.release_provenance import (
     ATTESTATION_KEYS,
     DOCUMENT_KEYS,
+    MAX_ATTESTATION_SUBJECTS,
     NOTARIZATION_KEYS,
     PACKAGE_KEYS,
     PUBLICATION_KEYS,
     SIGNING_KEYS,
     ProvenanceError,
     asset_set_digest,
+    attestation_subjects,
     build_baseline,
+    bundle_subjects,
     canonical_bytes,
     inventory_binding_digest,
     main,
+    render_attestation_checksums,
     serialize_provenance,
     split_prerelease,
     validate_document,
     validate_transition,
     verify_against_inventory,
+    verify_attestation_subjects,
     version_matches_channel,
     publication_gate,
     assess_protection,
@@ -50,6 +57,7 @@ from tools.desktop.release_provenance import (
 SOURCE_SHA = "a" * 40
 STABLE_VERSION = "0.1.0"
 IDENTIFIER = "dev.hive.coder"
+TYPES_BY_PLATFORM = {"windows": ["msi", "nsis"], "linux": ["deb", "appimage"], "macos": ["app", "dmg"]}
 
 MSI_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 PE_MAGIC = b"MZ"
@@ -121,9 +129,34 @@ def _inventory(platform: str, types: list[str], version: str = STABLE_VERSION, s
 
 
 def _baseline(platform: str = "windows", types: list[str] | None = None, version: str = STABLE_VERSION) -> tuple[dict, dict]:
-    types = types or {"windows": ["msi", "nsis"], "linux": ["deb", "appimage"], "macos": ["app", "dmg"]}[platform]
+    types = types or TYPES_BY_PLATFORM[platform]
     inventory = _inventory(platform, types, version)
     return inventory, build_baseline(inventory_document=inventory, release_channel="stable")
+
+
+def _b64(payload: bytes) -> str:
+    return base64.b64encode(payload).decode("ascii")
+
+
+def _bundle(subjects: list, *, statement: dict | None = None, envelope: dict | None = None) -> dict:
+    """A DSSE envelope around a statement with the given subjects.
+
+    The signature is deliberately absent. What this judges is what an attestation
+    *claims*, which the payload states on its own; whether the claim is authentic is the
+    signature check's job, and the release lane runs that as a separate step against the
+    transparency log.
+    """
+    payload = {
+        "_type": "https://in-toto.io/Statement/v1",
+        "subject": copy.deepcopy(subjects),
+        "predicateType": "https://slsa.dev/provenance/v1",
+        "predicate": {"buildDefinition": {}, "runDetails": {}},
+    }
+    payload.update(statement or {})
+    encoded = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
+    body = {"payload": encoded, "payloadType": "application/vnd.in-toto+json", "signatures": []}
+    body.update(envelope or {})
+    return {"mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json", "dsseEnvelope": body}
 
 
 def _identity() -> dict:
@@ -558,6 +591,316 @@ class BindingTests(unittest.TestCase):
         with self.assertRaises(ProvenanceError) as ctx:
             verify_against_inventory(document, other_inventory)
         self.assertIn("does not match the canonical bytes", str(ctx.exception))
+
+
+class AttestationSubjectTests(unittest.TestCase):
+    """The subject set a release attests, derived from the inventory and nothing else.
+
+    A GitHub attestation binds a *set* of ``(name, digest)`` subjects, and the official
+    surfaces will happily bind a set nobody intended: a pathname collapsed to a basename,
+    a directory dropped without complaint, a verifier that matches by digest alone and so
+    says nothing about the other subjects. Each test here is one of those ways.
+    """
+
+    EXPECTED = {
+        "windows": {"msi/Hive Coder_0.1.0_x64_en-US.msi", "nsis/Hive Coder_0.1.0_x64-setup.exe"},
+        "linux": {"appimage/Hive Coder_0.1.0_amd64.AppImage", "deb/hive-coder_0.1.0_amd64.deb"},
+        "macos": {"Hive Coder.app", "dmg/Hive Coder_0.1.0_aarch64.dmg"},
+    }
+
+    def setUp(self) -> None:
+        self.inventory, self.document = _baseline("windows")
+
+    def _subjects(self, inventory: dict | None = None) -> list[dict[str, str]]:
+        return attestation_subjects(self.inventory if inventory is None else inventory)
+
+    def _entry(self, inventory: dict, package_type: str) -> dict:
+        return next(entry for entry in inventory["packages"] if entry["packageType"] == package_type)
+
+    def test_every_platform_attests_its_own_packages_named_and_digested_by_the_inventory(self) -> None:
+        for platform, expected_names in sorted(self.EXPECTED.items()):
+            inventory = _inventory(platform, sorted(TYPES_BY_PLATFORM[platform]))
+            subjects = attestation_subjects(inventory)
+            self.assertEqual(len(subjects), len(inventory["packages"]), platform)
+            self.assertEqual({subject["name"] for subject in subjects}, expected_names, platform)
+            self.assertEqual(
+                {subject["digest"] for subject in subjects},
+                {f"sha256:{entry['digest']}" for entry in inventory["packages"]},
+                platform,
+            )
+
+    def test_the_subject_order_is_the_inventory_order_so_the_rendered_body_has_one_meaning(self) -> None:
+        for platform in sorted(TYPES_BY_PLATFORM):
+            inventory = _inventory(platform, sorted(TYPES_BY_PLATFORM[platform]))
+            self.assertEqual(
+                [subject["name"] for subject in attestation_subjects(inventory)],
+                [
+                    entry["relativePath"]
+                    for entry in sorted(
+                        inventory["packages"],
+                        key=lambda item: (item["packageType"], item["relativePath"]),
+                    )
+                ],
+                platform,
+            )
+
+    def test_a_directory_bundle_states_its_identity_kind_instead_of_impersonating_a_file(self) -> None:
+        macos = _inventory("macos", ["app", "dmg"])
+        kinds = {subject["name"]: subject["identityKind"] for subject in self._subjects(macos)}
+        self.assertEqual(kinds["Hive Coder.app"], "sorted-tree")
+        self.assertEqual(kinds["dmg/Hive Coder_0.1.0_aarch64.dmg"], "file-bytes")
+        for subject in self._subjects(self.inventory):
+            self.assertEqual(subject["identityKind"], "file-bytes")
+
+    def test_an_inventory_may_not_claim_a_file_digest_for_the_bundle_it_hashed_as_a_tree(self) -> None:
+        macos = copy.deepcopy(_inventory("macos", ["app", "dmg"]))
+        self.assertIn("tree_digest", self._entry(macos, "app")["structuralValidation"])
+        self._entry(macos, "app")["structuralValidation"].remove("tree_digest")
+        with self.assertRaises(ProvenanceError) as ctx:
+            attestation_subjects(macos)
+        self.assertIn("declares a file digest but is a directory bundle", str(ctx.exception))
+
+    def test_an_inventory_may_not_claim_a_tree_digest_for_a_single_file(self) -> None:
+        forged = copy.deepcopy(self.inventory)
+        self._entry(forged, "msi")["structuralValidation"].append("tree_digest")
+        with self.assertRaises(ProvenanceError) as ctx:
+            attestation_subjects(forged)
+        self.assertIn("declares a tree digest but is a file", str(ctx.exception))
+
+    def test_the_subject_digest_must_be_the_algorithm_the_attestation_surface_can_carve(self) -> None:
+        forged = copy.deepcopy(self.inventory)
+        self._entry(forged, "msi")["digestAlgorithm"] = "sha1"
+        with self.assertRaises(ProvenanceError) as ctx:
+            attestation_subjects(forged)
+        self.assertIn("digest algorithm must be 'sha256'", str(ctx.exception))
+        forged = copy.deepcopy(self.inventory)
+        self._entry(forged, "nsis")["digest"] = "not-hex"
+        with self.assertRaises(ProvenanceError) as ctx:
+            attestation_subjects(forged)
+        self.assertIn("not a lowercase 64-character hex SHA-256", str(ctx.exception))
+
+    def test_a_name_the_checksums_grammar_would_rewrite_is_refused_before_it_is_signed(self) -> None:
+        """``actions/attest`` strips one leading flag character, so a leading ``*`` is data loss."""
+        for starting_with in ("*", " "):
+            forged = copy.deepcopy(self.inventory)
+            entry = self._entry(forged, "msi")
+            entry["relativePath"] = f"{starting_with}{entry['relativePath']}"
+            with self.assertRaises(ProvenanceError) as ctx:
+                attestation_subjects(forged)
+            self.assertIn("rewritten by the checksums grammar", str(ctx.exception))
+        forged = copy.deepcopy(self.inventory)
+        self._entry(forged, "nsis")["relativePath"] = "nsis/a\nb.exe"
+        with self.assertRaises(ProvenanceError) as ctx:
+            attestation_subjects(forged)
+        self.assertIn("may not contain a line ending", str(ctx.exception))
+
+    def test_the_rendered_body_is_the_grammar_and_round_trips_to_the_same_subjects(self) -> None:
+        for platform in sorted(TYPES_BY_PLATFORM):
+            inventory = _inventory(platform, sorted(TYPES_BY_PLATFORM[platform]))
+            body = render_attestation_checksums(inventory)
+            self.assertTrue(body.endswith("\n"), platform)
+            self.assertNotIn("\r", body, platform)
+            lines = body.splitlines()
+            self.assertEqual(len(lines), len(inventory["packages"]), platform)
+            for line, subject in zip(lines, attestation_subjects(inventory)):
+                digest, separator, name = line.partition("  ")
+                self.assertEqual(separator, "  ", platform)
+                self.assertEqual(name, subject["name"], platform)
+                self.assertEqual(f"sha256:{digest}", subject["digest"], platform)
+
+    def test_an_inventory_that_is_not_the_closed_package_document_produces_no_subjects(self) -> None:
+        for payload, needle in (
+            ([], "not a JSON object"),
+            ({"schemaVersion": "other"}, "not the closed schema"),
+        ):
+            with self.assertRaises(ProvenanceError) as ctx:
+                attestation_subjects(payload)
+            self.assertIn(needle, str(ctx.exception))
+        emptied = copy.deepcopy(self.inventory)
+        emptied["packages"] = []
+        with self.assertRaises(ProvenanceError) as ctx:
+            attestation_subjects(emptied)
+        self.assertIn("at least one package", str(ctx.exception))
+
+    def test_a_set_too_large_for_anyone_to_verify_is_refused_at_generation_time(self) -> None:
+        """sigstore-go caps subjects at verify, so an over-cap set would be green and useless."""
+        inflated = copy.deepcopy(self.inventory)
+        inflated["packages"] = [
+            {
+                "packageType": "msi",
+                "relativePath": f"msi/pkg-{index}.msi",
+                "byteSize": 1,
+                "digestAlgorithm": "sha256",
+                "digest": "a" * 64,
+                "structuralValidation": ["path_relative"],
+            }
+            for index in range(MAX_ATTESTATION_SUBJECTS + 1)
+        ]
+        with self.assertRaises(ProvenanceError) as ctx:
+            attestation_subjects(inflated)
+        self.assertIn("subject ceiling", str(ctx.exception))
+
+
+class AttestationSubjectEvidenceTests(unittest.TestCase):
+    """What the signed bundle must be proved to contain, over and above one digest hit."""
+
+    def setUp(self) -> None:
+        self.inventory, self.document = _baseline("windows")
+        self.subjects = [
+            {"name": s["name"], "digest": {"sha256": s["digest"].split(":", 1)[1]}}
+            for s in attestation_subjects(self.inventory)
+        ]
+
+    def _observe(self, **changes) -> list[dict]:
+        observed = copy.deepcopy(self.subjects)
+        for index, change in changes.items():
+            observed[index] = change
+        return observed
+
+    def test_the_expected_subject_set_verifies_and_is_returned_as_derived(self) -> None:
+        self.assertEqual(verify_attestation_subjects(self.subjects, self.inventory), attestation_subjects(self.inventory))
+
+    def test_a_missing_package_is_refused_rather_than_reported_as_a_good_run(self) -> None:
+        dropped = self.subjects[:1]
+        with self.assertRaises(ProvenanceError) as ctx:
+            verify_attestation_subjects(dropped, self.inventory)
+        self.assertIn("missing", str(ctx.exception))
+        self.assertIn(self.subjects[1]["name"], str(ctx.exception))
+
+    def test_an_empty_statement_attests_nothing(self) -> None:
+        for payload, needle in (([], "attests nothing"), ({}, "not a list"), (None, "not a list")):
+            with self.assertRaises(ProvenanceError) as ctx:
+                verify_attestation_subjects(payload, self.inventory)
+            self.assertIn(needle, str(ctx.exception))
+
+    def test_an_extra_subject_is_refused_even_beside_a_correct_one(self) -> None:
+        neighbouring = {
+            "name": "msi/Hive Coder_0.0.9_x64_en-US.msi",
+            "digest": {"sha256": "e" * 64},
+        }
+        with self.assertRaises(ProvenanceError) as ctx:
+            verify_attestation_subjects([*self.subjects, neighbouring], self.inventory)
+        self.assertIn("unexpected", str(ctx.exception))
+        self.assertIn(neighbouring["name"], str(ctx.exception))
+
+    def test_the_inventory_manifest_is_not_a_substitute_for_the_packages_it_describes(self) -> None:
+        """The Prompt 43 shape: attesting the document that lists the packages."""
+        manifest = {
+            "name": "hive-package-inventory.json",
+            "digest": {"sha256": inventory_binding_digest(self.inventory)},
+        }
+        with self.assertRaises(ProvenanceError) as ctx:
+            verify_attestation_subjects([manifest], self.inventory)
+        message = str(ctx.exception)
+        self.assertIn("missing", message)
+        self.assertIn("unexpected", message)
+        self.assertIn(manifest["name"], message)
+
+    def test_an_adjacent_build_of_the_same_product_is_not_this_release(self) -> None:
+        other = _inventory("windows", ["msi", "nsis"], version="0.0.9")
+        adjacent = [
+            {"name": s["name"], "digest": {"sha256": s["digest"].split(":", 1)[1]}}
+            for s in attestation_subjects(other)
+        ]
+        with self.assertRaises(ProvenanceError) as ctx:
+            verify_attestation_subjects(adjacent, self.inventory)
+        self.assertIn("missing", str(ctx.exception))
+        self.assertIn("unexpected", str(ctx.exception))
+
+    def test_a_digest_bound_to_a_foreign_name_is_refused_not_repaired(self) -> None:
+        swapped = [
+            {"name": self.subjects[1]["name"], "digest": self.subjects[0]["digest"]},
+            {"name": self.subjects[0]["name"], "digest": self.subjects[1]["digest"]},
+        ]
+        with self.assertRaises(ProvenanceError) as ctx:
+            verify_attestation_subjects(swapped, self.inventory)
+        self.assertIn("a digest differs on", str(ctx.exception))
+
+    def test_a_bundle_over_exactly_the_packages_is_read_and_accepted(self) -> None:
+        observed = bundle_subjects(_bundle(self.subjects))
+        self.assertEqual(observed, self.subjects)
+        self.assertEqual(
+            verify_attestation_subjects(observed, self.inventory),
+            attestation_subjects(self.inventory),
+        )
+
+    def test_the_bundle_must_state_what_an_attestation_claims_rather_than_that_it_signed(self) -> None:
+        """A signed statement about something else is not provenance for these packages."""
+        for overrides, needle in (
+            ({"_type": "https://in-toto.io/Statement/v0.1"}, "not an in-toto statement"),
+            ({"predicateType": "https://example.com/whatever/v1"}, "not build provenance"),
+            ({"subject": "not a list"}, "no subject list"),
+            ({"subject": {"name": "x"}}, "no subject list"),
+        ):
+            with self.assertRaises(ProvenanceError) as ctx:
+                bundle_subjects(_bundle(self.subjects, statement=overrides))
+            self.assertIn(needle, str(ctx.exception))
+
+    def test_an_envelope_this_tool_cannot_read_yields_no_subjects(self) -> None:
+        for bundle, needle in (
+            ({}, "no dsseEnvelope"),
+            ({"dsseEnvelope": {}}, "no payload"),
+            ({"dsseEnvelope": {"payload": "not base64 !!"}}, "not base64"),
+            ({"dsseEnvelope": {"payload": _b64(b"{nope")}}, "is not JSON"),
+            ({"dsseEnvelope": {"payload": _b64(b"[1, 2]")}}, "not a JSON object"),
+            ("not a document", "not a JSON object"),
+        ):
+            with self.assertRaises(ProvenanceError) as ctx:
+                bundle_subjects(bundle)
+            self.assertIn(needle, str(ctx.exception))
+
+    def test_a_bundle_whose_subjects_came_from_a_later_step_of_the_same_run_is_refused(self) -> None:
+        """The adjacent failure that looks innocent: the same build, one package short."""
+        with self.assertRaises(ProvenanceError) as ctx:
+            verify_attestation_subjects(self.subjects[:1], self.inventory)
+        self.assertIn("missing", str(ctx.exception))
+        self.assertNotIn("MATCHES", str(ctx.exception))
+
+    def test_a_subject_is_a_name_with_exactly_one_sha256_and_appears_once(self) -> None:
+        for observed, needle in (
+            ([{"name": "a", "digest": {"sha256": "a" * 64}}, {"name": "a", "digest": {"sha256": "a" * 64}}],
+             "repeats a subject name"),
+            ([{"name": "a", "digest": {"sha512": "a" * 128}}], "unexpected digest"),
+            ([{"name": "a", "digest": {}}], "carries no digest"),
+            ([{"name": "a"}], "not a name/digest pair"),
+            ([{"name": "a", "digest": {"sha256": "a" * 64}, "extra": 1}], "not a name/digest pair"),
+            ([{"name": 1, "digest": {"sha256": "a" * 64}}], "wrong shape"),
+            (["not an object"], "not a name/digest pair"),
+        ):
+            with self.assertRaises(ProvenanceError) as ctx:
+                verify_attestation_subjects(observed, self.inventory)
+            self.assertIn(needle, str(ctx.exception))
+
+    def test_the_payload_is_decoded_strictly_rather_than_repaired(self) -> None:
+        """Characters outside the base64 alphabet mean a damaged statement, not a typo.
+
+        Lenient decoding drops them and reads the statement anyway, so this comparison
+        would answer for a bundle no verifier could have produced. Mutation: drop
+        ``validate=True`` from the decode and both cases below decode and match.
+        """
+        clean = _bundle(self.subjects)["dsseEnvelope"]["payload"]
+        self.assertTrue(bundle_subjects(_bundle(self.subjects)))
+        for suffix in ("~~~", "\x00", "  "):
+            with self.assertRaises(ProvenanceError) as ctx:
+                bundle_subjects(_bundle(self.subjects, envelope={"payload": clean + suffix}))
+            self.assertIn("not base64", str(ctx.exception), suffix)
+
+    def test_an_observed_set_too_large_for_anyone_to_verify_is_refused_before_comparing(
+        self
+    ) -> None:
+        """The ceiling that generation cannot reach but a bundle can.
+
+        The expected side is bounded by the eight-package inventory, so only the observed
+        side can show this bound is load-bearing. Mutation: remove the observed-count check
+        and a 1025-subject statement would be compared rather than refused.
+        """
+        oversized = [
+            {"name": f"pkg-{index}", "digest": {"sha256": "a" * 64}}
+            for index in range(MAX_ATTESTATION_SUBJECTS + 1)
+        ]
+        with self.assertRaises(ProvenanceError) as ctx:
+            verify_attestation_subjects(oversized, self.inventory)
+        self.assertIn(f"{MAX_ATTESTATION_SUBJECTS}-subject ceiling", str(ctx.exception))
 
 
 class StateMachineTests(unittest.TestCase):
@@ -1009,6 +1352,39 @@ class CliTests(unittest.TestCase):
             self.assertIn("RELEASE_GATE=DENY", out)
             self.assertIn("REASON=", out)
 
+    def test_attest_subjects_judges_a_bundle_against_the_inventory_it_descends_from(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            inventory, _ = _baseline("windows")
+            inv_path = Path(tmp) / "inv.json"
+            inv_path.write_text(serialize_inventory(inventory), encoding="utf-8")
+            bundle_path = Path(tmp) / "bundle.json"
+            subjects = [
+                {"name": s["name"], "digest": {"sha256": s["digest"].split(":", 1)[1]}}
+                for s in attestation_subjects(inventory)
+            ]
+            argv = ["--attest-subjects", "--attest-bundle", str(bundle_path), "--inventory", str(inv_path)]
+
+            bundle_path.write_text(json.dumps(_bundle(subjects)), encoding="utf-8")
+            code, out = self._run(argv)
+            self.assertEqual(0, code)
+            self.assertIn("ATTESTATION_SUBJECT_SET=MATCHES_PACKAGES", out)
+            self.assertIn("ATTESTATION_SUBJECT_BOUND=msi/Hive Coder_0.1.0_x64_en-US.msi identity=file-bytes", out)
+
+            bundle_path.write_text(
+                json.dumps(_bundle(subjects, statement={"subject": subjects[:1]})), encoding="utf-8"
+            )
+            code, out = self._run(argv)
+            self.assertEqual(2, code)
+            self.assertIn("REASON=attestation subject set is not this release's package set", out)
+            self.assertIn("missing", out)
+            self.assertNotIn("MATCHES", out)
+
+    def test_attest_subjects_requires_both_the_bundle_and_the_inventory(self) -> None:
+        for argv in (["--attest-subjects"], ["--attest-subjects", "--inventory", "unused.json"]):
+            code, out = self._run(argv)
+            self.assertEqual(2, code)
+            self.assertIn("--attest-subjects requires --inventory and --attest-bundle", out)
+
     def test_refusal_never_prints_a_value_that_could_be_a_secret(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             inventory, document = _baseline("windows")
@@ -1315,17 +1691,79 @@ class EnvironmentProtectionCliTests(unittest.TestCase):
         self.assertIn("--environment-protection requires --environment-record", out)
 
 
+#: Import roots and attribute owners that would make the validator a release actor.
+FORBIDDEN_SURFACE_ROOTS = (
+    "urllib", "http", "httpx", "aiohttp", "requests", "socket", "ssl", "ftplib",
+    "smtplib", "telnetlib", "subprocess", "shutil", "secrets", "importlib",
+)
+#: Callable and attribute names that reach a shell, a vendor signing tool, or the
+#: dynamic import that would hide either from a static read of this file. ``compile``
+#: is absent on purpose: ``re.compile`` is the regex builder this module uses throughout.
+FORBIDDEN_SURFACE_NAMES = (
+    "cosign", "codesign", "signtool", "notarytool", "trusign", "system",
+    "popen", "spawn", "execv", "exec", "eval", "__import__",
+)
+
+
+def _surfaces_reached(source: str) -> set[str]:
+    """Every module root, attribute owner, attribute name and called name a source reaches."""
+    reached: set[str] = set()
+
+    def add(name: str) -> None:
+        reached.add(name.lower())
+
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                add(alias.name.split(".")[0])
+        elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+            add(node.module.split(".")[0])
+        elif isinstance(node, ast.Attribute):
+            root = node
+            while isinstance(root, ast.Attribute):
+                root = root.value
+            if isinstance(root, ast.Name):
+                add(root.id)
+            add(node.attr)
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+            add(node.id)
+    return reached
+
+
 class OfflineLawTests(unittest.TestCase):
     """The validator must stay a judge, not become a release actor."""
 
-    def test_module_imports_no_network_credential_or_execution_surface(self) -> None:
+    def test_module_reaches_no_network_credential_or_execution_surface(self) -> None:
+        """Judged on code rather than on prose.
+
+        The contract names signing tools and attestation predicate URIs in its own text,
+        and a substring scan of the whole source would ban that documentation as loudly
+        as it bans a call to it. What must be empty is what the module can reach: an
+        import root, an attribute owner, a called name, or the dynamic-import primitive
+        that would hide one.
+        """
         import inspect
 
         import tools.desktop.release_provenance as module
 
-        source = inspect.getsource(module)
-        for forbidden in ("urllib", "http", "socket", "subprocess", "requests", "secrets", "shutil", "cosign", "codesign", "signtool"):
-            self.assertNotIn(forbidden, source)
+        reached = _surfaces_reached(inspect.getsource(module))
+        for root in FORBIDDEN_SURFACE_ROOTS:
+            self.assertNotIn(root, reached)
+        for name in FORBIDDEN_SURFACE_NAMES:
+            self.assertNotIn(name, reached)
+
+    def test_the_surface_scan_reports_a_module_that_does_reach_one(self) -> None:
+        """The scan is not vacuous: each forbidden shape it claims to refuse is recognized."""
+        for snippet, expected in (
+            ("import urllib.request\n", "urllib"),
+            ("from http import client\n", "http"),
+            ("import subprocess\nsubprocess.run(['signtool'])\n", "subprocess"),
+            ("secret = secrets.token_bytes(8)\n", "secrets"),
+            ("cosign('sign')\n", "cosign"),
+            ("__import__('socket')\n", "__import__"),
+            ("os.system('codesign -s -')\n", "system"),
+        ):
+            self.assertIn(expected, _surfaces_reached(snippet), snippet)
 
     def test_no_field_in_the_contract_can_hold_secret_material(self) -> None:
         secret_like = {"privatekey", "password", "token", "secret", "p12", "key", "pin", "credential"}
