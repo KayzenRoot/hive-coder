@@ -11,10 +11,10 @@
 Git/code/exact-head evidence beat HIVE if stale.
 
 ## Do
-- verify base exactly `5d97df6cf2f69a35d14af140e28088a7659eff7a`;
+- verify implementation base exactly `3c3e6d9566bdde5653518ae253386cfd205b330c` (the merged and postvalidated prebuild main);
 - use branch `feat/HCODER-WO-0027-tauri-updater` from the final prebuild main after this governance PR is merged;
-- refresh Tauri official updater/source facts before dependency edits;
-- implement the locked Rust-only bridge;
+- read Context Lock Delta 001 first, then refresh/confirm the exact Tauri updater source facts before dependency edits;
+- apply the Delta-001-bounded `plugins.updater` fail-closed config and implement the locked Rust-only bridge;
 - keep frontend plugin authority at zero;
 - produce focused evidence;
 - open a Draft PR;
@@ -27,6 +27,12 @@ Git/code/exact-head evidence beat HIVE if stale.
 - HTTPS only;
 - download returns only signature-verified bytes;
 - no custom comparator weakening Hive strictly-newer law.
+
+## Delta 001 execution note
+- Canonical `plugins.updater` is allowed to remain explicitly unconfigured with `pubkey: ""` and `endpoints: []`; this must yield unavailable before any request.
+- Keep `requireSignedVersion=true`, `allowDowngrades=false`, and every dangerous transport/TLS flag false.
+- Do not generate, fetch or invent a production updater key or endpoint to make the positive path pass. Use deterministic test doubles for positive contract coverage.
+- Only the `plugins.updater` node is unfrozen; all other `tauri.conf.json` content remains frozen.
 
 ## Do not
 - invent endpoint/public key values;
