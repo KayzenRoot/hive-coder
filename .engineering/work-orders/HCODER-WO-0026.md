@@ -1,17 +1,17 @@
 # HCODER-WO-0026 — Signing, Notarization, Release Provenance And Protected Release Workflow
 
-**Status:** ACTIVE / CANDIDATE — PRODUCT IMPLEMENTATION IN DRAFT PR, NOT PROMOTED  
-**Promotion law:** This Work Order is satisfied only against a named exact head. Canonical standing requires the governed closeout sequence: exact-head `Governance` + `Desktop Shell` + `Native Package Matrix` + the new `Protected Release` lane, an independent HEDS review with unresolved HIGH/CRITICAL `0/0`, an approved Checkpoint Delta, and a merge under repository policy with expected-head protection. No wording in this file promotes itself, and no green gate on an earlier head transfers to a later head.  
+**Status:** PROMOTION CANDIDATE PREPARATION — TECHNICAL IMPLEMENTATION IMPLEMENTED AND INDEPENDENTLY REVIEWED AT `0a1b8375e5c950d321f898b6d455eb874583c9a4`, BEHAVIOR FROZEN FOR PROMOTION PREP, GOVERNANCE DELTAS WRITTEN, NOT PROMOTED  
+**Promotion law:** This Work Order is satisfied only against a named exact head. Canonical standing requires the governed closeout sequence: exact-head `Governance` + `Desktop Shell` + `Native Package Matrix` + the new `Protected Release` lane, an independent HEDS review with unresolved HIGH/CRITICAL `0/0`, an approved Checkpoint Delta, and a merge under repository policy with expected-head protection. No wording in this file promotes itself, and no green gate on an earlier head transfers to a later head. The technical approval at `0a1b8375` is approval of frozen technical bytes; the promotion head this round produces is a different head and requires its own exact-head gates and its own independent review, with the technical carry-forward valid only while the freeze in Context Lock Delta 004 stays exact.  
 **Risk:** HIGH_ASSURANCE (release authority, code-signing identity, notarization, supply-chain provenance, CI permissions)  
 **Task class:** T3  
 **Context radius:** C4  
 **Canonical base:** `HCODER-CP-0025` / `1a56224eeb9bc07f032df1ede23bdda9d74f8d12`  
-**Decision:** `DEC-030` — PROPOSED / NOT CANONICAL while this Work Order is unreviewed  
+**Decision:** `DEC-030` — APPROVED FOR PROMOTION CANDIDATE / NOT CANONICAL ON MAIN until `HCODER_CP_0026_EFFECTIVE`  
 **Issue:** `#85`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
 **Slice:** `HCODER-DIST-001C`  
 **Predecessor:** `HCODER-WO-0025` / `HCODER-DIST-001B` — Issue `#82` CLOSED / COMPLETED, `HCODER-CP-0025` and `DEC-029` CANONICAL / SEALED  
-**Authorization:** Prompt 43. Prompt 42 sealed `CP-0025` and queued this Work Order as a governance pointer only; the queued Issue `#85` granted no implementation authority, and Prompt 43 is the first authorization to create the Work Order and begin `HCODER-DIST-001C`.
+**Authorization:** Prompt 43 created this Work Order and began `HCODER-DIST-001C`; Prompt 42 had sealed `CP-0025` and queued it as a governance pointer only, and the queued Issue `#85` granted no implementation authority. Prompt 44 corrected the review findings against the first candidate. Prompt 45 authorizes this promotion-candidate governance round under Context Lock Delta 004 and nothing beyond it.
 
 > **Scope of this record.** This file states the law of the increment. Whether a given head satisfies that law is mutable hosted evidence and lives in the active Draft PR and Issues #30 and #85, never here. `IMPLEMENTED` is not a promotion claim, and `UNKNOWN` never becomes `PASS`.
 
@@ -40,7 +40,7 @@ Source drift reconciled by this Work Order: `AGENTS.md` still declared `HCODER-C
 - One new stdlib-only, offline, non-mutating validator/admission gate: `tools/desktop/release_provenance.py`.
 - One new focused adversarial test module: `tests/desktop/test_release_provenance.py`.
 - One new workflow: `.github/workflows/protected-release.yml`, designed as a promotion pipeline with a secret-free preflight lane that can run as exact-head evidence.
-- The governed documents named in `## Deliverables`, plus `DEC-030` at status PROPOSED / NOT CANONICAL.
+- The governed documents named in `## Deliverables`, plus `DEC-030` at status APPROVED FOR PROMOTION CANDIDATE / NOT CANONICAL ON MAIN until `HCODER_CP_0026_EFFECTIVE`.
 - A bounded source-accuracy correction to `AGENTS.md`, and a bounded source-truth note where `07-DEPLOYMENT.md` would otherwise misstate proven packaging status as merely planned.
 
 ## Out of scope
@@ -79,7 +79,7 @@ Source drift reconciled by this Work Order: `AGENTS.md` still declared `HCODER-C
 ## Acceptance criteria
 
 - A complete Work Order and Context Lock exist before any credential-backed operation, and `DEC-030` is materialized and internally consistent first.
-- `DEC-030` is PROPOSED / NOT CANONICAL and separates integrity, provenance, publisher signing, notarization and publication authority.
+- `DEC-030` separates integrity, provenance, publisher signing, notarization and publication authority, and always carries a status that states its own non-canonical condition: PROPOSED / NOT CANONICAL while this Work Order is unreviewed, then APPROVED FOR PROMOTION CANDIDATE / NOT CANONICAL ON MAIN once its technical head is reviewed and it is still unmerged.
 - `AGENTS.md` no longer misstates `CP-0022` as current execution state; no historical Decision or append-only Context Lock is rewritten.
 - The provenance contract and validator are closed, deterministic, offline-verifiable, fail-closed, and bind exact source, version, channel and package identities.
 - Adversarial tests prove rejection of: tampered digest, tampered source SHA, wrong version, wrong channel, fabricated signing state, fabricated notarization state, duplicate entry, extra entry, traversal path, absolute path, package-set mismatch, impossible transition, provenance-as-signing substitution, and fabricated publication claim; each guard is proven non-vacuous by a mutation that fails only when the guard is removed.
@@ -90,7 +90,7 @@ Source drift reconciled by this Work Order: `AGENTS.md` still declared `HCODER-C
 - No production release is published; the unsigned or merely attested path is never presented as publisher authenticity.
 - Required credentials and protected environment are objectively absent, so this increment stops after the secret-independent substrate with a precise external-provisioning blocker and no degraded unsigned publication.
 - `Governance`, `Desktop Shell` and `Native Package Matrix` remain green and unweakened on the final technical head, and the new `Protected Release` preflight lane is green on that head.
-- Independent HEDS is not self-issued; the Draft PR remains unmerged awaiting review.
+- Independent HEDS is not self-issued; the Draft PR remains unmerged, and each new head — the corrected head and the promotion-candidate head alike — is reviewed on its own exact SHA rather than on the strength of the review before it.
 
 ## Tests
 
@@ -98,7 +98,7 @@ Iterate on the focused provenance module only. Before commit run the focused rel
 
 ## Deliverables
 
-`.engineering/work-orders/HCODER-WO-0026.md`; `.engineering/context-locks/HCODER-WO-0026.md`; `.engineering/prebuilt/HCODER-WO-0026-IMPLEMENTATION-PACK.md`; `.engineering/prebuilt/HCODER-WO-0026-EXECUTOR-BRIEF.md`; `.engineering/prebuilt/HCODER-WO-0026-ACCEPTANCE-SECURITY-MAP.md`; `.engineering/evidence/HCODER-WO-0026.md`; `docs/project-brain/adrs/DEC-030-SIGNING-NOTARIZATION-RELEASE-PROVENANCE.md`; `docs/project-brain/contracts/RELEASE-PROVENANCE-V1.md`; `tools/desktop/release_provenance.py`; `tests/desktop/test_release_provenance.py`; `.github/workflows/protected-release.yml`; the bounded `AGENTS.md` and `07-DEPLOYMENT.md` source-truth corrections; and the `DEC-030` ledger entry authorized by Context Lock Delta 001.
+`.engineering/work-orders/HCODER-WO-0026.md`; `.engineering/context-locks/HCODER-WO-0026.md`; `.engineering/prebuilt/HCODER-WO-0026-IMPLEMENTATION-PACK.md`; `.engineering/prebuilt/HCODER-WO-0026-EXECUTOR-BRIEF.md`; `.engineering/prebuilt/HCODER-WO-0026-ACCEPTANCE-SECURITY-MAP.md`; `.engineering/evidence/HCODER-WO-0026.md`; `docs/project-brain/adrs/DEC-030-SIGNING-NOTARIZATION-RELEASE-PROVENANCE.md`; `docs/project-brain/contracts/RELEASE-PROVENANCE-V1.md`; `tools/desktop/release_provenance.py`; `tests/desktop/test_release_provenance.py`; `.github/workflows/protected-release.yml`; the bounded `AGENTS.md` and `07-DEPLOYMENT.md` source-truth corrections; the `DEC-030` ledger entry authorized by Context Lock Delta 001; and the PROPOSED / REVIEW PENDING checkpoint candidate `.engineering/checkpoint-deltas/HCODER-WO-0026.md` authorized by Context Lock Delta 004, which becomes a canonical declaration only through the predicate it states.
 
 ## Review format
 

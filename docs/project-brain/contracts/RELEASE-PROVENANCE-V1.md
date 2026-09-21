@@ -2,7 +2,7 @@
 
 **Contract ID:** `hive-release-provenance-v1`  
 **Owner:** Hive Coder  
-**Governed by:** `HCODER-WO-0026` / `DEC-030` (PROPOSED / NOT CANONICAL)  
+**Governed by:** `HCODER-WO-0026` / `DEC-030` (APPROVED FOR PROMOTION CANDIDATE / NOT CANONICAL ON MAIN until `HCODER_CP_0026_EFFECTIVE`)  
 **Status:** CANDIDATE  
 **Verifier:** `tools/desktop/release_provenance.py`  
 **Descends from:** `hive-package-inventory-v1` (`HCODER-WO-0025` / `DEC-029`, canonical)

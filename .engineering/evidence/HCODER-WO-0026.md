@@ -1,15 +1,15 @@
 # Evidence Bundle — HCODER-WO-0026
 
-**Status:** CORRECTION CANDIDATE READY FOR INDEPENDENT REVIEW — SECRET-INDEPENDENT SUBSTRATE, CANDIDATE IN A DRAFT PR, NOT PROMOTED
+**Status:** PROMOTION CANDIDATE — TECHNICAL BEHAVIOR FROZEN AND INDEPENDENTLY REVIEWED, GOVERNANCE CANDIDATE WRITTEN, NOT PROMOTED
 **Canonical base:** `HCODER-CP-0025` / `1a56224eeb9bc07f032df1ede23bdda9d74f8d12`
 **Issue:** `#85`
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`
 **Slice:** `HCODER-DIST-001C`
-**Decision:** `DEC-030` — PROPOSED / NOT CANONICAL, with no canonical force while this Work Order is unreviewed
+**Decision:** `DEC-030` — APPROVED FOR PROMOTION CANDIDATE / NOT CANONICAL ON MAIN until `HCODER_CP_0026_EFFECTIVE`
 **Correction authority:** `HCODER-WO-0026`; the canonical append-only delta history lives in `.engineering/context-locks/HCODER-WO-0026.md`, and no terminal delta number or range is mirrored here.
-**Review round:** the Prompt 43 HEDS review of `374e642fb901ce21e1b8886fb80addccbfe89add` returned `CORRECTION_REQUIRED` at CRITICAL 0 / HIGH 1 / MEDIUM 2. What follows answers findings `H-43-01`, `M-43-02` and `M-43-03`; the findings, their dispositions and the proofs behind each are in `## Prompt 44 correction round`.
+**Review rounds:** the Prompt 43 HEDS review of `374e642fb901ce21e1b8886fb80addccbfe89add` returned `CORRECTION_REQUIRED` at CRITICAL 0 / HIGH 1 / MEDIUM 2, and `## Prompt 44 correction round` records the findings, their dispositions and the proofs behind each. Independent review `5262493714` of the corrected head `0a1b8375e5c950d321f898b6d455eb874583c9a4` then returned `APPROVED FOR GOVERNED PROMOTION-CANDIDATE PREPARATION` at CRITICAL 0 / HIGH 0 / MEDIUM 0 / LOW 0, and `## Prompt 45 promotion-candidate round` records what that approval was used for and what it did not license.
 
-> **What this bundle is.** A record of what the repository now contains and of what was proven on the local host. It embeds **no** hosted receipt, and no sentence here is evidence that any credential, GitHub environment, protection rule, certificate or notarization account exists. Where a claim depends on that external state it is placed in `## Claims requiring external exact-head evidence` and left `UNKNOWN`.
+> **What this bundle is.** A record of what the repository now contains and of what was proven on the local host. No sentence here is evidence that any credential, GitHub environment, protection rule, certificate or notarization account exists. Where a claim depends on that external state it is placed in `## Claims requiring external exact-head evidence` and left `UNKNOWN`. Hosted run identifiers are never recorded here **as current-state evidence**, because a mutable receipt in a frozen document is how a bundle starts lying after its head moves; the single exception is `## Prompt 45 promotion-candidate round`, whose receipts are quoted as **immutable stage facts of a named, superseded-on-merge head** and are labelled as such.
 
 ## Source-materialized claims
 
@@ -21,7 +21,8 @@ These describe the repository as it exists and do not change as evidence advance
 - `tests/desktop/test_release_provenance.py` (1796 lines, 16 classes) and `tests/desktop/test_protected_release_workflow.py` (1091 lines, 9 classes) are materialized adversarial lanes; the second is a stdlib text-and-AST audit of the workflow file and needs no runner, no network and no credential.
 - The CP-0025 substrate is consumed, not redefined: a provenance document binds to the real inventory through the SHA-256 of `serialize_inventory`'s canonical bytes, so tampering with upstream packaging evidence changes the binding rather than being papered over.
 - What an attestation is about is derived, not discovered. `attestation_subjects()` reads names and digests only out of the validated `hive-package-inventory-v1` document — never a filesystem walk, a glob or the manifest file standing in for the packages it describes — and `render_attestation_checksums()` emits them in the `<digest>  <name>` grammar `actions/attest` takes as `subject-checksums`, which preserves a name verbatim where `subject-path` would collapse it to a basename. A directory bundle therefore keeps its own identity: `Hive Coder.app` is attested under `identity=sorted-tree`, a flat package under `identity=file-bytes`, and an inventory that claims one kind where the other is entailed is refused.
-- The ledger carries a `DEC-030` entry marked PROPOSED / NOT CANONICAL (authorized by Context Lock Delta 001, pure append), and the `DEC-030` ADR points at that ledger entry in both directions so neither can be mistaken for promotion.
+- The ledger carries a `DEC-030` entry (appended under Context Lock Delta 001, pure append), and the `DEC-030` ADR points at that ledger entry in both directions so neither can be mistaken for promotion. Both now state the same status: APPROVED FOR PROMOTION CANDIDATE / NOT CANONICAL ON MAIN until `HCODER_CP_0026_EFFECTIVE`, which replaced the pre-review PROPOSED label once review `5262493714` had accepted the technical head, and which remains a non-canonical label by construction.
+- `.engineering/checkpoint-deltas/HCODER-WO-0026.md` exists as a PROPOSED / REVIEW PENDING candidate declaration carrying `HCODER_CP_0026_EFFECTIVE`, and the branch copy of `docs/project-brain/11-CHECKPOINT.md` carries the matching conditional rung plus a candidate section that names its own ineffectiveness. The `HCODER-CP-0025` record above it is unmodified, and `main` contains neither file's new text until a governed merge lands.
 - `AGENTS.md` and `docs/project-brain/07-DEPLOYMENT.md` carry the bounded source-truth corrections the Context Lock allows: `AGENTS.md` no longer states `HCODER-CP-0022` as current execution state, and `07-DEPLOYMENT.md` no longer states packaging as merely `PLANNED`. Both defer to `11-CHECKPOINT.md` as the authority.
 
 ## Verification executed locally
@@ -35,10 +36,14 @@ These describe the repository as it exists and do not change as evidence advance
 | Same suite at the canonical base `1a56224` | identical command | `Ran 605 tests … OK (skipped=58)` |
 | Workflow step bodies executed verbatim, outside any runner | `python …/subject_lane.py …/run4` (driver kept outside the repository, Git Bash pinned explicitly) | `ALL SUBJECT-LANE CHECKS PASSED` |
 | Desktop security gate, shadow run over the tracked file set only | `python …/shadow_gate.py` (driver outside the repository; `security_gate.py` unmodified) | `DESKTOP_SECURITY_GATE=PASS` |
+| **Prompt 45 round** — both frozen lanes after the governance edits | `PYTHONWARNINGS=error::ResourceWarning python -m unittest tests.desktop.test_release_provenance tests.desktop.test_protected_release_workflow` | `Ran 204 tests in 2.723s … OK` |
+| **Prompt 45 round** — full discovered suite | not run locally, deliberately | The 809-test row above belongs to the Prompt 44 content, and the only files that moved since it are markdown; `Governance` runs the discovered suite on the new head and is the gate for it. Re-running it locally would have measured the docs, not the code |
+| **Prompt 45 round** — cross-file status-label sweep | `grep` over `*.md` for `HCODER_CP_0026_EFFECTIVE` and for every surviving `PROPOSED / NOT CANONICAL` mention of `DEC-030` | 9 files carry the predicate consistently; no text asserts it is satisfied; two surviving stale-looking labels are correct as written — Delta 001's historical grant and the Prompt 43 prebuilt pack — and a third, the contract's live `**Governed by:**` field, was a real defect and is the freeze exception recorded below |
+| **Prompt 45 round** — hosted protection state re-proved read-only | `gh api repos/…/environments`, `…/actions/secrets`, `…/actions/variables`, repo visibility | `0`, `0`, `0`, `public` — unchanged, so no credentialed stage became reachable during this round |
 
 The delta is exactly `+204`, which is this Work Order's two lanes, with no pre-existing test altered, skipped or deleted; the 58 skips are the base's own and are unchanged.
 
-Every row above was re-run on the shipped candidate content after the last edit to it, not carried forward from an earlier round. The Prompt 43 counts for the same two lanes were 132 and 42, so the correction round added 27 provenance cases and 3 workflow cases and removed none.
+Every row through the `DESKTOP_SECURITY_GATE=PASS` row was re-run on the Prompt 44 shipped candidate content after the last edit to it, not carried forward from an earlier round. The Prompt 43 counts for the two lanes were 132 and 42, so the correction round added 27 provenance cases and 3 workflow cases and removed none. The four rows labelled **Prompt 45 round** are this round's own, and the 204-lane row there was re-run after the last markdown edit — the technical content it executes is the frozen content those earlier rows measured.
 
 ## Non-vacuity proofs
 
@@ -199,6 +204,63 @@ Three things on this host did not behave as the evidence would like. Each is sta
 `374e642fb901ce21e1b8886fb80addccbfe89add` was the Prompt 43 candidate. Every hosted check-run recorded against it — the four lane receipts cited in the Prompt 43 handoff — is **historical evidence for a superseded head** and is not current evidence for this one. The run identifiers themselves belong to the mutable hosted record and are carried in the PR body and the Issue `#85` handoff, not in this bundle, which by its own rule embeds no hosted receipt. What the bundle states instead is the law: a new head invalidates the old head's receipts, and `Governance`, `Desktop Shell`, `Native Package Matrix` and `Protected Release` must each be green on the exact head that is reviewed.
 
 
+
+## Prompt 45 promotion-candidate round
+
+Independent review `5262493714` accepted the corrected head for promotion-candidate preparation. This round is the governance response to that acceptance: it writes the candidate's checkpoint declaration and reconciles status wording, and it changes no technical byte. Context Lock Delta 004 is the authority for every edit below and records the freeze that bounds them.
+
+### Immutable review history
+
+| Field | Value |
+| --- | --- |
+| Reviewed technical head | `0a1b8375e5c950d321f898b6d455eb874583c9a4` (tree `d939c9f83034ee1eeebe78bc0b8c74b118dbfab7`) |
+| Independent HEDS review | `5262493714` |
+| Verdict | APPROVED FOR GOVERNED PROMOTION-CANDIDATE PREPARATION |
+| Counts | CRITICAL `0` / HIGH `0` / MEDIUM `0` / LOW `0` |
+| Technical exact-head receipts | Governance `35545347036`, Desktop Shell `35545347009`, Native Package Matrix `35545346966`, Protected Release `35545347058` — all SUCCESS on that PR head, with `build-attest-*`, `sign-*` and `publish` SKIPPED |
+
+These are quoted as **stage facts of a named head**, which is the only way a frozen document may carry a run identifier without later lying: they are already superseded by the promotion-candidate head this round produces, and none of them satisfies condition (C) of `HCODER_CP_0026_EFFECTIVE`, which requires runs launched from the exact `main` SHA after a governed merge. No promotion-head run ID appears anywhere in this bundle or in the checkpoint delta, because it does not exist yet; it belongs to PR `#86` and Issues #85 and #30 once it does. The Prompt 43 `CORRECTION_REQUIRED` review of `374e642fb901ce21e1b8886fb80addccbfe89add` is preserved above and is not edited to flatter the present.
+
+### What this round wrote
+
+`.engineering/checkpoint-deltas/HCODER-WO-0026.md` is new: the PROPOSED / REVIEW PENDING candidate declaration, the predicate, the admitted and withheld authority, the carry-forward law and the rollback truth. `docs/project-brain/11-CHECKPOINT.md` gains the matching conditional rung and candidate section — a candidate, not an effectiveness claim, with `HCODER-CP-0025`'s record byte-preserved as history — because that file's own law is that it selects the checkpoint by predicate and that no edit is required to flip a status; adding a predicate line to a document that computes status from predicates is the pattern working as designed, while omitting it would force a later rewrite of the ladder. The Work Order, the `DEC-030` ADR header and promotion-gate text, the `DEC-030` ledger entry, `AGENTS.md` and `07-DEPLOYMENT.md` then move from a pre-review label to the reviewed state, and nothing else.
+
+`AGENTS.md` and `07-DEPLOYMENT.md` were opened for one reason each, and that reason is stated so the exception is checkable: both labelled `DEC-030` as merely `PROPOSED` / "Proposed, not canonical", and after this round those sentences are false by omission — the Decision has been reviewed and is a promotion candidate, while remaining non-canonical. No other line in either file was touched, and neither was reflowed. `.engineering/prebuilt/` was left entirely alone: the implementation pack's `DEC-030 (PROPOSED / NOT CANONICAL)` field is the Prompt 43 deliverable requirement as written at that stage, not a current-state claim, and rewriting a prebuilt brief to match a later round is exactly the history-smoothing this project forbids.
+
+### Technical freeze proof
+
+Compared against `0a1b8375e5c950d321f898b6d455eb874583c9a4` with `git rev-parse <head>:<path>` versus `git ls-files -s <path>` (blob against staged blob, so CRLF filters cannot mask or fake a difference). Every frozen path matched:
+
+| Blob at the reviewed technical head | Path |
+| --- | --- |
+| `12902a49a344a53350df926da382a6f85629a74c` | `.github/workflows/protected-release.yml` |
+| `227339e657ac1fe19dba448327be51614ed1fb00` | `tools/desktop/release_provenance.py` |
+| `58972d331d4d2c4ec8ab33f4705b5e88b6d67c2c` | `tests/desktop/test_release_provenance.py` |
+| `14243a2483ec693cd06ce8f30ee2dcd65c103d85` | `tests/desktop/test_protected_release_workflow.py` |
+| `b071f7ba238d6fdcd61196a99be61d5bb8418667` | `tools/desktop/package_inventory.py` |
+| `cb078deb81063d56db135940c01a3e7a729729cc` | `tools/desktop/version_drift.py` |
+| `1f823d7672f95217ca144a4fe8c8d96f318b63d4` | `.github/workflows/governance.yml` |
+| `7eb76979345c554dacc1b3a5fac0a26a0019367e` | `.github/workflows/desktop-shell.yml` |
+| `118bbbe8f453dd130852d97a40b2e0781ab71d92` | `.github/workflows/native-package-matrix.yml` |
+
+**One documented exception, and how it was found.** `docs/project-brain/contracts/RELEASE-PROVENANCE-V1.md` moved from blob `106c4cd…` to `1c6af6c…`, and the whole of that change is line 5:
+
+```
+-**Governed by:** `HCODER-WO-0026` / `DEC-030` (PROPOSED / NOT CANONICAL)
++**Governed by:** `HCODER-WO-0026` / `DEC-030` (APPROVED FOR PROMOTION CANDIDATE / NOT CANONICAL ON MAIN until `HCODER_CP_0026_EFFECTIVE`)
+```
+
+The contract was not on Prompt 45's freeze list; this round's Context Lock Delta 004 first froze it anyway on the reasoning that contract text is technical surface, and the pre-commit consistency sweep then found that its `**Governed by:**` field is a live status label whose `PROPOSED` half this very round makes false. Delta 004 records that reversal rather than hiding it, narrows the freeze to "every word except that field", and notes the general lesson: a status field is classified by what it asserts, not by which directory it lives in. No schema, ladder, admission rule or verifier description changed, and `**Status:** CANDIDATE` two lines below still reads as it did.
+
+The path-set proof is the stronger form and does not depend on remembering which files matter: `git diff --cached --name-status 0a1b8375` lists the complete set of differences between the reviewed head and the committed candidate, and it contains **only** governance documents — `.engineering/checkpoint-deltas/HCODER-WO-0026.md` (added) plus modifications to `.engineering/context-locks/HCODER-WO-0026.md`, `.engineering/evidence/HCODER-WO-0026.md`, `.engineering/work-orders/HCODER-WO-0026.md`, `AGENTS.md`, `docs/project-brain/07-DEPLOYMENT.md`, `docs/project-brain/10-DECISIONS-LEDGER.md`, `docs/project-brain/11-CHECKPOINT.md`, `docs/project-brain/adrs/DEC-030-SIGNING-NOTARIZATION-RELEASE-PROVENANCE.md` and the contract line above. `apps/desktop/**`, `hive_runtime/**`, `foundations/**`, every manifest, lockfile and generated-icon source are therefore untouched without any need to enumerate them, and no formatter ran on any file. Of the 10 changed paths, 8 are pure additions or label reconciliations; the largest deletion in the round is one line of `11-CHECKPOINT.md`, the checkpoint-ladder paragraph, whose `HCODER_CP_0025`/`0024`/`0023` clauses survive verbatim inside its replacement with the `HCODER_CP_0026` rung prefixed.
+
+### What this round did not do
+
+No merge; PR `#86` stays Draft and is not marked Ready. No `workflow_dispatch` of any path and no attempt to run `build-attest-*`, `sign-*` or `publish` for greener evidence. No environment, secret, variable, protection rule or application created or requested, and no credential value, placeholder value or value request written into any file, comment, artifact or report. No test, gate, assertion or workflow line modified, weakened, skipped or deleted — this round ran the frozen technical code, it did not edit it. No claim that `HCODER-CP-0026` exists or that `DEC-030` is canonical. No `HCODER-DIST-001D` work queued or started.
+
+### Verification discipline for a documentation-only round
+
+The full discovered suite was **not** re-run locally: it is green on `0a1b8375`, nothing it reads changed, and `Governance` runs it on the new head as a hosted gate. What was run locally is listed in `## Verification executed locally` under the promotion-candidate rows, and it is the cheap direction of the truth test — that documentation edits cannot break the frozen lanes — plus the repo's own offline predicates.
 
 ## Externally gated stages — never executable in this increment
 
