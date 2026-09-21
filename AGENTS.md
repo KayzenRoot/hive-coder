@@ -71,11 +71,12 @@ GEF V1 universal is adopted; review mode is HEDS_DELTA_EXACT_HEAD and proof carr
 
 ### In-flight increments (not checkpoints, not canonical-complete)
 - `HCODER-PLATFORM-001` (Issue #63) native validation matrix is canonical on `main`; its ledger records **CANONICAL / PROVEN_CI MATRIX COMPLETE**. Launch smoke remains PROVEN_CI on Windows only. Release package evidence is now proven under `HCODER-CP-0025`; package **install** behaviour remains UNPROVEN on all platforms, and unsigned packages remain undistributable.
-- `HCODER-WO-0026` / Issue `#85` / `HCODER-DIST-001C` is **CLOSED / COMPLETE / CANONICAL / SEALED** under `HCODER-CP-0026`; PR `#86` is merged. Its credential-bearing signing/notarization and publication stages remain unexercised and outside the admitted authority. No successor distribution slice is considered started merely because CP-0026 is effective.
+- `HCODER-WO-0026` / Issue `#85` / `HCODER-DIST-001C` is **CLOSED / COMPLETE / CANONICAL / SEALED** under `HCODER-CP-0026`; PR `#86` is merged. Its credential-bearing signing/notarization and publication stages remain unexercised and outside the admitted authority.
+- `HCODER-WO-0027` / Issue `#89` / `HCODER-DIST-001D` is **PREBUILT / IMPLEMENTATION NOT STARTED**. It proposes DEC-031 and a Rust-only Hive Update Admission Bridge. No updater transport/install/restart authority exists until implementation is reviewed and promoted.
 
 ### NEXT EXACT ACTIONS
-1. Treat `HCODER-CP-0026` / `DEC-030` as the current canonical baseline and reconcile Issue #30 against it before any successor work.
-2. Do not start `HCODER-DIST-001D` or any signing/notarization executor implicitly. A successor requires its own governed Work Order, Context Lock, allowed files, acceptance criteria and exact-head gates.
-3. Apply the **CHAT FIRST, CODEX LAST** review-routing law above: review findings and approved lifecycle actions are performed directly through chat/repository tools whenever safely possible; Codex is used only for work the chat cannot safely execute.
-4. Before any credentialed release stage can run in a future slice, external provisioning must exist and be proved by the environment-protection probe. Report credential class, documented slot/configuration identity and verification condition only — never a value or request for one.
-5. Any future promotion head invalidates prior exact-head receipts and must earn its own required gates and HEDS.
+1. Treat `HCODER-CP-0026` / `DEC-030` as the canonical baseline and `HCODER-WO-0027` / Issue `#89` as the only active successor pointer.
+2. Read WO-0027, its Context Lock, DEC-031 and prebuilt pack before implementation. Do not infer updater authority from the parent epic alone.
+3. Apply **CHAT FIRST, CODEX LAST**: keep planning/review/GitHub lifecycle work in chat; use Codex only when local dependency resolution, Rust/Tauri implementation and native toolchain execution materially require it.
+4. No updater private key, install/restart frontend command, release publication, UI, rollback/health or native update E2E is authorized by the prebuild.
+5. Any implementation head must earn Governance + Desktop Shell + Native Package Matrix + Protected Release and independent HEDS before promotion.
