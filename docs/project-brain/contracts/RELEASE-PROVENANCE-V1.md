@@ -2,8 +2,8 @@
 
 **Contract ID:** `hive-release-provenance-v1`  
 **Owner:** Hive Coder  
-**Governed by:** `HCODER-WO-0026` / `DEC-030` (APPROVED FOR PROMOTION CANDIDATE / NOT CANONICAL ON MAIN until `HCODER_CP_0026_EFFECTIVE`)  
-**Status:** CANDIDATE  
+**Governed by:** `HCODER-WO-0026` / `DEC-030` — CANONICAL / SEALED under `HCODER-CP-0026`  
+**Status:** CANONICAL  
 **Verifier:** `tools/desktop/release_provenance.py`  
 **Descends from:** `hive-package-inventory-v1` (`HCODER-WO-0025` / `DEC-029`, canonical)
 
@@ -280,4 +280,4 @@ A valid, verified `hive-release-provenance-v1` document is **evidence about a bu
 
 ## Versioning law
 
-Any new field, enum value, state, transition edge, relaxed bound, or any change to a key tuple, an ordering rule or the serialization is a contract change: it requires a new schema identity (`hive-release-provenance-v2`), a governed Work Order, an accepted decision and review. Under v1, unknown input of any kind fails closed. Under a PROPOSED parent decision, nothing in this file is canonical, and no document conforming to it may be presented as publisher-authentic, notarized, published or production-distributable.
+Any new field, enum value, state, transition edge, relaxed bound, or any change to a key tuple, an ordering rule or the serialization is a contract change: it requires a new schema identity (`hive-release-provenance-v2`), a governed Work Order, an accepted decision and review. Under v1, unknown input of any kind fails closed. `DEC-030` is canonical under `HCODER-CP-0026`, so this contract is canonical as an evidence/admission contract; conformance alone still proves none of publisher authenticity, notarization, completed publication or production-distributable status.
