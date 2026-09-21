@@ -55,7 +55,7 @@ The implementation may choose the smallest upstream-supported way to register th
 - `requireSignedVersion=true`, `allowDowngrades=false`;
 - dangerous TLS/transport flags false;
 - endpoint/key cannot come from frontend.
-If satisfying signed-version config requires a bounded change to `tauri.conf.json`, STOP and request a Context Lock Delta before touching it.
+Context Lock Delta 001 now authorizes exactly the `plugins.updater` node in `tauri.conf.json`. For this implementation candidate, keep it explicitly unconfigured with empty `pubkey` and empty `endpoints`, while setting `requireSignedVersion=true`, `allowDowngrades=false`, and all dangerous transport/TLS flags to false. Empty trust data means unavailable and must be rejected before any request. Do not invent or generate a real key/endpoint. No other `tauri.conf.json` key is authorized to change.
 
 ## State/proof changes
 
