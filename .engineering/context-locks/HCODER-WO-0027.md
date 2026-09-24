@@ -184,3 +184,22 @@ The governed prebuild PR #90 was merged and postvalidated before implementation.
 ### Evidence / STOP law
 
 The `tauri.conf.json` diff must be mechanically bounded to `plugins.updater` and the exact fields above. Any other config change is unauthorized. Final implementation still requires the same four exact-head workflows and independent HEDS with unresolved CRITICAL/HIGH = 0/0. STOP on any attempt to make empty trust data usable, add non-HTTPS/insecure behavior, introduce caller-controlled trust, or broaden authority.
+
+
+## Context Lock Delta 002 — synchronize executor base after CR-001 closeout
+
+**Trigger:** PR #91 merged its reviewed Context Lock Delta 001 correction as `e5cfe3267f968d80cc3c4dc91cb6acf54ee7eb80` after the Delta-001 prebuild base correction had selected `3c3e6d9566bdde5653518ae253386cfd205b330c`.
+
+**Finding:** Delta 001's reference to `3c3e6d9...` was accurate for the post-PR-#90 main at that lifecycle point. PR #91 later became the accepted implementation-preparation source and was exact-head validated. The current `AGENTS.md` and Issue #89 reflect that later state, while this executor brief still directs the older base. Because this documentation correction itself will advance `main` if merged, neither the pre-correction `e5cfe32...` nor the historical `3c3e6d9...` may be treated as the implementation start SHA after this Delta is accepted.
+
+### Bounded correction
+
+- Delta 001 is retained verbatim as the historical CR-001 trust-configuration authorization and post-PR-#90 base snapshot.
+- This Delta corrects only executor source selection and the corresponding handoff instructions; it changes no product/runtime authority, trust value, dependency, workflow, test contract, or DEC-031 promotion status.
+- Implementation remains blocked until this correction is accepted, merged under repository policy, and the resulting exact `main` passes its required post-merge gates with independent HEDS approval.
+- After that closeout, the implementation executor must fetch `main` again, capture its full SHA as the Work Order's exact start SHA, verify the accepted correction merge and current Issue #30 / Issue #89 state, then create `feat/HCODER-WO-0027-tauri-updater` from that captured SHA. If `main` has any additional unreviewed movement, if HIVE/local work cannot be reconciled, or if source fingerprints differ, mark the Context Lock STALE and stop for recompile/review. Preserve local work; never reset or rewrite history destructively.
+- The implementation PR remains Draft and unmerged for independent review. All four required hosted workflows and HEDS must apply to the same implementation head.
+
+### Evidence / STOP law
+
+The last verified pre-correction main is `e5cfe3267f968d80cc3c4dc91cb6acf54ee7eb80`; its exact-main Governance, Desktop Shell, Native Package Matrix and Protected Release runs were successful for the secret-independent surface, with credential-bearing release jobs skipped as designed. This SHA is historical after this Delta's merge. Do not start implementation from the pre-correction head. No executor may claim the correction PR's post-merge gates or HEDS before those results exist. All Delta-001 fail-closed trust and authority constraints remain unchanged.
