@@ -51,7 +51,7 @@ class TestOnlyUpdateService implements UpdateService {
   }
 
   public availability() {
-    return { available: true, reason: "not_configured" as const };
+    return { available: true, reason: "configured" as const };
   }
 
   public status() {
@@ -341,7 +341,45 @@ describe("BridgedUpdateService", () => {
     expect(admitted.state).toBe("available");
     expect(admitted.candidateVersion).toBe("0.2.0");
     expect(service.status()).toEqual(admitted);
-    expect(service.availability()).toEqual({ available: true, reason: "not_configured" });
+    expect(service.availability()).toEqual({ available: true, reason: "configured" });
+  });
+
+  it("reports a reachable bridge and a configured updater as separate facts", async () => {
+    // The shape a build with no updater trust root answers with, including on a
+    // plain status read that attempted nothing. The bridge answered, so it is
+    // reachable; nothing about that makes an updater usable.
+    const inert = bridged({
+      readUpdateStatus: snapshot({
+        state: "unavailable",
+        error: { code: "service_unavailable", detail: "the updater has no trusted public key and endpoint configured" },
+      }),
+    });
+    expect((await inert.service.refreshStatus()).state).toBe("unavailable");
+    expect(inert.service.availability()).toEqual({ available: false, reason: "not_configured" });
+
+    // Every remaining state is one the bridge only grants after its own trusted
+    // configuration resolved, so each of them evidences a configured updater.
+    for (const state of ["idle", "checking", "available", "ready", "failure"] as const) {
+      const { service } = bridged({
+        readUpdateStatus: snapshot({
+          state,
+          candidateVersion: state === "available" || state === "ready" ? "0.2.0" : null,
+          authenticityProof: state === "ready" ? ACCEPTED_PROOF : null,
+          error: state === "failure" ? { code: "download_failed", detail: "the candidate download failed" } : null,
+        }),
+      });
+      expect((await service.refreshStatus()).state, state).toBe(state);
+      expect(service.availability(), state).toEqual({ available: true, reason: "configured" });
+    }
+  });
+
+  it("reports the shipped build as reachable and unusable on its first read", async () => {
+    // Before any call there is no evidence either way, so nothing is claimed.
+    const { bridge, service } = bridged({ readUpdateStatus: snapshot({ state: "unavailable" }) });
+    expect(service.availability()).toEqual({ available: false, reason: "bridge_unreachable" });
+    await service.refreshStatus();
+    expect(bridge.calls).toEqual(["readUpdateStatus"]);
+    expect(service.availability().available).toBe(false);
   });
 
   it("routes each operation to exactly one named backend call", async () => {

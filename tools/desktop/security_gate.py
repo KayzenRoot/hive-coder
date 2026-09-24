@@ -82,6 +82,16 @@ EXPECTED_UPDATER_CONFIG = {
 # 2.12.0 would silently drop requireSignedVersion/allowDowngrades and keep running.
 MIN_UPDATER_PLUGIN_VERSION = (2, 12, 0)
 
+# A signed-version requirement is only honourable if the tool that signs the
+# artifact writes the version into the minisign trusted comment. Upstream added
+# that in `@tauri-apps/cli-v2.11.5` (`updater_signature.rs` appends
+# "\tversion:{version}" and refuses a version carrying a tab or newline); at
+# v2.11.4 the same file builds `format!("timestamp:{}\tfile:{}", ..)` and records
+# no version at all. Below this floor the admitted trust posture is
+# unsatisfiable by anything this repository can build, so it fails the gate
+# rather than being left as a comment in an evidence file.
+MIN_TAURI_CLI_VERSION = (2, 11, 5)
+
 ALLOWED_INVOKE_FILE = (DESKTOP / "src" / "lib" / "desktopBridge.ts").resolve()
 ALLOWED_PROCESS_FILE = (TAURI / "src" / "runtime_status_supervisor.rs").resolve()
 ALLOWED_UPDATER_ADMISSION_FILE = (TAURI / "src" / "update_admission.rs").resolve()
@@ -427,6 +437,25 @@ def main() -> int:
             + ": older pins ignore the signed-version and downgrade keys"
         )
 
+    # The counterpart of the plugin floor: `requireSignedVersion` is admitted in
+    # `tauri.conf.json`, but a CLI that signs without a version field makes every
+    # produced artifact end `MissingSignedVersion`. The pin is therefore load-bearing
+    # trust, not build convenience, and a downgrade must fail here.
+    cli_pin = package.get("devDependencies", {}).get("@tauri-apps/cli")
+    resolved_cli_pin = cli_pin or "ABSENT"
+    cli_parts = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", cli_pin or "")
+    if cli_parts is None:
+        failures.append(
+            f"@tauri-apps/cli must be an exact x.y.z pin, got {cli_pin!r}"
+        )
+    elif tuple(int(part) for part in cli_parts.groups()) < MIN_TAURI_CLI_VERSION:
+        failures.append(
+            "@tauri-apps/cli must be at least "
+            + ".".join(str(part) for part in MIN_TAURI_CLI_VERSION)
+            + ": older CLIs sign updater artifacts without a version field,"
+            " which makes the admitted requireSignedVersion posture unsatisfiable"
+        )
+
     if package_lock.is_file():
         lock = json.loads(package_lock.read_text(encoding="utf-8"))
         root_package = lock.get("packages", {}).get("", {})
@@ -434,6 +463,14 @@ def main() -> int:
             failures.append("package-lock runtime dependencies differ from package.json")
         if root_package.get("devDependencies") != package.get("devDependencies"):
             failures.append("package-lock dev dependencies differ from package.json")
+        locked_cli = (
+            lock.get("packages", {}).get("node_modules/@tauri-apps/cli", {}).get("version")
+        )
+        if locked_cli != cli_pin:
+            failures.append(
+                "package-lock must resolve @tauri-apps/cli to the manifest pin"
+                f" {cli_pin!r}, got {locked_cli!r}"
+            )
 
     if cargo_lock.is_file():
         cargo_text = cargo_lock.read_text(encoding="utf-8")
@@ -469,6 +506,7 @@ def main() -> int:
     print("GUEST_UPDATER_PERMISSIONS=0")
     print("UPDATER_TRUST_CONFIG=DELTA_001_FAIL_CLOSED")
     print(f"UPDATER_PLUGIN_PIN={resolved_plugin_pin}")
+    print(f"TAURI_CLI_PIN={resolved_cli_pin}")
     print("INSTALL_RESTART_AUTHORITY=0")
     print("FILESYSTEM_MUTATION_PRIMITIVES=0")
     print("GENERIC_PROCESS_EXECUTION=0")

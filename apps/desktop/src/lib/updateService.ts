@@ -46,6 +46,7 @@ export const UPDATE_AVAILABILITY_REASONS = [
   "not_configured",
   "unsupported_platform",
   "bridge_unreachable",
+  "configured",
 ] as const;
 
 export type UpdateAvailabilityReason = (typeof UPDATE_AVAILABILITY_REASONS)[number];
@@ -61,7 +62,11 @@ export interface UpdateService {
   currentVersion(): string;
   /** Current release channel. Read-only observation. */
   currentChannel(): ReleaseChannel;
-  /** Whether an updater is usable at all in this build. */
+  /**
+   * Whether an updater is usable at all in this build. Not the same fact as
+   * "the backend answered": a build whose update trust root is absent has a
+   * perfectly reachable bridge that must never be reported as usable.
+   */
   availability(): UpdateAvailability;
   /** Bounded, redaction-safe status snapshot. */
   status(): UpdateStatus;
@@ -274,6 +279,17 @@ export class BridgedUpdateService implements UpdateAdmissionService {
     return this.#channel;
   }
 
+  /**
+   * A reachable bridge and a configured updater are two different facts, and
+   * only the second one makes updates usable.
+   *
+   * The client cannot read the trust root — it is Rust-side configuration and is
+   * never named in this file — so the snapshot it was handed is its only
+   * evidence. `unavailable` is what a build with no trust root reports, including
+   * on a plain status read, which is why the other states may count as
+   * configured: the bridge will not grant `idle` unless its own configuration
+   * resolved.
+   */
   public availability(): UpdateAvailability {
     if (!this.#bridgeReachable) {
       return { available: false, reason: "bridge_unreachable" };
@@ -281,7 +297,7 @@ export class BridgedUpdateService implements UpdateAdmissionService {
     if (this.#snapshot.state === "unavailable") {
       return { available: false, reason: "not_configured" };
     }
-    return { available: true, reason: "not_configured" };
+    return { available: true, reason: "configured" };
   }
 
   public status(): UpdateStatus {

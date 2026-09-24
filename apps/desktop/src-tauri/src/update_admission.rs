@@ -128,6 +128,20 @@ const NO_ADMITTED_CANDIDATE: Denial = Denial::new(
     "no checked update candidate is held by this build",
 );
 
+/// The two refusals whose entire subject is which candidate owns the slot.
+///
+/// They are the only codes a slot that already owns a candidate may swallow:
+/// neither is evidence that the held candidate, or the bytes verified for it,
+/// became invalid. Every other refusal reports something that actually went
+/// wrong, and has to be recorded.
+fn is_slot_occupancy_refusal(refusal: &Refusal) -> bool {
+    let code = match refusal {
+        Refusal::Unavailable(_) => return false,
+        Refusal::Failed(denial) => denial.code,
+    };
+    code == CANDIDATE_ALREADY_ADMITTED.code || code == NO_ADMITTED_CANDIDATE.code
+}
+
 const PLATFORM_UNSUPPORTED: Denial = Denial::new(
     "service_unavailable",
     "this build cannot determine the updater platform identity",
@@ -452,22 +466,36 @@ pub struct AuthenticityProof {
     pub verified_at_epoch_ms: u64,
 }
 
-/// The record of a verification that succeeded: the candidate that was admitted
-/// and the proof derived from the bytes the updater returned.
+/// The record of a verification that succeeded: the candidate that was admitted,
+/// the proof derived from the bytes the updater returned, and those bytes
+/// themselves.
+///
+/// R4 makes the bytes part of the owned candidate, not an implementation detail:
+/// `ready` promises an artifact that is present, verified and waiting, so the
+/// single pending candidate has to be the thing a later governed install consumes.
 #[derive(Debug, Clone)]
 pub struct VerifiedCandidate {
     pub admitted: AdmittedCandidate,
     pub proof: AuthenticityProof,
+    /// Signature-verified artifact bytes, retained in trusted Rust state only.
+    /// Nothing in this build writes them to a file, and the status wire has no
+    /// field they could be serialised into.
+    ///
+    /// No consumer exists yet by design: reading them out is the install slice,
+    /// which is separately governed authority. The field is the candidate the
+    /// `ready` state promises, so it has to survive the download even though this
+    /// build can only hold it.
+    #[allow(dead_code)]
+    pub bytes: Vec<u8>,
 }
 
 /// Hash verified bytes and bind them to the candidate that was checked.
 ///
 /// `artifact_sha256` covers exactly what the updater returned, so a later
-/// substitution cannot present different bytes under the same candidate name. The
-/// bytes themselves are not retained: this slice has no install authority, so
-/// holding a full artifact indefinitely would keep an unconsumed payload in
-/// memory and let `ready` age into a claim about bytes that were long since
-/// superseded. A future install must re-admit and re-verify.
+/// substitution cannot present different bytes under the same candidate name, and
+/// the retained payload is bound to the same `metadata_sha256` the proof carries.
+/// The bytes arrive here only after `Update::download` has verified the signature,
+/// so no unverified byte can enter the slot.
 pub fn admit_verified_bytes(
     admitted: &AdmittedCandidate,
     bytes: &[u8],
@@ -482,6 +510,7 @@ pub fn admit_verified_bytes(
             metadata_sha256: admitted.metadata_sha256.clone(),
             verified_at_epoch_ms,
         },
+        bytes: bytes.to_vec(),
     }
 }
 
@@ -620,6 +649,18 @@ impl UpdateAdmissionBridge {
         Self::snapshot_of(&inner)
     }
 
+    /// Whether the slot owns nothing: no candidate, no verified bytes, no
+    /// recorded refusal.
+    ///
+    /// A status read consults this to decide whether it may answer `idle` at all.
+    /// From the frontend's side "no attempt has happened yet" and "this build can
+    /// never attempt" look identical unless the read says otherwise, so `idle` has
+    /// to be earned by a configured trust root rather than granted by the absence
+    /// of an attempt.
+    pub fn holds_nothing(&self) -> Result<bool, Refusal> {
+        Ok(matches!(self.lock()?.held, Held::Empty))
+    }
+
     /// Admit exactly one candidate from a check the caller cannot steer.
     ///
     /// `announced` is projected from `update` by [`announced_of`], so the version,
@@ -639,9 +680,14 @@ impl UpdateAdmissionBridge {
 
     /// Claim the single pending-candidate slot, taking the handle that must be
     /// downloaded with it. A second admission attempt never replaces the first.
+    ///
+    /// A refused slot is the one state a check may take over: a refusal left no
+    /// candidate behind, so retrying is the only way a transient fault can ever
+    /// stop being the reported state. A candidate that is pending, in flight or
+    /// verified is a different thing, and nothing here replaces it.
     fn begin(&self, admitted: AdmittedCandidate, update: Option<Update>) -> Result<(), Refusal> {
         let mut inner = self.lock()?;
-        if !matches!(inner.held, Held::Empty) {
+        if !matches!(inner.held, Held::Empty | Held::Refused(_)) {
             return Err(Refusal::Failed(CANDIDATE_ALREADY_ADMITTED));
         }
         inner.held = Held::Admitted(admitted);
@@ -650,12 +696,18 @@ impl UpdateAdmissionBridge {
     }
 
     /// Take the admitted candidate so a concurrent call cannot act on it too.
+    ///
+    /// A candidate that is already in flight or already verified occupies the
+    /// slot, so the refusal names that fact rather than pretending nothing was
+    /// admitted.
     pub fn take_for_download(&self) -> Result<(AdmittedCandidate, Update), Refusal> {
         let mut inner = self.lock()?;
         let admitted = match &inner.held {
             Held::Admitted(candidate) => candidate.clone(),
-            Held::Verified(_) => return Err(Refusal::Failed(CANDIDATE_ALREADY_ADMITTED)),
-            _ => return Err(Refusal::Failed(NO_ADMITTED_CANDIDATE)),
+            Held::InFlight(_) | Held::Verified(_) => {
+                return Err(Refusal::Failed(CANDIDATE_ALREADY_ADMITTED));
+            }
+            Held::Empty | Held::Refused(_) => return Err(Refusal::Failed(NO_ADMITTED_CANDIDATE)),
         };
         let update = inner.update.take().ok_or(Refusal::Failed(NO_ADMITTED_CANDIDATE))?;
         inner.held = Held::InFlight(admitted.clone());
@@ -686,11 +738,36 @@ impl UpdateAdmissionBridge {
     }
 
     /// Remember a refusal so the next status read reports it rather than idle.
+    ///
+    /// Two claims have to survive this call, because a refusal says something
+    /// about the *attempt*, not always about the candidate:
+    ///
+    /// - A verified candidate is the strongest observation this bridge can make.
+    ///   A later attempt, however it failed, cannot demote the ready claim back to
+    ///   a failure and lose the bytes it verified.
+    /// - A refusal whose whole subject is that the slot is already spoken for
+    ///   (`candidate_already_admitted`, `no_admitted_candidate`) is not evidence
+    ///   against the held candidate. Swallowing it keeps the pending candidate and
+    ///   its updater handle intact, so a duplicate call is a no-op instead of a
+    ///   state-destroying one.
+    ///
+    /// A genuine fault (unreachable service, failed verification or download) does
+    /// replace a pending or in-flight slot, and releases its handle: the attempt
+    /// consumed that candidate, so reporting the failure and admitting a later
+    /// check is the honest sequence. Release is what keeps retry lawful —
+    /// [`UpdateAdmissionBridge::begin`] accepts an empty or refused slot and
+    /// nothing else.
     pub fn record(&self, refusal: Refusal) {
-        if let Ok(mut inner) = self.inner.lock() {
-            inner.held = Held::Refused(refusal);
-            inner.update = None;
+        let Ok(mut inner) = self.inner.lock() else { return };
+        if matches!(inner.held, Held::Verified(_)) {
+            return;
         }
+        let slot_is_occupied = !matches!(inner.held, Held::Empty | Held::Refused(_));
+        if slot_is_occupied && is_slot_occupancy_refusal(&refusal) {
+            return;
+        }
+        inner.held = Held::Refused(refusal);
+        inner.update = None;
     }
 
     fn lock(&self) -> Result<std::sync::MutexGuard<'_, BridgeInner>, Refusal> {
@@ -807,9 +884,26 @@ mod tests {
         pub fn hold_for_test(&self, admitted: AdmittedCandidate) -> Result<(), Refusal> {
             self.begin(admitted, None)
         }
+
+        /// Move the slot into the in-flight state a download owns it in, without
+        /// an `Update` handle.
+        ///
+        /// Same limitation as [`Self::hold_for_test`]: the handle only exists
+        /// inside the plugin crate. What is reachable this way is every guard that
+        /// depends on slot ownership rather than on a live request — which is what
+        /// the second-download and second-completion laws actually turn on.
+        pub fn begin_download_for_test(&self, admitted: AdmittedCandidate) {
+            let mut inner = self.inner.lock().expect("test bridge lock");
+            inner.held = Held::InFlight(admitted);
+            inner.update = None;
+        }
     }
 
     const TEST_ENDPOINT: &str = "https://release.example.invalid/{{target}}/{{arch}}/{{current_version}}";
+
+    /// Distinctive enough that a payload reaching any serialised surface is
+    /// visible in the failing assertion rather than in a hex dump.
+    const ARTIFACT_PAYLOAD: &[u8] = b"hive-signed-artifact-payload-must-not-leave-rust";
 
     /// Newer than any version this product is realistically going to ship as its
     /// canonical identity, and still inside the declared core bound.
@@ -873,6 +967,27 @@ mod tests {
         let mut keys: Vec<&str> = value.as_object().expect("wire status must be an object").keys().map(String::as_str).collect();
         keys.sort_unstable();
         keys
+    }
+
+    /// Collect every string a serialised status emits, at any depth, keys included.
+    /// Used to prove the wire carries no room for an artifact, not just that the
+    /// top-level object lacks an obvious field for one.
+    fn wire_strings(value: &Value, found: &mut Vec<String>) {
+        match value {
+            Value::String(text) => found.push(text.clone()),
+            Value::Array(items) => {
+                for item in items {
+                    wire_strings(item, found);
+                }
+            }
+            Value::Object(entries) => {
+                for (key, item) in entries {
+                    found.push(key.clone());
+                    wire_strings(item, found);
+                }
+            }
+            _ => {}
+        }
     }
 
     #[test]
@@ -1155,6 +1270,182 @@ mod tests {
         assert_eq!(value["candidateVersion"], NEWER);
         assert_eq!(value["error"], Value::Null);
         assert_eq!(value["authenticityProof"]["scheme"], ADMITTED_SCHEME);
+    }
+
+    #[test]
+    fn verified_candidate_retains_exactly_the_bytes_it_hashed() {
+        let admission = admitted(NEWER, "0.1.0");
+        let verified = admit_verified_bytes(&admission, ARTIFACT_PAYLOAD, 1_700_000_000_000);
+        assert_eq!(verified.bytes, ARTIFACT_PAYLOAD);
+        // The proof describes the payload the same record holds, under the same
+        // admitted identity — nothing else could be `ready`.
+        assert_eq!(verified.proof.artifact_sha256, hex_sha256(&verified.bytes));
+        assert_eq!(verified.proof.metadata_sha256, admission.metadata_sha256);
+        assert_eq!(verified.admitted.metadata_sha256, admission.metadata_sha256);
+        // Different bytes under one identity is exactly the substitution the
+        // retained hash exists to make visible.
+        let swapped = admit_verified_bytes(&admission, b"substituted-bytes", 1_700_000_000_000);
+        assert_ne!(swapped.proof.artifact_sha256, verified.proof.artifact_sha256);
+        assert_eq!(swapped.proof.metadata_sha256, verified.proof.metadata_sha256);
+        // One payload admitted under two candidates stays two separate bindings.
+        let renamed =
+            admit_verified_bytes(&admitted("999998.0.0", "0.1.0"), ARTIFACT_PAYLOAD, 1_700_000_000_000);
+        assert_eq!(renamed.proof.artifact_sha256, verified.proof.artifact_sha256);
+        assert_ne!(renamed.proof.metadata_sha256, verified.proof.metadata_sha256);
+    }
+
+    #[test]
+    fn ready_status_carries_a_binding_and_never_the_payload() {
+        let verified = admit_verified_bytes(&admitted(NEWER, "0.1.0"), ARTIFACT_PAYLOAD, 1_700_000_000_000);
+        let inner = BridgeInner {
+            held: Held::Verified(verified),
+            update: None,
+        };
+        let status = UpdateAdmissionBridge::snapshot_of(&inner).unwrap();
+        let value = serde_json::to_value(&status).unwrap();
+        assert_eq!(value["state"], "ready");
+        assert_eq!(value["authenticityProof"]["artifactSha256"], hex_sha256(ARTIFACT_PAYLOAD));
+        // The closed key set has no field an artifact could ride in, and every
+        // string the wire can emit stays inside the bounded vocabulary.
+        assert_eq!(wire_keys(&value).len(), 8);
+        assert_eq!(wire_keys(&value["authenticityProof"]).len(), 4);
+        let mut text = Vec::new();
+        wire_strings(&value, &mut text);
+        let payload = std::str::from_utf8(ARTIFACT_PAYLOAD).expect("test payload is utf-8");
+        assert!(
+            text.iter().all(|seen| !seen.contains(payload)),
+            "the verified payload reached the status wire"
+        );
+        assert!(
+            text.iter().all(|seen| seen.len() <= MAX_DETAIL_CHARS),
+            "an unbounded string reached the status wire"
+        );
+    }
+
+    #[test]
+    fn a_second_completion_cannot_replace_the_ready_candidates_bytes() {
+        let bridge = UpdateAdmissionBridge::new();
+        let candidate = admitted(NEWER, crate::PACKAGE_VERSION);
+        bridge.begin_download_for_test(candidate.clone());
+        let status = bridge
+            .complete_download(&candidate, ARTIFACT_PAYLOAD, 1_700_000_000_000)
+            .expect("the in-flight candidate may complete");
+        assert_eq!(status.state, "ready");
+        // The same candidate completing again is refused, and the held bytes are
+        // still the ones the first completion verified.
+        let refusal = bridge
+            .complete_download(&candidate, b"late-substitution", 1_700_000_000_001)
+            .err()
+            .expect("a ready candidate is not a slot waiting for other bytes");
+        assert_eq!(denial_of(refusal).code, "candidate_already_admitted");
+        let after = bridge.snapshot().unwrap();
+        assert_eq!(after.state, "ready");
+        assert_eq!(
+            after.authenticity_proof.expect("ready must still carry its proof").artifact_sha256,
+            hex_sha256(ARTIFACT_PAYLOAD)
+        );
+    }
+
+    #[test]
+    fn completion_only_binds_the_candidate_the_slot_owns() {
+        let bridge = UpdateAdmissionBridge::new();
+        let held = admitted(NEWER, crate::PACKAGE_VERSION);
+        let other = admitted("999998.0.0", crate::PACKAGE_VERSION);
+        bridge.begin_download_for_test(held.clone());
+        let refusal = bridge
+            .complete_download(&other, ARTIFACT_PAYLOAD, 1_700_000_000_000)
+            .err()
+            .expect("an unclaimed candidate cannot complete");
+        assert_eq!(denial_of(refusal).code, "no_admitted_candidate");
+        let value = serde_json::to_value(bridge.snapshot().unwrap()).unwrap();
+        assert_eq!(value["state"], "available");
+        assert_eq!(value["candidateVersion"], NEWER);
+        assert_eq!(value["authenticityProof"], Value::Null);
+        // The attempt did not consume the in-flight candidate either.
+        assert_eq!(
+            denial_of(bridge.complete_download(&other, ARTIFACT_PAYLOAD, 1_700_000_000_000).err().unwrap()).code,
+            "no_admitted_candidate"
+        );
+    }
+
+    #[test]
+    fn a_duplicate_check_leaves_the_pending_candidate_held() {
+        let bridge = UpdateAdmissionBridge::new();
+        let first = admitted(NEWER, crate::PACKAGE_VERSION);
+        let second = admitted("999998.0.0", crate::PACKAGE_VERSION);
+        bridge.hold_for_test(first.clone()).expect("an empty slot admits");
+        let refusal = bridge
+            .hold_for_test(second)
+            .err()
+            .expect("a held candidate cannot be replaced");
+        // This is the exact sequence a second `check_for_update` produces, refusal
+        // report included: the duplicate must not cost the build its candidate.
+        bridge.record(refusal);
+        let value = serde_json::to_value(bridge.snapshot().unwrap()).unwrap();
+        assert_eq!(value["state"], "available");
+        assert_eq!(value["candidateVersion"], NEWER);
+        assert_eq!(value["error"], Value::Null);
+    }
+
+    #[test]
+    fn a_second_download_attempt_leaves_the_in_flight_candidate_alone() {
+        let bridge = UpdateAdmissionBridge::new();
+        let candidate = admitted(NEWER, crate::PACKAGE_VERSION);
+        bridge.begin_download_for_test(candidate.clone());
+        let refusal = bridge.take_for_download().err().expect("the slot is already in flight");
+        assert_eq!(denial_of(refusal).code, "candidate_already_admitted");
+        bridge.record(refusal);
+        let value = serde_json::to_value(bridge.snapshot().unwrap()).unwrap();
+        assert_eq!(value["state"], "available");
+        assert_eq!(value["candidateVersion"], NEWER);
+    }
+
+    #[test]
+    fn a_verified_candidate_survives_every_later_refusal() {
+        let bridge = UpdateAdmissionBridge::new();
+        let candidate = admitted(NEWER, crate::PACKAGE_VERSION);
+        bridge.begin_download_for_test(candidate.clone());
+        bridge.complete_download(&candidate, ARTIFACT_PAYLOAD, 1_700_000_000_000).expect("ready");
+        let refusal = bridge.take_for_download().err().expect("a ready candidate cannot be re-downloaded");
+        bridge.record(refusal);
+        bridge.record(Refusal::Unavailable(SERVICE_UNREACHABLE));
+        let value = serde_json::to_value(bridge.snapshot().unwrap()).unwrap();
+        // `ready` claims bytes exist and were verified. A later attempt failing for
+        // its own reasons cannot make that claim false, so it cannot erase them.
+        assert_eq!(value["state"], "ready");
+        assert_eq!(value["authenticityProof"]["artifactSha256"], hex_sha256(ARTIFACT_PAYLOAD));
+    }
+
+    #[test]
+    fn a_failed_download_releases_the_slot_so_a_later_check_is_a_real_retry() {
+        let bridge = UpdateAdmissionBridge::new();
+        bridge.begin_download_for_test(admitted(NEWER, crate::PACKAGE_VERSION));
+        // A genuine fault is not a slot-occupancy refusal: the attempt consumed
+        // this candidate, so the failure is what the build reports.
+        bridge.record(Refusal::Failed(DOWNLOAD_FAILED));
+        let value = serde_json::to_value(bridge.snapshot().unwrap()).unwrap();
+        assert_eq!(value["state"], "failure");
+        assert_eq!(value["error"]["code"], "download_failed");
+        // And because the refusal released the slot, the next check is a lawful
+        // retry rather than a permanent `candidate_already_admitted`.
+        bridge
+            .hold_for_test(admitted("999998.0.0", crate::PACKAGE_VERSION))
+            .expect("a refusal is retryable by a later check");
+        assert_eq!(bridge.snapshot().unwrap().state, "available");
+    }
+
+    #[test]
+    fn an_unreachable_service_is_reported_until_a_retrying_check_replaces_it() {
+        let bridge = UpdateAdmissionBridge::new();
+        assert!(bridge.holds_nothing().expect("fresh bridge"));
+        bridge.record(Refusal::Unavailable(SERVICE_UNREACHABLE));
+        let value = serde_json::to_value(bridge.snapshot().unwrap()).unwrap();
+        assert_eq!(value["state"], "unavailable");
+        assert_eq!(value["error"]["code"], "service_unavailable");
+        assert!(!bridge.holds_nothing().expect("a refusal is an observation the bridge keeps"));
+        bridge.hold_for_test(admitted(NEWER, crate::PACKAGE_VERSION)).expect("retry after refusal");
+        assert!(!bridge.holds_nothing().expect("the slot is now held"));
+        assert_eq!(bridge.snapshot().unwrap().state, "available");
     }
 
     #[test]

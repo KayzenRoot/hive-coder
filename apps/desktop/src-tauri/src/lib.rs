@@ -725,7 +725,8 @@ fn get_runtime_status_envelope(webview_window: tauri::WebviewWindow) -> Result<S
     runtime_status_supervisor::query_runtime_status_envelope()
 }
 
-/// Read what trusted update state currently holds. Performs no request.
+/// Read what trusted update state currently holds. Performs no request; the only
+/// thing it consults is this build's own configuration.
 #[tauri::command]
 async fn get_update_status(
     app: tauri::AppHandle,
@@ -765,8 +766,26 @@ async fn download_update_candidate(
     perform_update_download(&app).await
 }
 
+/// Read the bridge without performing a request, and without letting an absent
+/// trust root look like a configured updater that is merely waiting.
+///
+/// A slot that owns nothing would otherwise answer `idle`, which is the same
+/// observation a build with a real endpoint and no announcement produces. Only
+/// here does that matter: `idle` is the one state a frontend may read as "the
+/// updater is reachable and has nothing to show yet", so it has to be earned by
+/// the configuration resolving, not granted by nobody having asked yet.
 fn bounded_snapshot(app: &tauri::AppHandle) -> Result<WireStatus, String> {
-    app.state::<UpdateAdmissionBridge>()
+    let bridge = app.state::<UpdateAdmissionBridge>();
+    if bridge.holds_nothing().map_err(|_| "update state is unavailable".to_owned())? {
+        let probe = match probe_from_config(app.config()) {
+            Ok(probe) => probe,
+            Err(refusal) => return report_refusal(app, refusal),
+        };
+        if let Err(refusal) = resolve_trust(&probe, PACKAGE_VERSION) {
+            return report_refusal(app, refusal);
+        }
+    }
+    bridge
         .snapshot()
         .map_err(|_| "update state is unavailable".to_owned())
 }
