@@ -1,12 +1,13 @@
 # HCODER-WO-0027 — Evidence Bundle
 
-**Status:** IMPLEMENTATION CANDIDATE — TECHNICAL LANE GREEN ON THE LOCAL HOST, NOT PUSHED, NO HOSTED RECEIPT EXISTS
+**Status:** IMPLEMENTATION CANDIDATE — RECONCILED ONTO THE DELTA-002 EXACT SOURCE, LOCAL LANES GREEN, PUBLISHED AS A DRAFT PR, NOT MERGED
 **Issue:** #89
 **Slice:** HCODER-DIST-001D
 **Decision:** `DEC-031` — PROPOSED / NOT CANONICAL. Nothing in this bundle promotes it.
 **Canonical base at prebuild:** `5d97df6cf2f69a35d14af140e28088a7659eff7a`
+**Exact source for this run:** `a9b48bce43fcc2c1a14b70036ed4555f52ba3537` — `origin/main` after `HCODER-WO-0027: correct executor base after CR-001`, verified by `git fetch origin --prune` before any edit, which is the handoff's stop-before-editing condition. It is not triggered, so implementation continues on that source.
 
-> **What this bundle is.** A record of what the repository now contains and of what was proven on one Windows host. No sentence here is evidence that an update endpoint, a signing key pair, a publisher, a certificate or a runner exists. Every hosted row is `NOT RUN`, because this round was deliberately not pushed; a receipt for a head that does not exist yet would be the first false statement in this file.
+> **What this bundle is.** A record of what the repository now contains and of what was proven on one Windows host. No sentence here is evidence that an update endpoint, a signing key pair, a publisher, a certificate or a runner exists. Hosted receipts are not duplicated into this file at all, following the `HCODER-WO-0026` rule that a mutable run identifier inside a frozen document is how a bundle starts lying after its head moves: the four workflow runs and their per-job status are recorded in the Draft PR thread and in Issue `#89`, each bound to the exact head they measured.
 
 ## Prebuild facts
 - CP-0026 / DEC-030 canonical and sealed.
@@ -18,9 +19,9 @@
 - no updater signing key/public production trust configuration is claimed.
 
 ## Evidence slots for executor
-- **start SHA:** `e5cfe3267f968d80cc3c4dc91cb6acf54ee7eb80` (`feat/HCODER-WO-0027-tauri-updater`, i.e. Delta-001 `#91` merged).
-- **final SHA:** the commit that carries this bundle. Resolve it with `git rev-parse HEAD` on that branch; it is written before the commit exists, so no SHA is asserted here, and no hosted run has measured any head of this branch.
-- **changed files:** 11 — new `apps/desktop/src-tauri/src/update_admission.rs`; modified `apps/desktop/src-tauri/{Cargo.toml,Cargo.lock,src/lib.rs,tauri.conf.json}`, `apps/desktop/src/{contracts/updateState.ts,contracts/updateState.test.ts,lib/desktopBridge.ts,lib/updateService.ts,lib/updateService.test.ts}`, `tools/desktop/security_gate.py`. `apps/desktop/src-tauri/gen/` and `src-tauri/icons/` are generated locally and are deliberately untracked and unstaged.
+- **start SHA:** `a9b48bce43fcc2c1a14b70036ed4555f52ba3537` for the reconciled branch. The work itself began one commit earlier, on `e5cfe3267f968d80cc3c4dc91cb6acf54ee7eb80` (Delta-001 `#91` merged); see *Source-truth reconciliation onto Delta-002* for how the earlier head was preserved rather than redone.
+- **final SHA:** not asserted here. This bundle is carried by the branch tip, and a SHA written into a frozen document goes stale the moment a commit follows it. The candidate head, the four hosted runs measured against it and the review state are recorded in the Draft PR and Issue `#89`, each bound to the exact head it measured.
+- **changed files:** 12 — new `apps/desktop/src-tauri/src/update_admission.rs` and this bundle; modified `apps/desktop/src-tauri/{Cargo.toml,Cargo.lock,src/lib.rs,tauri.conf.json}`, `apps/desktop/src/{contracts/updateState.ts,contracts/updateState.test.ts,lib/desktopBridge.ts,lib/updateService.ts,lib/updateService.test.ts}`, `tools/desktop/security_gate.py`. Nothing under `docs/project-brain/`, no workflow, no capability file, no `package.json`/`package-lock.json`. `apps/desktop/src-tauri/gen/` and `src-tauri/icons/` are generated locally and are deliberately untracked and unstaged.
 - **selected updater crate:** `tauri-plugin-updater = "=2.12.0"` (exact pin, default features `rustls-tls`, `system-proxy`, `zip` retained).
 - **selected Tauri CLI:** **unchanged** — `@tauri-apps/cli` stays at `2.11.4`, `tauri` crate at `=2.11.5`, `tauri-build` at `=2.6.3`. Not bumping it is a blocker, not a decision: see *The signed-version gap*.
 - **upstream signed-version source:** `tauri-apps/tauri` `crates/tauri-cli/src/helpers/updater_signature.rs` — present with the `\tversion:` append at tag `@tauri-apps/cli-v2.11.5`, absent at `@tauri-apps/cli-v2.11.4`; consumer is `tauri-apps/plugins-workspace` `plugins/updater/src/config.rs` at tag `updater-v2.12.0` (`require_signed_version` line 135, `allow_downgrades` line 148) and `src/updater.rs` `verify_signature` → `verify_signed_version` → `signed_version` (lines ~1529–1606).
@@ -28,10 +29,10 @@
 - **new command set:** `get_update_status`, `check_for_update`, `download_update_candidate` — three, argument-free, registered in `generate_handler![]` and reachable only through three named bindings in `desktopBridge.ts`.
 - **capability diff:** none. `capabilities/desktop-read-only.json` is byte-identical to its prebuild content with `permissions: []`.
 - **lockfile diff:** `Cargo.lock` 432 → 483 packages (+51, `tauri-plugin-updater` and its `reqwest`/`rustls`/`minisign`/`zip` graph plus the four direct pins `semver =1.0.28`, `serde_json =1.0.151`, `sha2 =0.10.9`, `tauri-plugin-updater =2.12.0`). No JS lockfile changed.
-- **focused tests:** Rust `cargo test --locked` **32 passed / 0 failed**, of which 19 are new `update_admission` cases over the 13 the crate had at the base. Desktop `vitest run` **127 passed / 0 failed** across 9 files; `contracts/updateState.test.ts` went 39 → 40 cases and `lib/updateService.test.ts` 13 → 26, so +14 with no case deleted — several existing cases were retargeted to the DEC-031 law, and each rewrite is described in *Contract law added* below.
+- **focused tests:** Rust `cargo test --locked` **33 passed / 0 failed**, of which 20 are new `update_admission` cases over the 13 the crate had at the base. Desktop `vitest run` **127 passed / 0 failed** across 9 files; `contracts/updateState.test.ts` went 39 → 40 cases and `lib/updateService.test.ts` 13 → 26, so +14 with no case deleted — several existing cases were retargeted to the DEC-031 law, and each rewrite is described in *Contract law added* below.
 - **security gate:** `DESKTOP_SECURITY_GATE=PASS` with `TAURI_COMMANDS=check_for_update,choose_workspace,download_update_candidate,get_desktop_snapshot,get_runtime_status_envelope,get_update_status`, `FRONTEND_INVOKES=6`, `CAPABILITY_PERMISSIONS=0`, `UPDATE_COMMAND_ARGS=0`, `UPDATE_RAW_DECODER=STRICT`, `GUEST_UPDATER_PERMISSIONS=0`, `UPDATER_TRUST_CONFIG=DELTA_001_FAIL_CLOSED`, `UPDATER_PLUGIN_PIN=2.12.0`, `INSTALL_RESTART_AUTHORITY=0`, `FILESYSTEM_MUTATION_PRIMITIVES=0`, `GENERIC_PROCESS_EXECUTION=0`, `LOCKFILES=COMMITTED`.
 - **version drift:** `VERSION_DRIFT=LOCKED`, canonical source `apps/desktop/src-tauri/tauri.conf.json:0.1.0`, mirrors `Cargo.toml:0.1.0` and `package.json:0.1.0`.
-- **Rust tests/check:** `cargo check --locked --all-targets` clean, zero warnings; `cargo audit --no-fetch` exit 0 with **7 allowed warnings**, and the same command against `git show HEAD:…/Cargo.lock` reports the **same 7** (`glib` unsound, `proc-macro-error` + five `unic-*` unmaintained) — so the +51 packages add no finding.
+- **Rust tests/check:** `cargo check --locked --all-targets` clean, zero warnings — and that is the command the zero-warning claim rests on. `cargo test --locked` additionally emits one MSVC linker line (`Criando biblioteca …` / `link.exe` stdout) on this host while building the test binary; it is the toolchain announcing an output file, not a compiler diagnostic, and it is not counted as a warning either way. `cargo audit --no-fetch` exit 0 with **7 allowed warnings**, and the same command against `git show HEAD:…/Cargo.lock` reports the **same 7** (`glib` unsound, `proc-macro-error` + five `unic-*` unmaintained) — so the +51 packages add no finding.
 - **web tests/typecheck/build:** `npm run typecheck` clean; `npx vitest run` 127/127; `npm run build:web` builds (`dist/assets/index-*.js 237.52 kB`).
 - **npm audit:** `found 0 vulnerabilities`.
 - **Governance run:** NOT RUN — this branch was not pushed, so no Actions run exists for any head of it.
@@ -41,6 +42,17 @@
 - **blockers:** the signed-version gap below; the local `tests/runtime` git-stage lane cannot run here (see *Local lanes that did not run*); no trust data exists by design, so no real check/download has ever executed.
 - **HIVE refresh:** NOT PERFORMED — `no hive binary` on this host and no generated knowledge for the workspace, so nothing in this bundle rests on a HIVE card. Recorded as an unmet deliverable rather than simulated.
 - **proposed checkpoint delta:** see *Proposed checkpoint delta* at the end of this file. Nothing is minted here.
+
+## Source-truth reconciliation onto Delta-002
+
+Implementation of this Work Order ran in two pieces, and the seam is recorded rather than smoothed over.
+
+- The code was written on `e5cfe3267f968d80cc3c4dc91cb6acf54ee7eb80`, the head Delta-001 produced, and was committed there. That is the head every local gate in *Verification executed locally* was first measured against.
+- `a9b48bce43fcc2c1a14b70036ed4555f52ba3537` then became `origin/main`: `HCODER-WO-0027: correct executor base after CR-001`, merging PR `#92`. Its whole diff is `.engineering/context-locks/HCODER-WO-0027.md` and `.engineering/prebuilt/HCODER-WO-0027-EXECUTOR-BRIEF.md` — verified with `git diff --name-only e5cfe32 a9b48bc`. Neither path is one this implementation touches, and neither carries a product, runtime, trust, dependency, workflow or test-contract change, so Delta-002 grants no new authority and unlocks nothing beyond what Delta-001 already did.
+- Reconciliation moved the branch instead of redoing it: local `main` was fast-forwarded to the verified `a9b48bc` and the feature branch rebased onto it. No reset, clean, discard, force-push or history rewrite was used, and no local work was dropped. Reading Delta-002 *before* editing is what the handoff requires, because an executor that starts from a superseded source cannot know which lock delta governs it.
+- **Every gate was then re-measured on the rebased head** (see *Verification executed locally*). A commit is not evidence, but it does invalidate receipts: the pre-rebase numbers below are reproduced from the post-rebase tree, not carried forward.
+
+The practical consequence for the reviewer is that the candidate's ancestry contains both the Delta-001 trust-node unlock and the Delta-002 source correction, so the Context Lock it must be read against is the one at its own tip.
 
 ## What the repository now contains
 
@@ -84,7 +96,7 @@ When HCODER-DIST-001E governs install authority, `ready → installing` and `ins
 
 | What | Exact command | Result |
 | --- | --- | --- |
-| Rust admission + shell lane | `cargo test --locked` | `32 passed; 0 failed` |
+| Rust admission + shell lane | `cargo test --locked` | `33 passed; 0 failed` (plus one MSVC linker output notice, not a diagnostic) |
 | Rust build, all targets | `cargo check --locked --all-targets` | clean, no warnings |
 | Rust advisories, this lock | `cargo audit --no-fetch` | exit 0, 7 allowed warnings |
 | Rust advisories, base lock | `cargo audit --no-fetch -f <git show HEAD:…/Cargo.lock>` | exit 0, the **same** 7 warnings |
@@ -118,6 +130,35 @@ A green gate proves nothing if it cannot fail. Ten single-line mutations were ap
 | drop `deny_unknown_fields` from the trust probe | DETECTED — updater admission guard missing |
 
 The TS lane carries the same non-vacuity duty from the other side: `exposesForbiddenMember` is asserted against a fixture that *does* expose `installUpdate`, the `BridgedUpdateService` suite drives a fake bridge that can answer with a valid `ready`, an unadmitted proof, another client's identity, install progress, a snapshot with a ride-along key and a transport failure, and asserts the service caches, refuses or faults exactly as declared. Because that backend is fake, every `ready` in those tests is contract behaviour against a simulated authority — it is not, and must not be read as, evidence that a real artifact was verified.
+
+## Acceptance-map self-audit (U1–U20)
+
+Each property in `.engineering/prebuilt/HCODER-WO-0027-ACCEPTANCE-SECURITY-MAP.md` was walked against the named proof column, and the audit found one real gap: **U6 had no test that the signed-version refusals map into the bounded vocabulary** — `download_refusal()` classified `MissingSignedVersion` and `SignedVersionMismatch`, but nothing asserted it, so the CRITICAL binding property rested on reading the match arms. `upstream_faults_map_to_bounded_denials_and_never_forward_text` closes that, and doubles as the U18 test that a hostile endpoint string cannot be echoed. The table records the state after that fix.
+
+| U | Proof in this tree | Verdict |
+| --- | --- | --- |
+| U1 Rust-only | exact `tauri-plugin-updater = "=2.12.0"` in `Cargo.toml`; gate forbids `@tauri-apps/plugin-updater` in frontend source and any `updater` capability permission (`GUEST_UPDATER_PERMISSIONS=0`) | PROVEN_LOCALLY |
+| U2 Single bridge | `FRONTEND_INVOKES=6`, all in `desktopBridge.ts`, against the exact allowlist | PROVEN_LOCALLY |
+| U3 Argument-free | `UPDATE_COMMAND_ARGS=0` plus `ARGUMENT_FREE_COMMANDS` signature scan; nothing at the Rust entry points accepts a payload | PROVEN_LOCALLY |
+| U4 No placeholder trust | `shipped_configuration_is_the_fail_closed_delta_001_node`, `absent_updater_node_is_a_malformed_configuration`, `probe_rejects_unknown_missing_and_alias_ed_keys`; blank-key and empty-endpoint arms reach `service_unavailable` before any request in `unsafe_or_relaxed_controls_are_refused_as_unavailable` | PROVEN_LOCALLY |
+| U5 HTTPS only | `only_https_origin_endpoints_are_trusted`, `unsafe_or_relaxed_controls_are_refused_as_unavailable`; `dangerous*` pinned false in config **and** probe | PROVEN_LOCALLY |
+| U6 Signed-version binding | `requireSignedVersion: true` written and gate-enforced both ways; `MIN_UPDATER_PLUGIN_VERSION=(2,12,0)` because 2.11.x parses the key away; two `const _: fn(&Config) -> bool` field-surface pins; refusal mapping now covered | PARTLY — the *refusal* is proven, a *successful* verified download is not demonstrable on the pinned CLI. See the gap section |
+| U7 No downgrade | `allowDowngrades: false` in config and probe; `eligibility_is_same_channel_and_strictly_newer_only`, `prerelease_ordering_cannot_be_bypassed_by_string_length`, `version_profile_matches_the_shared_parity_vectors` (DEC-028) | PROVEN_LOCALLY for the Hive law; upstream comparator unexercisable, same reason as U6 |
+| U8 Same channel | `channel_is_derived_from_the_installed_version_shape`, cross-channel arm of the eligibility test | PROVEN_LOCALLY |
+| U9 Strictly newer | equal/older arms of `eligibility_is_same_channel_and_strictly_newer_only` | PROVEN_LOCALLY |
+| U10 Signature before ready | `admitted_without_handle_and_ready_without_download_both_refuse`, `proof_binds_artifact_and_metadata_without_exposing_trust_data`; `PROOF_GATED_TRANSITIONS` restricts `verifying → ready` to an admitted proof | PROVEN_LOCALLY |
+| U11 Candidate identity binding | `candidate_identity_substitution_is_refused`, `metadata_identity_is_deterministic_and_binds_every_input`; the `Update` handle is stored only beside the identity it was admitted for | PROVEN_LOCALLY |
+| U12 Verified-bytes custody | `pending_slot_holds_exactly_one_candidate`; `FILESYSTEM_MUTATION_PRIMITIVES=0`; no staging path exists. Bytes are hashed then dropped, which is the recorded pack deviation | PROVEN_LOCALLY |
+| U13 Proof non-authority | `the_bridge_never_asserts_install_progress`; TS "never lets install progress enter product state, whatever the backend claims"; `install_authority_not_governed` refuses before the proof gate | PROVEN_LOCALLY |
+| U14 No install/restart invoke | 6-command allowlist, `INSTALL_RESTART_AUTHORITY=0`, `PRODUCTION_RUST_INSTALL_PRIMITIVES` and `FRONTEND_FORBIDDEN_UPDATE_TEXT` scans; mutation case in the non-vacuity table | PROVEN_LOCALLY |
+| U15 No generic network surface | `status_wire_carries_exactly_the_contract_key_set` + `wire_keys` (closed `WireStatus`, no `url`/`signature`/header field exists to arrive in); no generic HTTP plugin; argument-free commands | PROVEN_LOCALLY |
+| U16 Package law preserved | `bundle.active: false` unchanged and gate-checked; the six-target matrix itself is a hosted claim | PARTLY — needs Native Package Matrix on the exact head |
+| U17 Existing authority preserved | `capabilities/desktop-read-only.json` byte-identical with `permissions: []`; `CAPABILITY_PERMISSIONS=0`; gate green | PROVEN_LOCALLY |
+| U18 Error redaction | `Denial { code: &'static str, detail: &'static str }` makes echoing unrepresentable; `every_refusal_uses_the_closed_vocabulary_and_safe_detail`; the new fault test asserts a hostile URL never appears in a detail | PROVEN_LOCALLY |
+| U19 Platform truth | `expected_platform()` (updater `Update::target` shape) kept deliberately distinct from `platform_binding()` (`{os}-{arch}`); no arm reports install or restart success on any platform | PROVEN_LOCALLY |
+| U20 Exact-head evidence | four workflows green on one SHA | NOT SATISFIED LOCALLY — only hosted runs can close it, and they measure the pushed head, not this commit's ancestors |
+
+Nothing in the right-hand column is a PASS for a property the map marks CRITICAL in a live sense: U6, U16 and U20 are stated as partial or unsatisfied, because the toolchain pin and the absence of hosted evidence make that the honest verdict. Per the map's closing line, no finding above is closed by prose — every PROVEN_LOCALLY row names a test function or a gate counter that the non-vacuity campaign shows can fail.
 
 ## Claims explicitly unavailable at prebuild
 

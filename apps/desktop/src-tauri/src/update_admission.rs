@@ -1248,6 +1248,49 @@ mod tests {
     }
 
     #[test]
+    fn upstream_faults_map_to_bounded_denials_and_never_forward_text() {
+        use tauri_plugin_updater::Error;
+
+        // Where an upstream message would carry remote text. A denial's detail is
+        // `&'static str`, so a forwarded endpoint could not even compile; this
+        // asserts the mapping rather than trusting it.
+        let hostile = "https://release.invalid/a";
+        let verification_faults = [
+            Error::MissingSignedVersion,
+            Error::SignedVersionMismatch {
+                signed: hostile.to_owned(),
+                announced: "0.9.9".to_owned(),
+            },
+            Error::SignatureUtf8(hostile.to_owned()),
+        ];
+        for fault in verification_faults {
+            let denial = denial_of(download_refusal(&fault));
+            assert_eq!(denial, VERIFICATION_FAILED, "{fault}");
+            assert!(detail_is_contract_safe(denial.detail), "{fault}");
+            assert!(!denial.detail.contains("release.invalid"), "{fault}");
+        }
+
+        // Everything that is not a signature fault is a transport failure, never
+        // a silently-admitted release.
+        for fault in [
+            Error::Network(hostile.to_owned()),
+            Error::Io(std::io::Error::other(hostile.to_owned())),
+            Error::ReleaseNotFound,
+        ] {
+            let denial = denial_of(download_refusal(&fault));
+            assert_eq!(denial, DOWNLOAD_FAILED, "{fault}");
+        }
+
+        // A failed check never reached a candidate, so it reports unavailability
+        // rather than pretending a release was refused.
+        for fault in [Error::EmptyEndpoints, Error::ReleaseNotFound] {
+            let refusal = check_refusal(&fault);
+            assert!(matches!(refusal, Refusal::Unavailable(_)), "{fault}");
+            assert_eq!(denial_of(refusal).code, "service_unavailable", "{fault}");
+        }
+    }
+
+    #[test]
     fn the_bridge_never_asserts_install_progress() {
         // `installing` and `success` need the separately governed install
         // authority, so no observation this module can produce may claim them.
