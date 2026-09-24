@@ -1,14 +1,23 @@
 /**
  * Hive-owned UpdateService boundary (HCODER-WO-0024 / HCODER-DIST-001A).
  *
- * This is the seam that keeps any future Tauri updater implementation detail out
- * of core/product logic. Product code depends on this interface, never on an
+ * This is the seam that keeps any Tauri updater implementation detail out of
+ * core/product logic. Product code depends on this interface, never on an
  * updater plugin, endpoint, HTTP client or installer.
  *
- * The production implementation here is deliberately INERT and fail-closed: it
- * can report the current version and channel and evaluate pure contract law, and
- * it can do nothing else. It performs no network request, download, install,
- * restart, signature check, release call, process spawn or filesystem mutation.
+ * Two implementations exist on purpose:
+ *
+ * - `InertUpdateService` is the deliberately fail-closed DEC-028 boundary. It
+ *   performs no network request, download, install, restart, signature check,
+ *   release call, process spawn or filesystem mutation, and it is what a build
+ *   without a trusted update backend runs on.
+ * - `BridgedUpdateService` is the HCODER-WO-0027 / DEC-031 adapter. It forwards
+ *   exactly three argument-free operations — read status, check, download and
+ *   verify — to a named backend bridge, and it admits nothing else. It still
+ *   performs no install, restart, publication or filesystem mutation, and it
+ *   accepts no caller-supplied endpoint, key, version, channel, target or
+ *   comparator: a snapshot that fails contract law, or that disagrees with this
+ *   client's own version/channel identity, is discarded rather than displayed.
  */
 
 import {
@@ -36,6 +45,7 @@ export const UPDATE_AVAILABILITY_REASONS = [
   "inert_this_slice",
   "not_configured",
   "unsupported_platform",
+  "bridge_unreachable",
 ] as const;
 
 export type UpdateAvailabilityReason = (typeof UPDATE_AVAILABILITY_REASONS)[number];
@@ -88,6 +98,29 @@ export class UpdateServiceConfigurationError extends Error {
 }
 
 /**
+ * A service identity is one value, not two independent fields: a version that is
+ * individually valid but does not belong to the configured channel is rejected
+ * here, because a client that reports `beta` while running `0.1.0` would compute
+ * eligibility against the wrong release line.
+ */
+function admitServiceIdentity(options: UpdateServiceOptions): {
+  readonly version: string;
+  readonly channel: ReleaseChannel;
+} {
+  if (!isValidVersion(options.currentVersion)) {
+    throw new UpdateServiceConfigurationError("malformed_version");
+  }
+  const channel = options.currentChannel ?? DEFAULT_RELEASE_CHANNEL;
+  if (!isReleaseChannel(channel)) {
+    throw new UpdateServiceConfigurationError("unknown_channel");
+  }
+  if (!versionMatchesChannel(options.currentVersion, channel)) {
+    throw new UpdateServiceConfigurationError("version_channel_mismatch");
+  }
+  return { version: options.currentVersion, channel };
+}
+
+/**
  * Inert production UpdateService.
  *
  * It reports immutable configuration, evaluates contract law, and exposes no
@@ -105,18 +138,9 @@ export class InertUpdateService implements UpdateService {
   readonly #channel: ReleaseChannel;
 
   public constructor(options: UpdateServiceOptions) {
-    if (!isValidVersion(options.currentVersion)) {
-      throw new UpdateServiceConfigurationError("malformed_version");
-    }
-    const channel = options.currentChannel ?? DEFAULT_RELEASE_CHANNEL;
-    if (!isReleaseChannel(channel)) {
-      throw new UpdateServiceConfigurationError("unknown_channel");
-    }
-    if (!versionMatchesChannel(options.currentVersion, channel)) {
-      throw new UpdateServiceConfigurationError("version_channel_mismatch");
-    }
-    this.#version = options.currentVersion;
-    this.#channel = channel;
+    const identity = admitServiceIdentity(options);
+    this.#version = identity.version;
+    this.#channel = identity.channel;
   }
 
   public currentVersion(): string {
@@ -161,15 +185,170 @@ export class InertUpdateService implements UpdateService {
 }
 
 /**
- * Structural assertion used by tests and gates: the inert service exposes no
- * mutating, transport or installation member. This is a contract property, not a
- * stylistic one — a future authorised updater must arrive through a governed
- * Work Order that widens this boundary explicitly.
+ * The three admitted operations, in the shape product code may depend on. Every
+ * one of them is argument-free and answers with a validated snapshot; there is
+ * deliberately no install, restart or rollback member.
+ */
+export interface UpdateAdmissionService extends UpdateService {
+  refreshStatus(): Promise<UpdateStatus>;
+  checkForUpdate(): Promise<UpdateStatus>;
+  downloadUpdateCandidate(): Promise<UpdateStatus>;
+}
+
+/**
+ * The honest local answer when no trusted snapshot exists: `unavailable`, with
+ * no candidate and no proof. `unavailable` is the one state the contract allows
+ * to carry an error without having attempted a transition, so a client that
+ * never reached its backend says so rather than posing as `idle`.
+ */
+function unknownTrustSnapshot(currentVersion: string, channel: ReleaseChannel): UpdateStatus {
+  const verdict = evaluateStatus({
+    contract: UPDATE_STATE_CONTRACT,
+    state: "unavailable",
+    channel,
+    currentVersion,
+    candidateVersion: null,
+    authenticityProof: null,
+    error: { code: "service_unavailable", detail: "no admissible update status was obtained" },
+    events: [],
+  });
+  if (!verdict.ok) {
+    // Only a broken identity could make this literal invalid, and the
+    // constructor already refused one.
+    throw new UpdateServiceConfigurationError("malformed_version");
+  }
+  return verdict.status;
+}
+
+/**
+ * The named, argument-free backend operations a trusted update bridge offers.
+ *
+ * This is an injection seam, not a generic command channel: the three members
+ * are fixed, they take no parameters, and the production implementation binds
+ * each one to its own literal Tauri command name in `desktopBridge.ts`.
+ */
+export interface UpdateStatusBridge {
+  readUpdateStatus(): Promise<UpdateStatus>;
+  requestUpdateCheck(): Promise<UpdateStatus>;
+  requestUpdateCandidateDownload(): Promise<UpdateStatus>;
+}
+
+export interface BridgedUpdateServiceOptions extends UpdateServiceOptions {
+  readonly bridge: UpdateStatusBridge;
+}
+
+/**
+ * Bounded network-capable adapter (HCODER-WO-0027 / DEC-031).
+ *
+ * It forwards the three admitted operations and caches the last snapshot the
+ * contract accepted. Everything it cannot do is the point: it cannot install,
+ * restart, publish or mutate anything, it cannot be told an endpoint, key,
+ * version, channel, target or comparator, and it cannot surface a backend
+ * snapshot that disagrees with this client's own version/channel identity.
+ *
+ * A bridge fault is reported as an honest `unavailable` snapshot rather than as
+ * a retained stale claim, so an unreachable backend can never be mistaken for a
+ * client that is merely idle.
+ */
+export class BridgedUpdateService implements UpdateAdmissionService {
+  public readonly boundary = UPDATE_SERVICE_BOUNDARY;
+  readonly #version: string;
+  readonly #channel: ReleaseChannel;
+  readonly #bridge: UpdateStatusBridge;
+  #snapshot: UpdateStatus;
+  #bridgeReachable = false;
+
+  public constructor(options: BridgedUpdateServiceOptions) {
+    const identity = admitServiceIdentity(options);
+    this.#version = identity.version;
+    this.#channel = identity.channel;
+    this.#bridge = options.bridge;
+    this.#snapshot = unknownTrustSnapshot(identity.version, identity.channel);
+  }
+
+  public currentVersion(): string {
+    return this.#version;
+  }
+
+  public currentChannel(): ReleaseChannel {
+    return this.#channel;
+  }
+
+  public availability(): UpdateAvailability {
+    if (!this.#bridgeReachable) {
+      return { available: false, reason: "bridge_unreachable" };
+    }
+    if (this.#snapshot.state === "unavailable") {
+      return { available: false, reason: "not_configured" };
+    }
+    return { available: true, reason: "not_configured" };
+  }
+
+  public status(): UpdateStatus {
+    return this.#snapshot;
+  }
+
+  public evaluateCandidate(candidateVersion: unknown): ChannelEligibility {
+    return evaluateEligibility(this.#version, candidateVersion, this.#channel);
+  }
+
+  public evaluateTransition(from: unknown, to: unknown, proof?: unknown): TransitionVerdict {
+    return evaluateTransition(from, to, proof);
+  }
+
+  public async refreshStatus(): Promise<UpdateStatus> {
+    return this.#admit(this.#bridge.readUpdateStatus());
+  }
+
+  public async checkForUpdate(): Promise<UpdateStatus> {
+    return this.#admit(this.#bridge.requestUpdateCheck());
+  }
+
+  public async downloadUpdateCandidate(): Promise<UpdateStatus> {
+    return this.#admit(this.#bridge.requestUpdateCandidateDownload());
+  }
+
+  async #admit(call: Promise<UpdateStatus>): Promise<UpdateStatus> {
+    const fault = (): UpdateStatus => {
+      this.#bridgeReachable = false;
+      this.#snapshot = unknownTrustSnapshot(this.#version, this.#channel);
+      return this.#snapshot;
+    };
+    let reported: unknown;
+    try {
+      reported = await call;
+    } catch {
+      return fault();
+    }
+    const verdict = evaluateStatus(reported);
+    if (!verdict.ok) {
+      return fault();
+    }
+    // Identity binding: the backend describes this running client, and a
+    // snapshot naming another version or channel is not this client's state.
+    if (verdict.status.currentVersion !== this.#version || verdict.status.channel !== this.#channel) {
+      return fault();
+    }
+    this.#bridgeReachable = true;
+    this.#snapshot = verdict.status;
+    return this.#snapshot;
+  }
+}
+
+/**
+ * Structural assertion used by tests and gates: no UpdateService may expose an
+ * install, restart, publication or state-advancing member. This is a contract
+ * property, not a stylistic one — installation remains behind the separately
+ * governed HCODER-DIST-001E authority.
+ *
+ * `check` and `download` were on this list while the boundary was inert.
+ * HCODER-WO-0027 admits them as named, argument-free transport operations on
+ * `BridgedUpdateService`, so asserting their absence would now assert the wrong
+ * law. `downloadAndInstall` stays forbidden: the compound operation is exactly
+ * the install authority this slice withholds.
  */
 export const FORBIDDEN_UPDATE_SERVICE_MEMBERS = [
-  "check",
   "checkNow",
-  "download",
   "downloadAndInstall",
   "install",
   "installUpdate",
