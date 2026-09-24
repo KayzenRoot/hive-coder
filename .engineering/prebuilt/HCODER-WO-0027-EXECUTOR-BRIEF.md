@@ -11,9 +11,9 @@
 Git/code/exact-head evidence beat HIVE if stale.
 
 ## Do
-- verify implementation base exactly `3c3e6d9566bdde5653518ae253386cfd205b330c` (the merged and postvalidated prebuild main);
-- use branch `feat/HCODER-WO-0027-tauri-updater` from the final prebuild main after this governance PR is merged;
-- read Context Lock Delta 001 first, then refresh/confirm the exact Tauri updater source facts before dependency edits;
+- do not implement from the historical post-PR-#90 base `3c3e6d9566bdde5653518ae253386cfd205b330c` or pre-correction `e5cfe3267f968d80cc3c4dc91cb6acf54ee7eb80`; wait until Context Lock Delta 002 is accepted/merged with exact-main gates and independent HEDS approval, then capture the full current `main` SHA at preflight as the implementation start SHA;
+- create `feat/HCODER-WO-0027-tauri-updater` from that captured post-Delta-002 `main` SHA; verify the merge and source fingerprints before any edits, and stop/recompile if the head moved or local work cannot be reconciled safely;
+- read Context Lock Delta 002 first and retain Delta 001 as historical authority; refresh/confirm the exact Tauri updater source facts before dependency edits;
 - apply the Delta-001-bounded `plugins.updater` fail-closed config and implement the locked Rust-only bridge;
 - keep frontend plugin authority at zero;
 - produce focused evidence;
@@ -28,7 +28,7 @@ Git/code/exact-head evidence beat HIVE if stale.
 - download returns only signature-verified bytes;
 - no custom comparator weakening Hive strictly-newer law.
 
-## Delta 001 execution note
+## Delta 001 execution note (trust-config constraints remain in force)
 - Canonical `plugins.updater` is allowed to remain explicitly unconfigured with `pubkey: ""` and `endpoints: []`; this must yield unavailable before any request.
 - Keep `requireSignedVersion=true`, `allowDowngrades=false`, and every dangerous transport/TLS flag false.
 - Do not generate, fetch or invent a production updater key or endpoint to make the positive path pass. Use deterministic test doubles for positive contract coverage.
