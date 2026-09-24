@@ -32,13 +32,13 @@
 - **focused tests:** Rust `cargo test --locked` **33 passed / 0 failed**, of which 20 are new `update_admission` cases over the 13 the crate had at the base. Desktop `vitest run` **127 passed / 0 failed** across 9 files; `contracts/updateState.test.ts` went 39 → 40 cases and `lib/updateService.test.ts` 13 → 26, so +14 with no case deleted — several existing cases were retargeted to the DEC-031 law, and each rewrite is described in *Contract law added* below.
 - **security gate:** `DESKTOP_SECURITY_GATE=PASS` with `TAURI_COMMANDS=check_for_update,choose_workspace,download_update_candidate,get_desktop_snapshot,get_runtime_status_envelope,get_update_status`, `FRONTEND_INVOKES=6`, `CAPABILITY_PERMISSIONS=0`, `UPDATE_COMMAND_ARGS=0`, `UPDATE_RAW_DECODER=STRICT`, `GUEST_UPDATER_PERMISSIONS=0`, `UPDATER_TRUST_CONFIG=DELTA_001_FAIL_CLOSED`, `UPDATER_PLUGIN_PIN=2.12.0`, `INSTALL_RESTART_AUTHORITY=0`, `FILESYSTEM_MUTATION_PRIMITIVES=0`, `GENERIC_PROCESS_EXECUTION=0`, `LOCKFILES=COMMITTED`.
 - **version drift:** `VERSION_DRIFT=LOCKED`, canonical source `apps/desktop/src-tauri/tauri.conf.json:0.1.0`, mirrors `Cargo.toml:0.1.0` and `package.json:0.1.0`.
-- **Rust tests/check:** `cargo check --locked --all-targets` clean, zero warnings — and that is the command the zero-warning claim rests on. `cargo test --locked` additionally emits one MSVC linker line (`Criando biblioteca …` / `link.exe` stdout) on this host while building the test binary; it is the toolchain announcing an output file, not a compiler diagnostic, and it is not counted as a warning either way. `cargo audit --no-fetch` exit 0 with **7 allowed warnings**, and the same command against `git show HEAD:…/Cargo.lock` reports the **same 7** (`glib` unsound, `proc-macro-error` + five `unic-*` unmaintained) — so the +51 packages add no finding.
+- **Rust tests/check:** `cargo check --locked --all-targets` clean, zero warnings — and that is the command the zero-warning claim rests on. `cargo test --locked` additionally emits one MSVC linker line (`Criando biblioteca …` / `link.exe` stdout) on this host while building the test binary; it is the toolchain announcing an output file, not a compiler diagnostic, and it is not counted as a warning either way. `cargo audit --no-fetch` exit 0 with **7 allowed warnings**, and the same command against `git show a9b48bc:apps/desktop/src-tauri/Cargo.lock` reports the **same 7** (`glib` unsound, `proc-macro-error` + five `unic-*` unmaintained) — so the +51 packages add no finding.
 - **web tests/typecheck/build:** `npm run typecheck` clean; `npx vitest run` 127/127; `npm run build:web` builds (`dist/assets/index-*.js 237.52 kB`).
 - **npm audit:** `found 0 vulnerabilities`.
-- **Governance run:** NOT RUN — this branch was not pushed, so no Actions run exists for any head of it.
-- **Desktop Shell run:** NOT RUN — same reason.
-- **Native Package Matrix run:** NOT RUN — same reason.
-- **Protected Release run:** NOT RUN — same reason, and it is in any case unreachable: `bundle.active` is false and no signing or publication authority exists.
+- **Governance run:** measured against the exact pushed head and reported in the Draft PR, never restated here — see *Proposed checkpoint delta* item 4.
+- **Desktop Shell run:** same placement rule as Governance.
+- **Native Package Matrix run:** same placement rule. This is the head that closes U16's hosted half.
+- **Protected Release run:** same placement rule, and it is in any case structurally capped: `bundle.active` is false, no signing or publication authority exists, so its credential-bearing stages stay `UNKNOWN` / `BLOCKED` and are not reported as passing on any head.
 - **blockers:** the signed-version gap below; the local `tests/runtime` git-stage lane cannot run here (see *Local lanes that did not run*); no trust data exists by design, so no real check/download has ever executed.
 - **HIVE refresh:** NOT PERFORMED — `no hive binary` on this host and no generated knowledge for the workspace, so nothing in this bundle rests on a HIVE card. Recorded as an unmet deliverable rather than simulated.
 - **proposed checkpoint delta:** see *Proposed checkpoint delta* at the end of this file. Nothing is minted here.
@@ -94,12 +94,14 @@ When HCODER-DIST-001E governs install authority, `ready → installing` and `ins
 
 ## Verification executed locally
 
+Every row was measured on the rebased candidate head (`a9b48bc` + this branch's two commits), after the reconciliation described above — not carried forward from the pre-rebase head. Hosted lanes are absent by construction here, so nothing below is claimed as exact-head CI.
+
 | What | Exact command | Result |
 | --- | --- | --- |
 | Rust admission + shell lane | `cargo test --locked` | `33 passed; 0 failed` (plus one MSVC linker output notice, not a diagnostic) |
 | Rust build, all targets | `cargo check --locked --all-targets` | clean, no warnings |
 | Rust advisories, this lock | `cargo audit --no-fetch` | exit 0, 7 allowed warnings |
-| Rust advisories, base lock | `cargo audit --no-fetch -f <git show HEAD:…/Cargo.lock>` | exit 0, the **same** 7 warnings |
+| Rust advisories, base lock | `cargo audit --no-fetch -f <git show a9b48bc:…/Cargo.lock>` | exit 0, the **same** 7 warnings |
 | Desktop unit lane | `npx vitest run` | `127 passed (9 files)` |
 | Desktop types | `npm run typecheck` | clean |
 | Web bundle | `npm run build:web` | built |
@@ -110,11 +112,11 @@ When HCODER-DIST-001E governs install authority, `ready → installing` and `ins
 
 ## Local lanes that did not run, and why
 
-`python -m pytest tests -q` on this host is `39 failed, 698 passed, 72 skipped`. All 39 failures are in `tests/runtime/test_git_stage_*` and every one of them is the WO-0023 provenance gate refusing to proceed because the admitted pure-Python backend is absent — `ModuleNotFoundError: No module named 'dulwich'` — with the install command named in the exception text. They do not import anything this Work Order changed, and no file under `hive_runtime/` or `tests/runtime/` is modified. Reported as an environment gap on this host, not as a pass and not as a regression.
+`python -m pytest tests -q` on this host is `39 failed, 698 passed, 72 skipped`, re-measured unchanged on the rebased candidate head. All 39 failures are in `tests/runtime/test_git_stage_*` and every one of them is the WO-0023 provenance gate refusing to proceed because the admitted pure-Python backend is absent: the traceback reaches `distribution("dulwich")` at `hive_runtime/git_stage_index_codec.py:146` and raises for the missing distribution, with the install command named in the exception text. They do not import anything this Work Order changed, and no file under `hive_runtime/` or `tests/runtime/` is modified. Reported as an environment gap on this host, not as a pass and not as a regression.
 
 ## Non-vacuity proof
 
-A green gate proves nothing if it cannot fail. Ten single-line mutations were applied to an isolated copy of the working tree (drivers and copies kept outside the repository, `/tmp/w0027mut`, destroyed after the run; the repository re-measured `PASS` afterwards and `git status` unchanged). Each was expected to be caught, and all ten were, on the content this bundle describes:
+A green gate proves nothing if it cannot fail. Ten single-line mutations were applied to clean mirrors extracted from the candidate head itself with `git archive HEAD -- apps/desktop tools/desktop` (drivers kept outside the repository under `/tmp`, mirrors destroyed after the run; the control mirror measured `PASS` before the campaign, the repository re-measured `PASS` afterwards with `git status` unchanged). Each was expected to be caught, and all ten were:
 
 | Mutation | Gate verdict |
 | --- | --- |
@@ -128,6 +130,8 @@ A green gate proves nothing if it cannot fail. Ten single-line mutations were ap
 | `update.install(...)` in production Rust | DETECTED — forbidden updater install call |
 | trust keys named in frontend `.ts` | DETECTED — forbidden updater trust root in frontend source |
 | drop `deny_unknown_fields` from the trust probe | DETECTED — updater admission guard missing |
+
+Result: **10 detected / 10 applied**, control mirror `PASS`. Each row above is the gate's own first refusal line, not a paraphrase.
 
 The TS lane carries the same non-vacuity duty from the other side: `exposesForbiddenMember` is asserted against a fixture that *does* expose `installUpdate`, the `BridgedUpdateService` suite drives a fake bridge that can answer with a valid `ready`, an unadmitted proof, another client's identity, install progress, a snapshot with a ride-along key and a transport failure, and asserts the service caches, refuses or faults exactly as declared. Because that backend is fake, every `ready` in those tests is contract behaviour against a simulated authority — it is not, and must not be read as, evidence that a real artifact was verified.
 
