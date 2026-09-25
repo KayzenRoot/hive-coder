@@ -668,6 +668,19 @@ impl UpdateAdmissionBridge {
         Ok(matches!(self.lock()?.held, Held::Empty))
     }
 
+    /// Record a successful check that found no update.
+    ///
+    /// A successful no-update observation supersedes a refusal from an earlier
+    /// request. It leaves any candidate owned by a concurrent operation intact.
+    pub fn record_no_update(&self) -> Result<WireStatus, Refusal> {
+        let mut inner = self.lock()?;
+        if matches!(&inner.held, Held::Refused(_)) {
+            inner.held = Held::Empty;
+            inner.update = None;
+        }
+        Self::snapshot_of(&inner)
+    }
+
     /// Admit exactly one candidate from a check the caller cannot steer.
     ///
     /// `announced` is projected from `update` by [`announced_of`], so the version,
@@ -1514,7 +1527,36 @@ mod tests {
     }
 
     #[test]
-    fn pending_slot_holds_exactly_one_candidate() {
+    fn a_successful_no_update_check_clears_a_previous_check_failure() {
+        let bridge = UpdateAdmissionBridge::new();
+        bridge.record(check_refusal(&tauri_plugin_updater::Error::ReleaseNotFound));
+        assert_eq!(bridge.snapshot().unwrap().state, "failure");
+
+        let snapshot = bridge
+            .record_no_update()
+            .expect("a successful no-update check clears the previous refusal");
+        assert_eq!(snapshot.state, "idle");
+        assert!(serde_json::to_value(snapshot).unwrap()["error"].is_null());
+        assert!(bridge.holds_nothing().expect("refusal was cleared"));
+    }
+
+    #[test]
+    fn a_successful_no_update_check_preserves_an_owned_candidate() {
+        let bridge = UpdateAdmissionBridge::new();
+        bridge
+            .hold_for_test(admitted(NEWER, crate::PACKAGE_VERSION))
+            .expect("the bridge holds an admitted candidate");
+
+        let snapshot = bridge
+            .record_no_update()
+            .expect("the concurrent check returns the current owned state");
+        let value = serde_json::to_value(snapshot).unwrap();
+        assert_eq!(value["state"], "available");
+        assert_eq!(value["candidateVersion"], NEWER);
+    }
+
+    #[test]
+    fn pending_slot_holds_exactly one candidate() {
         let bridge = UpdateAdmissionBridge::new();
         assert_eq!(bridge.snapshot().unwrap().state, "idle");
         bridge.hold_for_test(admitted(NEWER, crate::PACKAGE_VERSION)).unwrap();
