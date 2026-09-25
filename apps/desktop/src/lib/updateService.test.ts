@@ -373,6 +373,22 @@ describe("BridgedUpdateService", () => {
     }
   });
 
+  it("keeps a configured updater configured when a remote check fails", async () => {
+    const { service } = bridged({
+      requestUpdateCheck: snapshot({
+        state: "failure",
+        error: { code: "service_unavailable", detail: "update service is unreachable" },
+      }),
+    });
+
+    const failed = await service.checkForUpdate();
+    expect(failed.state).toBe("failure");
+    expect(failed.error?.code).toBe("service_unavailable");
+    // The bridge answered and the build's trust configuration resolved. An
+    // endpoint outage is a check failure, not a missing updater configuration.
+    expect(service.availability()).toEqual({ available: true, reason: "configured" });
+  });
+
   it("reports the shipped build as reachable and unusable on its first read", async () => {
     // Before any call there is no evidence either way, so nothing is claimed.
     const { bridge, service } = bridged({ readUpdateStatus: snapshot({ state: "unavailable" }) });

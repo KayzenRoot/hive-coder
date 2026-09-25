@@ -142,6 +142,13 @@ fn is_slot_occupancy_refusal(refusal: &Refusal) -> bool {
     code == CANDIDATE_ALREADY_ADMITTED.code || code == NO_ADMITTED_CANDIDATE.code
 }
 
+/// A failed update check does not own the candidate slot. Its failure can be
+/// reported when the slot is empty, but cannot invalidate work another operation
+/// already admitted or started downloading.
+fn is_non_owning_check_failure(refusal: &Refusal) -> bool {
+    matches!(refusal, Refusal::Failed(denial) if denial.code == SERVICE_UNREACHABLE.code)
+}
+
 const PLATFORM_UNSUPPORTED: Denial = Denial::new(
     "service_unavailable",
     "this build cannot determine the updater platform identity",
@@ -751,19 +758,19 @@ impl UpdateAdmissionBridge {
     ///   its updater handle intact, so a duplicate call is a no-op instead of a
     ///   state-destroying one.
     ///
-    /// A genuine fault (unreachable service, failed verification or download) does
-    /// replace a pending or in-flight slot, and releases its handle: the attempt
-    /// consumed that candidate, so reporting the failure and admitting a later
-    /// check is the honest sequence. Release is what keeps retry lawful —
-    /// [`UpdateAdmissionBridge::begin`] accepts an empty or refused slot and
-    /// nothing else.
+    /// A failure owned by a pending or in-flight operation (such as its download
+    /// or verification failing) releases that candidate so a later check can retry.
+    /// A check failure is non-owning: it cannot invalidate a candidate admitted
+    /// or downloaded by another operation, and is inert while that slot is occupied.
     pub fn record(&self, refusal: Refusal) {
         let Ok(mut inner) = self.inner.lock() else { return };
         if matches!(inner.held, Held::Verified(_)) {
             return;
         }
         let slot_is_occupied = !matches!(inner.held, Held::Empty | Held::Refused(_));
-        if slot_is_occupied && is_slot_occupancy_refusal(&refusal) {
+        if slot_is_occupied
+            && (is_slot_occupancy_refusal(&refusal) || is_non_owning_check_failure(&refusal))
+        {
             return;
         }
         inner.held = Held::Refused(refusal);
@@ -862,10 +869,11 @@ pub fn download_refusal(error: &tauri_plugin_updater::Error) -> Refusal {
     }
 }
 
-/// Map a failed `Updater::check`. Nothing reached a verifiable candidate, so the
-/// observation is simply unavailable rather than a refused release.
+/// Map a failed `Updater::check`. Trust was validated before the request, so
+/// this means the configured service could not answer, not that its trust root is
+/// absent. A check does not own an already-held candidate.
 pub fn check_refusal(_error: &tauri_plugin_updater::Error) -> Refusal {
-    Refusal::Unavailable(SERVICE_UNREACHABLE)
+    Refusal::Failed(SERVICE_UNREACHABLE)
 }
 
 #[cfg(test)]
@@ -1432,6 +1440,58 @@ mod tests {
             .hold_for_test(admitted("999998.0.0", crate::PACKAGE_VERSION))
             .expect("a refusal is retryable by a later check");
         assert_eq!(bridge.snapshot().unwrap().state, "available");
+    }
+
+    #[test]
+    fn a_failed_check_is_a_failure_not_missing_configuration() {
+        let refusal = check_refusal(&tauri_plugin_updater::Error::ReleaseNotFound);
+        assert!(matches!(
+            refusal,
+            Refusal::Failed(denial) if denial.code == SERVICE_UNREACHABLE.code
+        ));
+
+        let bridge = UpdateAdmissionBridge::new();
+        bridge.record(refusal);
+        let value = serde_json::to_value(bridge.snapshot().unwrap()).unwrap();
+        assert_eq!(value["state"], "failure");
+        assert_eq!(value["error"]["code"], "service_unavailable");
+    }
+
+    #[test]
+    fn a_non_owning_check_failure_does_not_replace_an_admitted_candidate() {
+        let bridge = UpdateAdmissionBridge::new();
+        bridge
+            .hold_for_test(admitted(NEWER, crate::PACKAGE_VERSION))
+            .expect("the bridge holds an admitted candidate");
+
+        let refusal = check_refusal(&tauri_plugin_updater::Error::ReleaseNotFound);
+        bridge.record(refusal);
+        let value = serde_json::to_value(bridge.snapshot().unwrap()).unwrap();
+        assert_eq!(value["state"], "available");
+        assert_eq!(value["candidateVersion"], NEWER);
+        assert_eq!(value["error"], Value::Null);
+    }
+
+    #[test]
+    fn a_non_owning_check_failure_preserves_an_in_flight_download() {
+        let bridge = UpdateAdmissionBridge::new();
+        let candidate = admitted(NEWER, crate::PACKAGE_VERSION);
+        bridge.begin_download_for_test(candidate.clone());
+
+        let refusal = check_refusal(&tauri_plugin_updater::Error::ReleaseNotFound);
+        bridge.record(refusal);
+        let value = serde_json::to_value(bridge.snapshot().unwrap()).unwrap();
+        assert_eq!(value["state"], "downloading");
+        assert_eq!(value["candidateVersion"], NEWER);
+
+        let ready = bridge
+            .complete_download(&candidate, ARTIFACT_PAYLOAD, 1_700_000_000_000)
+            .expect("the owner may complete after a non-owning check fails");
+        assert_eq!(ready.state, "ready");
+        assert_eq!(
+            ready.authenticity_proof.expect("ready proof").artifact_sha256,
+            hex_sha256(ARTIFACT_PAYLOAD)
+        );
     }
 
     #[test]
