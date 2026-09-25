@@ -1,6 +1,6 @@
 # HCODER-WO-0027 — Evidence Bundle
 
-**Status:** CORRECTION ROUND APPLIED — FOUR REVIEW FINDINGS FIXED LOCALLY, LANES RE-MEASURED ON THE NEW HEAD, CARRIED ON THE SAME DRAFT PR, NOT APPROVED, NOT MERGED
+**Status:** C03 follow-up corrections are present on the same Draft PR; head-specific validation receipts remain external; independent HEDS is pending. Not approved or merged.
 **Issue:** #89
 **Slice:** HCODER-DIST-001D
 **Decision:** `DEC-031` — PROPOSED / NOT CANONICAL. Nothing in this bundle promotes it.
@@ -60,11 +60,11 @@ The practical consequence for the reviewer is that the candidate's ancestry cont
 Source-materialized claims — true of the tree, independent of any runner:
 
 - `apps/desktop/src-tauri/src/update_admission.rs` is the only place in this build that can hold updater state. It resolves trust from this build's own configuration, evaluates the DEC-028 channel/version law against what an endpoint announced, and keeps one pending slot (`Empty | Admitted | InFlight | Verified | Refused`) behind a mutex, with the official `Update` handle stored beside the identity it was admitted for and, once verified, the bytes that identity hashes stored in the same place. It performs no install, restart, publication or filesystem mutation; two `const _: fn(&tauri_plugin_updater::Config) -> bool` items make the 2.12 field surface a compile-time dependency rather than a hope.
-- The slot has a small law of its own, because holding a payload made its loss observable. A refusal that only says "the slot is occupied" cannot overwrite the candidate it was refused against; a genuine fault releases a pending or in-flight candidate so the next check is a real retry; a `Refused` slot is the only non-empty state a later `begin()` may claim; a `Verified` candidate is never demoted; and a completion may bind only to the `metadata_sha256` the slot already owns. So at most one candidate is ever live, it cannot be silently replaced, and it cannot be destroyed by an unrelated read.
+- The slot has a small law of its own, because holding a payload made its loss observable. Occupancy refusals and non-owning `SERVICE_UNREACHABLE` check failures are inert while another operation owns an admitted or in-flight candidate; an owning download or verification failure releases its candidate so a later check can retry; a `Refused` slot is the only non-empty state a later `begin()` may claim; a `Verified` candidate is never demoted; and a completion may bind only to the `metadata_sha256` the slot already owns. So at most one candidate is ever live, it cannot be silently replaced, and it cannot be destroyed by an unrelated check.
 - Three commands reach the guest. Each is argument-free; each answers with a `hive-update-state-v1` snapshot built from a closed `WireStatus` of exactly the eight contract keys, so a remote body, URL, signature, public key or header has no field to arrive in — and neither can a payload, which is why the retained bytes have no route out. Upstream error messages are classified into a 16-name refusal vocabulary and discarded, because they quote endpoints.
 - `get_update_status` on an empty slot is not a free `idle`. The status read first resolves this build's own trust configuration and, if it does not resolve, answers with the refusal instead: `idle` is a state the bridge grants only to a build that has a trust root. This is a reading of local configuration and performs no request, and it is what lets the frontend distinguish "an updater exists" from "the bridge answered" without inventing a wire field for it.
 - `apps/desktop/src/lib/desktopBridge.ts` remains the only file that calls `invoke`, now with 6 sites and no generic helper: a shared `invoke(command)` function would have turned three named bindings back into one caller-selectable surface, so each of the three repeats its own literal command constant.
-- `BridgedUpdateService` caches only what `evaluateStatus` accepted, and additionally refuses a snapshot whose `currentVersion`/`channel` disagree with this client's own identity. Any fault — throw, malformed wire, identity disagreement — replaces the cached claim with an honest `unavailable` snapshot rather than keeping a stale one. Its `availability()` now separates the two facts it used to merge: reachability is what the client observed (`bridge_unreachable`), usability is what the snapshot can evidence (`not_configured` vs `configured`), and the third reason is only ever returned by a build whose own status read was answered by a resolved trust root.
+- `BridgedUpdateService` caches only what `evaluateStatus` accepted, and additionally refuses a snapshot whose `currentVersion`/`channel` disagree with this client's own identity. Any fault — throw, malformed wire, identity disagreement — replaces the cached claim with an honest `unavailable` snapshot rather than keeping a stale one. Its `availability()` separates bridge reachability (`bridge_unreachable`) from build configuration: missing trust remains `unavailable` / `not_configured`, while a remote check error is a `failure` on a reachable, configured bridge. An `idle` status still requires a trust root.
 - The frontend never sees the trust root: `tauri.conf.json → plugins.updater` is the Delta-001 fail-closed node (`pubkey: ""`, `endpoints: []`, `requireSignedVersion: true`, `allowDowngrades: false`, three `dangerous*` false), and the security gate now fails if that node drifts in either direction.
 
 ## The signed-version gap (DEC-031's loadable premise, checked rather than assumed)
@@ -107,6 +107,20 @@ Two limits that this round did not remove:
 - `bounded_snapshot`'s configuration probe is not unit-covered, because `get_update_status` needs a live `AppHandle`. The primitive it turns on, `UpdateAdmissionBridge::holds_nothing`, is covered directly, and mutating it to `Ok(true)` fails that test — but the wiring from probe to reported state is verified by reading, and by the security gate's command set, not by a Rust test.
 - The CRITICAL's end-to-end half stays open for the reason in *The signed-version gap*: producing a signed artifact requires `createUpdaterArtifacts`, which this slice forbids, and a private key, which does not exist here. Aligning the toolchain is what the finding asked for and what was done; demonstrating a verified download is still not available to any build in this repository.
 
+## Follow-up review corrections after `22338f9`
+
+The exact-head analysis of `22338f989afdcf223df76d4688aac6c5493a12a0` found two MEDIUM findings: a failing non-owning check could erase an admitted/in-flight candidate, and a configured endpoint failure was being represented as missing configuration.
+
+This follow-up stays in HCODER-WO-0027 / PR #93 and changes no authority boundary:
+- `check_refusal` preserves missing endpoint configuration as `Unavailable(TRUST_NOT_CONFIGURED)`; other check failures after trust validation become `Failed(SERVICE_UNREACHABLE)`. The bounded state distinguishes a configured-but-unreachable endpoint (`failure`) from an absent trust root (`unavailable` / `not_configured`).
+- `record()` ignores `Failed(SERVICE_UNREACHABLE)` while an admitted or in-flight candidate owns the slot. An owning download/verification failure still releases its candidate for a lawful retry, and verified bytes remain protected.
+- Rust regression tests cover the failure classification, an admitted candidate surviving a failed check, and an in-flight download completing successfully after a failed check. The TypeScript regression test checks that a reachable configured bridge stays `configured` when its remote check fails.
+- The proposed checkpoint wording below is aligned to DEC-031 and WO-0027: the live N→N+1 demonstration remains deferred to DIST-001G and is not added as a prerequisite for this bridge's promotion. It remains unproven and is not claimed here.
+
+The first C03 hosted attempt showed that the in-flight wire snapshot remains `available`, and that `Error::EmptyEndpoints` must remain an unavailable configuration case while remote check errors are failures. The follow-up corrected these classifications/assertions; failed-run receipts apply only to their original SHA and are not carried forward.
+
+No updater config, dependency, workflow, capability or install/release authority changed. `DEC-031` remains PROPOSED / NOT CANONICAL. Formal independent HEDS is still required.
+
 ## Contract law added while making that gap honest
 
 Admitting a proof scheme made `ready` producible, which exposed an asymmetry the pre-DEC-031 law had handled with one gate: a caller presenting a well-formed proof could reach `installing`. Install readiness and install progress are different claims — the first says a verified artifact was obtained, the second says the running product was mutated — so they are now gated separately:
@@ -121,7 +135,7 @@ When HCODER-DIST-001E governs install authority, `ready → installing` and `ins
 
 ## Verification executed locally
 
-Every row was measured on the corrected head this bundle now carries — after the `576a40f` review round and on the same tree this file is committed with. An earlier commit supersedes a receipt, it does not extend it, so none of these numbers is carried forward from the pre-correction head. Hosted lanes are absent by construction here, so nothing below is claimed as exact-head CI.
+Every row below is a historical local measurement on `22338f989afdcf223df76d4688aac6c5493a12a0`, before the C03 follow-up. None transfers to a later head. This review executor had no local checkout or HIVE and ran no local C03 tests; the corrected Rust/TypeScript tests and current exact-head hosted receipts are recorded externally in PR #93 and Issue #89.
 
 | What | Exact command | Result |
 | --- | --- | --- |
@@ -147,11 +161,11 @@ Every row was measured on the corrected head this bundle now carries — after t
 
 The whole-repository lane, `python -m pytest tests -q`, is therefore `39 failed, 698 passed, 72 skipped` here — the same 39 and nothing else, with the 698 being the 364 above plus the 334 from the three lanes this Work Order can actually measure. Installing `dulwich` to turn those rows green is not this branch's call: it changes the host's dependency set rather than the repository's, and the failing lane is the governed Git-staging substrate sealed under `HCODER-CP-0023`.
 
-No hosted lane ran either. The four workflows measure the pushed head, and every receipt for a previous head stops being evidence the moment this file is committed.
+The local executor did not run hosted lanes. Current exact-head workflow receipts are kept in PR #93 and Issue #89; every commit invalidates the previous head's evidence.
 
 ## Non-vacuity proof
 
-A green gate proves nothing if it cannot fail. Twenty-two single-line mutations were applied to clean mirrors built from the working tree this bundle is committed with — the gate and Rust mirrors outside the repository, the JS mirror necessarily inside `apps/desktop` so `vitest` resolves `node_modules`, and removed by the run itself. Three controls measured `PASS` before any mutation: the unmutated gate mirror, the unmutated Rust mirror at 42 tests, and the unmutated JS mirror at 28. Each case was expected to be caught by the one guard named in it, and the row below records that guard's own first refusal line or first panicking assertion, copied from the run rather than paraphrased.
+A green gate proves nothing if it cannot fail. The 22 single-line mutations below were measured on historical head `22338f989afdcf223df76d4688aac6c5493a12a0`, not on this follow-up candidate. They were applied to clean mirrors of that tree — the gate and Rust mirrors outside the repository, the JS mirror necessarily inside `apps/desktop` so `vitest` resolves `node_modules`, and removed by the run itself. Three controls measured `PASS` before mutation: the unmutated gate mirror, the unmutated Rust mirror at 42 tests, and the unmutated JS mirror at 28. Those results are not carried forward.
 
 | Mutation | Guard verdict |
 | --- | --- |
@@ -191,6 +205,9 @@ The TS lane carries the same duty from the other side: `exposesForbiddenMember` 
 
 ## Acceptance-map self-audit (U1–U20)
 
+The `PROVEN_LOCALLY` rows below refer only to historical head `22338f989afdcf223df76d4688aac6c5493a12a0`; they do not carry forward to C03. Current exact-head hosted evidence and per-job skips are kept in PR #93 / Issue #89, with no mutable run IDs copied into this bundle.
+
+
 Each property in `.engineering/prebuilt/HCODER-WO-0027-ACCEPTANCE-SECURITY-MAP.md` was walked against the named proof column, and the audit found one real gap: **U6 had no test that the signed-version refusals map into the bounded vocabulary** — `download_refusal()` classified `MissingSignedVersion` and `SignedVersionMismatch`, but nothing asserted it, so the CRITICAL binding property rested on reading the match arms. `upstream_faults_map_to_bounded_denials_and_never_forward_text` closes that, and doubles as the U18 test that a hostile endpoint string cannot be echoed. The table records the state after that fix.
 
 | U | Proof in this tree | Verdict |
@@ -228,7 +245,7 @@ No real update check, real signed download, install, restart, rollback, publicat
 
 Nothing is minted here; this is the text a reviewer can turn into a delta, and no `HCODER-CP-*` number is claimed by this Work Order.
 
-1. **`DEC-031` stays PROPOSED.** Its technical content is implemented and locally proven, and its loadable premise — a signed version a real release can carry — is now satisfiable by the toolchain this tree pins. It is still not *met*, because meeting it needs an artifact that this slice is forbidden to produce. Promotion therefore needs the next two items plus a genuine N→N+1 proof, not a greener local run.
+1. **`DEC-031` stays PROPOSED.** Canonicalization of this bounded bridge follows its own promotion gate: implementation within the Context Lock, verified dependency/source semantics, focused and adversarial tests, all four hosted workflows on one exact head, independent HEDS with unresolved CRITICAL/HIGH = 0/0, then the separately reviewed checkpoint process. A live N→N+1 update remains unproven and explicitly deferred to DIST-001G; this Work Order neither executes nor claims it.
 2. **Trust material and artifact production, as a governed decision — not a lock delta.** The previously listed unlock ("a Context Lock delta admitting `package.json` and `package-lock.json` to move the CLI pin") is **withdrawn**: Delta-002 already admits both files conditionally, the condition was met, and the move is done in this branch. What no existing delta admits is a public key, an endpoint, a signing credential or `createUpdaterArtifacts`, and those are exactly what the next slice needs in order to turn `requireSignedVersion: true` from a satisfied requirement into an observed one.
 3. **An `HCODER-DIST-001E` scope statement** that re-adds `ready → installing` and `installing → success` to `PROOF_GATED_TRANSITIONS` at the same moment it introduces install authority, and that keeps `bundle.active: false` until then. The obligation already sits in the code comment; it belongs in the governance record too, because a slice that adds install without re-adding those two edges would leave `ready` one step from a mutation with nothing between them.
-4. **No hosted-evidence claim may be back-filled into this file.** When this branch is pushed, the four hosted rows are re-measured against the new head and the old rows are superseded, not edited — a head move invalidates every receipt above it.
+4. **Exact-head hosted evidence stays external.** PR #93 and Issue #89 hold the mutable run IDs and per-job outcomes. Every new commit, including a documentation-only evidence update, invalidates previous receipts and requires all four workflows to be re-measured on its exact SHA.
