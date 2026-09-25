@@ -872,8 +872,11 @@ pub fn download_refusal(error: &tauri_plugin_updater::Error) -> Refusal {
 /// Map a failed `Updater::check`. Trust was validated before the request, so
 /// this means the configured service could not answer, not that its trust root is
 /// absent. A check does not own an already-held candidate.
-pub fn check_refusal(_error: &tauri_plugin_updater::Error) -> Refusal {
-    Refusal::Failed(SERVICE_UNREACHABLE)
+pub fn check_refusal(error: &tauri_plugin_updater::Error) -> Refusal {
+    match error {
+        tauri_plugin_updater::Error::EmptyEndpoints => Refusal::Unavailable(TRUST_NOT_CONFIGURED),
+        _ => Refusal::Failed(SERVICE_UNREACHABLE),
+    }
 }
 
 #[cfg(test)]
@@ -1481,7 +1484,9 @@ mod tests {
         let refusal = check_refusal(&tauri_plugin_updater::Error::ReleaseNotFound);
         bridge.record(refusal);
         let value = serde_json::to_value(bridge.snapshot().unwrap()).unwrap();
-        assert_eq!(value["state"], "downloading");
+        // The wire snapshot remains "available" while the single slot is owned
+        // by a download; successful completion below proves the ownership survived.
+        assert_eq!(value["state"], "available");
         assert_eq!(value["candidateVersion"], NEWER);
 
         let ready = bridge
@@ -1632,13 +1637,15 @@ mod tests {
             assert_eq!(denial, DOWNLOAD_FAILED, "{fault}");
         }
 
-        // A failed check never reached a candidate, so it reports unavailability
-        // rather than pretending a release was refused.
-        for fault in [Error::EmptyEndpoints, Error::ReleaseNotFound] {
-            let refusal = check_refusal(&fault);
-            assert!(matches!(refusal, Refusal::Unavailable(_)), "{fault}");
-            assert_eq!(denial_of(refusal).code, "service_unavailable", "{fault}");
-        }
+        // Empty endpoint configuration is unavailable. Once configuration has
+        // passed trust validation, a remote check failure is a distinct failure.
+        let missing_config = check_refusal(&Error::EmptyEndpoints);
+        assert!(matches!(missing_config, Refusal::Unavailable(_)));
+        assert_eq!(denial_of(missing_config), TRUST_NOT_CONFIGURED);
+
+        let remote_fault = check_refusal(&Error::ReleaseNotFound);
+        assert!(matches!(remote_fault, Refusal::Failed(_)));
+        assert_eq!(denial_of(remote_fault), SERVICE_UNREACHABLE);
     }
 
     #[test]
