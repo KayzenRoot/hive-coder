@@ -1556,7 +1556,7 @@ mod tests {
     }
 
     #[test]
-    fn pending_slot_holds_exactly one candidate() {
+    fn pending_slot_holds_exactly_one_candidate() {
         let bridge = UpdateAdmissionBridge::new();
         assert_eq!(bridge.snapshot().unwrap().state, "idle");
         bridge.hold_for_test(admitted(NEWER, crate::PACKAGE_VERSION)).unwrap();
