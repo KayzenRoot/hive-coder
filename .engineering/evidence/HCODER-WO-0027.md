@@ -1,6 +1,6 @@
 # HCODER-WO-0027 — Evidence Bundle
 
-**Status:** C03 follow-up corrections are present on the same Draft PR; head-specific validation receipts remain external; independent HEDS is pending. Not approved or merged.
+**Status:** C03 and C04 follow-up corrections are present on the same Draft PR; final-head hosted receipts remain external; independent HEDS is pending. Not approved or merged.
 **Issue:** #89
 **Slice:** HCODER-DIST-001D
 **Decision:** `DEC-031` — PROPOSED / NOT CANONICAL. Nothing in this bundle promotes it.
@@ -120,6 +120,14 @@ This follow-up stays in HCODER-WO-0027 / PR #93 and changes no authority boundar
 The first C03 hosted attempt showed that the in-flight wire snapshot remains `available`, and that `Error::EmptyEndpoints` must remain an unavailable configuration case while remote check errors are failures. The follow-up corrected these classifications/assertions; failed-run receipts apply only to their original SHA and are not carried forward.
 
 No updater config, dependency, workflow, capability or install/release authority changed. `DEC-031` remains PROPOSED / NOT CANONICAL. Formal independent HEDS is still required.
+
+## C04 review correction after `4ae77cc`
+
+The exact-head C03 review found that `perform_update_check` handled a successful `Ok(None)` response by returning the current snapshot unchanged. If an earlier attempt had left `Held::Refused`, a later successful check that found no newer release kept reporting the stale failure/unavailable state. Tauri updater `2.12.0` defines `check()` as `Result<Option<Update>>`; `Ok(None)` is the successful no-update result.
+
+The same-Work-Order correction adds `UpdateAdmissionBridge::record_no_update()`. On that successful result it clears only a remembered `Held::Refused` and returns the resulting snapshot. It preserves `Held::Admitted`, `Held::InFlight`, and `Held::Verified` when a concurrent operation owns the slot. `perform_update_check` now uses this transition for `Ok(None)`.
+
+Two Rust regressions cover recovery from a previous check failure to `idle` and preservation of a concurrently admitted candidate. No local C04 test execution is claimed. The prior `4ae77cc` workflow receipts do not transfer; Governance, Desktop Shell, Native Package Matrix, and Protected Release must all be measured again on the final C04 head, with job-level skips called out separately in the PR/Issue evidence. No trust value, dependency, capability, workflow, installation, restart or publication authority changed.
 
 ## Contract law added while making that gap honest
 
