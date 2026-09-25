@@ -40,21 +40,121 @@ PRODUCTION_RUST_WRITE_PRIMITIVES = {
     ".set_len(": "filesystem truncate",
 }
 
+# Install/restart authority is HCODER-DIST-001E. Production Rust in this slice may
+# verify and hold a candidate, but may never mutate the running product.
+PRODUCTION_RUST_INSTALL_PRIMITIVES = {
+    ".install(": "updater install call",
+    "restart_app": "restart command",
+    "install_update": "install command",
+    "relaunch": "relaunch authority",
+}
+
+# The updater trust root is Rust-side configuration only. A frontend that names
+# any of these keys is describing trust it does not own, which is the exact
+# caller-selected-trust surface HCODER-WO-0027 forbids.
+FRONTEND_FORBIDDEN_UPDATE_TEXT = {
+    "@tauri-apps/plugin-updater": "guest updater plugin dependency",
+    "plugin:updater": "guest updater plugin permission",
+    "updater:default": "guest updater plugin permission",
+    "pubkey": "updater trust root in frontend source",
+    "endpoints": "updater endpoint list in frontend source",
+    "requireSignedVersion": "updater trust config in frontend source",
+    "allowDowngrades": "updater downgrade config in frontend source",
+    "dangerousInsecureTransportProtocol": "updater transport config in frontend source",
+    "dangerousAcceptInvalidCerts": "updater TLS-weakening config in frontend source",
+    "dangerousAcceptInvalidHostnames": "updater host-weakening config in frontend source",
+    "install_update": "install command surface",
+    "restart_app": "restart command surface",
+}
+
+# Delta-001 admits exactly this node, and nothing else, under plugins.updater.
+EXPECTED_UPDATER_CONFIG = {
+    "pubkey": "",
+    "endpoints": [],
+    "requireSignedVersion": True,
+    "allowDowngrades": False,
+    "dangerousInsecureTransportProtocol": False,
+    "dangerousAcceptInvalidCerts": False,
+    "dangerousAcceptInvalidHostnames": False,
+}
+
+# 2.11.x deserializes the updater config with unknown keys ignored, so a pin below
+# 2.12.0 would silently drop requireSignedVersion/allowDowngrades and keep running.
+MIN_UPDATER_PLUGIN_VERSION = (2, 12, 0)
+
+# A signed-version requirement is only honourable if the tool that signs the
+# artifact writes the version into the minisign trusted comment. Upstream added
+# that in `@tauri-apps/cli-v2.11.5` (`updater_signature.rs` appends
+# "\tversion:{version}" and refuses a version carrying a tab or newline); at
+# v2.11.4 the same file builds `format!("timestamp:{}\tfile:{}", ..)` and records
+# no version at all. Below this floor the admitted trust posture is
+# unsatisfiable by anything this repository can build, so it fails the gate
+# rather than being left as a comment in an evidence file.
+MIN_TAURI_CLI_VERSION = (2, 11, 5)
+
 ALLOWED_INVOKE_FILE = (DESKTOP / "src" / "lib" / "desktopBridge.ts").resolve()
 ALLOWED_PROCESS_FILE = (TAURI / "src" / "runtime_status_supervisor.rs").resolve()
-ALLOWED_COMMANDS = {"get_desktop_snapshot", "choose_workspace", "get_runtime_status_envelope"}
-EXPECTED_INVOKES = 3
+ALLOWED_UPDATER_ADMISSION_FILE = (TAURI / "src" / "update_admission.rs").resolve()
+FRONTEND_SOURCE = (DESKTOP / "src").resolve()
+ALLOWED_COMMANDS = {
+    "get_desktop_snapshot",
+    "choose_workspace",
+    "get_runtime_status_envelope",
+    "get_update_status",
+    "check_for_update",
+    "download_update_candidate",
+}
+# Every command reachable from the guest must take no caller-supplied data. The
+# three update commands additionally receive only Tauri-injected handles, which
+# carry no path, version, URL or payload.
+ARGUMENT_FREE_COMMANDS = (
+    "choose_workspace",
+    "get_runtime_status_envelope",
+    "get_update_status",
+    "check_for_update",
+    "download_update_candidate",
+)
+CALLER_CONTROLLED_SIGNATURE_TOKENS = ("String", "Path", "PathBuf", "Vec<", "serde_json", "Value")
+EXPECTED_COMMAND_CONSTANTS = {
+    "SNAPSHOT_COMMAND": "get_desktop_snapshot",
+    "CHOOSE_WORKSPACE_COMMAND": "choose_workspace",
+    "RUNTIME_STATUS_COMMAND": "get_runtime_status_envelope",
+    "UPDATE_STATUS_COMMAND": "get_update_status",
+    "UPDATE_CHECK_COMMAND": "check_for_update",
+    "UPDATE_DOWNLOAD_COMMAND": "download_update_candidate",
+}
+EXPECTED_INVOKES = 6
 EXPECTED_CAPABILITY = "desktop-read-only"
 EXPECTED_WINDOW = "main"
+
+# Dependency and build output trees are gitignored and never part of a candidate
+# head. Scanning them would make the verdict depend on whether a developer had
+# installed the graph locally rather than on what the head actually authorises.
+UNTRACKED_ARTIFACT_DIRS = {"node_modules", "target", "dist", "build", "__pycache__", ".venv"}
 
 
 def text_files() -> list[Path]:
     suffixes = {".rs", ".ts", ".tsx", ".json", ".toml", ".css"}
-    return [p for p in DESKTOP.rglob("*") if p.is_file() and p.suffix in suffixes]
+    found = []
+    for path in DESKTOP.rglob("*"):
+        if not path.is_file() or path.suffix not in suffixes:
+            continue
+        if UNTRACKED_ARTIFACT_DIRS.intersection(path.relative_to(DESKTOP).parts):
+            continue
+        found.append(path)
+    return found
 
 
 def production_rust(text: str) -> str:
     return text.split("#[cfg(test)]", 1)[0]
+
+
+def locked_version(lock_text: str, package: str) -> str | None:
+    match = re.search(
+        rf'\[\[package\]\]\nname = "{re.escape(package)}"\nversion = "([^"]+)"',
+        lock_text,
+    )
+    return match.group(1) if match else None
 
 
 def main() -> int:
@@ -87,6 +187,14 @@ def main() -> int:
             for needle, reason in PRODUCTION_RUST_WRITE_PRIMITIVES.items():
                 if needle in prod:
                     failures.append(f"{rel}: forbidden production {reason}: {needle}")
+            for needle, reason in PRODUCTION_RUST_INSTALL_PRIMITIVES.items():
+                if needle in prod:
+                    failures.append(f"{rel}: forbidden production {reason}: {needle}")
+
+        if path.suffix in {".ts", ".tsx"} and FRONTEND_SOURCE in path.resolve().parents:
+            for needle, reason in FRONTEND_FORBIDDEN_UPDATE_TEXT.items():
+                if needle in text:
+                    failures.append(f"{rel}: forbidden {reason}: {needle}")
 
         if "invoke(" in text:
             invoke_count += text.count("invoke(")
@@ -110,16 +218,22 @@ def main() -> int:
         failures.append(f"Tauri command allowlist mismatch: {sorted(command_names)}")
 
     bridge_text = ALLOWED_INVOKE_FILE.read_text(encoding="utf-8")
-    if "invoke(CHOOSE_WORKSPACE_COMMAND);" not in bridge_text:
-        failures.append("choose_workspace frontend invocation must carry no caller-controlled path/payload")
-    if re.search(r"invoke\(CHOOSE_WORKSPACE_COMMAND\s*,", bridge_text):
-        failures.append("choose_workspace must not receive frontend arguments")
-    if "invoke(RUNTIME_STATUS_COMMAND);" not in bridge_text:
-        failures.append("runtime status invocation must use the named argument-free command")
-    if re.search(r"invoke\(RUNTIME_STATUS_COMMAND\s*,", bridge_text):
-        failures.append("runtime status command must not receive frontend arguments")
+    # Each command is reached through its own module-level `as const` literal. An
+    # invoke site that names anything else, or that passes an argument, would turn
+    # these bindings back into a generic invoke surface the caller controls.
+    for constant, command in EXPECTED_COMMAND_CONSTANTS.items():
+        if f'const {constant} = "{command}" as const;' not in bridge_text:
+            failures.append(f"{constant} must bind literal command {command!r} as an as-const value")
+    invoke_sites = re.findall(r"invoke\(([^)]*)\)", bridge_text)
+    if len(invoke_sites) != EXPECTED_INVOKES:
+        failures.append(f"desktop bridge must declare exactly {EXPECTED_INVOKES} invoke sites, found {len(invoke_sites)}")
+    for argument in invoke_sites:
+        if argument not in EXPECTED_COMMAND_CONSTANTS:
+            failures.append(f"invoke site must name a declared constant and carry no arguments, got invoke({argument})")
     if "decodeRuntimeStatusEnvelope(raw)" not in bridge_text:
         failures.append("runtime status bridge must admit raw wire only through decodeRuntimeStatusEnvelope(raw)")
+    if "evaluateStatus(raw)" not in bridge_text:
+        failures.append("update bridge must admit raw wire only through evaluateStatus(raw)")
     if "JSON.parse(raw)" in bridge_text:
         failures.append("runtime status bridge must not bypass canonical raw-wire validation with JSON.parse(raw)")
 
@@ -131,6 +245,12 @@ def main() -> int:
         failures.append(f"desktop capability must target only [{EXPECTED_WINDOW!r}]")
     if capability.get("permissions") != []:
         failures.append(f"desktop capability permissions must be empty, got {capability.get('permissions')!r}")
+
+    # Zero-Guest: no capability in the tree may name the updater plugin, so the
+    # plugin's own guest commands stay unreachable from the webview.
+    for capability_file in sorted((TAURI / "capabilities").rglob("*.json")):
+        if "updater" in capability_file.read_text(encoding="utf-8"):
+            failures.append(f"{capability_file.relative_to(ROOT)}: guest updater permission must not be referenced")
 
     tauri_config = json.loads((TAURI / "tauri.conf.json").read_text(encoding="utf-8"))
     app_config = tauri_config.get("app", {})
@@ -155,6 +275,26 @@ def main() -> int:
     bundle = tauri_config.get("bundle", {})
     if bundle.get("active") is not False:
         failures.append("installer/bundle generation must remain disabled in current governed desktop scope")
+    if bundle.get("createUpdaterArtifacts") is True:
+        failures.append("updater artifact generation must not be enabled by this slice")
+
+    # Context Lock Delta-001 unfroze exactly one config node, and only in its
+    # fail-closed posture: empty pubkey and empty endpoints are the explicit
+    # "no trust root" state, never a usable configuration.
+    plugins = tauri_config.get("plugins")
+    if not isinstance(plugins, dict) or list(plugins) != ["updater"]:
+        failures.append(f"only the updater plugin node may be configured, got {sorted(plugins or {})!r}")
+    updater_node = plugins.get("updater") if isinstance(plugins, dict) else None
+    if not isinstance(updater_node, dict):
+        failures.append("tauri.conf must carry an explicit updater plugin object")
+    elif updater_node != EXPECTED_UPDATER_CONFIG:
+        drifted = [
+            key
+            for key in EXPECTED_UPDATER_CONFIG
+            if key not in updater_node or updater_node[key] != EXPECTED_UPDATER_CONFIG[key]
+        ]
+        drifted += [key for key in updater_node if key not in EXPECTED_UPDATER_CONFIG]
+        failures.append(f"updater plugin node must equal the Delta-001 fail-closed posture, drifted: {sorted(set(drifted))}")
 
     rust_lib = (TAURI / "src" / "lib.rs").read_text(encoding="utf-8")
     prod_rust = production_rust(rust_lib)
@@ -172,21 +312,28 @@ def main() -> int:
         if guard not in prod_rust:
             failures.append(f"trusted workspace guard missing: {guard}")
 
-    choose_match = re.search(r"fn\s+choose_workspace\s*\((.*?)\)\s*->", prod_rust, re.DOTALL)
-    if not choose_match:
-        failures.append("choose_workspace command signature not found")
+    # Only the six governed commands may be reachable, and each must be declared
+    # exactly once in the handler; a seventh registration would be an unlisted
+    # authority surface even if its Rust function exists.
+    handler = re.search(r"generate_handler!\[(.*?)\]", prod_rust, re.DOTALL)
+    if handler is None:
+        failures.append("tauri command handler list not found")
     else:
-        signature = choose_match.group(1)
-        if any(token in signature for token in ("String", "Path", "PathBuf", "Vec<", "serde_json", "Value")):
-            failures.append("choose_workspace command accepts caller-controlled target/payload")
+        registered = {name.strip() for name in handler.group(1).replace("\n", " ").split(",") if name.strip()}
+        if registered != ALLOWED_COMMANDS:
+            failures.append(f"registered command set mismatch: {sorted(registered)}")
 
-    runtime_match = re.search(r"fn\s+get_runtime_status_envelope\s*\((.*?)\)\s*->", prod_rust, re.DOTALL)
-    if not runtime_match:
-        failures.append("runtime status command signature not found")
-    else:
-        signature = runtime_match.group(1)
-        if any(token in signature for token in ("String", "Path", "PathBuf", "Vec<", "serde_json", "Value")):
-            failures.append("runtime status command accepts caller-controlled process/payload data")
+    # The update commands are the third argument-free family: they carry no
+    # version, URL, target, key, payload or install choice from the guest.
+    for command in ARGUMENT_FREE_COMMANDS:
+        match = re.search(rf"fn\s+{command}\s*\((.*?)\)\s*->", prod_rust, re.DOTALL)
+        if match is None:
+            failures.append(f"{command} command signature not found")
+            continue
+        signature = match.group(1)
+        offenders = [token for token in CALLER_CONTROLLED_SIGNATURE_TOKENS if token in signature]
+        if offenders:
+            failures.append(f"{command} command accepts caller-controlled data: {offenders}")
 
     if "std::process" in prod_rust:
         failures.append("workspace/Git read path must not invoke an external process command")
@@ -217,6 +364,54 @@ def main() -> int:
     if process_sites != [ALLOWED_PROCESS_FILE]:
         failures.append(f"process execution must exist only in fixed runtime supervisor, got {[str(path.relative_to(ROOT)) for path in process_sites]}")
 
+    # The updater plugin may be touched by exactly two Rust files: the command
+    # wiring in lib.rs and the admission law in update_admission.rs. Any third
+    # file that names the plugin is a second, unreviewed trust surface.
+    plugin_sites = [
+        path
+        for path in files
+        if path.suffix == ".rs" and "tauri_plugin_updater" in production_rust(path.read_text(encoding="utf-8"))
+    ]
+    if {path.resolve() for path in plugin_sites} != {
+        (TAURI / "src" / "lib.rs").resolve(),
+        ALLOWED_UPDATER_ADMISSION_FILE,
+    }:
+        failures.append(f"updater plugin must be referenced only by lib.rs and update_admission.rs, got {[str(p.relative_to(ROOT)) for p in plugin_sites]}")
+
+    admission_text = (
+        ALLOWED_UPDATER_ADMISSION_FILE.read_text(encoding="utf-8")
+        if ALLOWED_UPDATER_ADMISSION_FILE.is_file()
+        else ""
+    )
+    if not admission_text:
+        failures.append("update_admission.rs is missing, so the updater has no Hive trust surface")
+    admission_prod = production_rust(admission_text)
+    required_admission_guards = [
+        # Compile-time proof that the pinned plugin really exposes both trust keys;
+        # a pin that drops either field must stop compiling, not degrade silently.
+        "config.require_signed_version",
+        "config.allow_downgrades",
+        # Upstream ignores unknown config keys, so the Hive probe must not.
+        '#[serde(deny_unknown_fields, rename_all = "camelCase")]',
+        "fn resolve_trust",
+        "fn expected_platform",
+        "fn evaluate_admission",
+    ]
+    for guard in required_admission_guards:
+        if guard not in admission_prod:
+            failures.append(f"updater admission guard missing: {guard}")
+
+    required_command_guards = [
+        ".manage(UpdateAdmissionBridge::default())",
+        ".plugin(tauri_plugin_updater::Builder::new().build())",
+        "updater_builder()",
+        ".download(",
+        "resolve_trust",
+    ]
+    for guard in required_command_guards:
+        if guard not in prod_rust:
+            failures.append(f"update command guard missing: {guard}")
+
     package = json.loads((DESKTOP / "package.json").read_text(encoding="utf-8"))
     all_deps = {**package.get("dependencies", {}), **package.get("devDependencies", {})}
     for dep in all_deps:
@@ -228,6 +423,38 @@ def main() -> int:
         failures.append("native picker dependency must remain exact-pinned and minimal")
     if "gix" in cargo_toml:
         failures.append("WO-0016 Git HEAD observation must not add the broad gix dependency graph")
+    # A pin below 2.12.0 keeps building and keeps *passing* Hive-side policy checks
+    # while silently discarding requireSignedVersion/allowDowngrades upstream, so
+    # the floor is law here rather than a comment.
+    pin = re.search(r'tauri-plugin-updater\s*=\s*"=(\d+)\.(\d+)\.(\d+)"', cargo_toml)
+    resolved_plugin_pin = ".".join(pin.groups()) if pin else "ABSENT"
+    if pin is None:
+        failures.append('tauri-plugin-updater must be exact-pinned as "=x.y.z"')
+    elif tuple(int(part) for part in pin.groups()) < MIN_UPDATER_PLUGIN_VERSION:
+        failures.append(
+            "tauri-plugin-updater must be at least "
+            + ".".join(str(part) for part in MIN_UPDATER_PLUGIN_VERSION)
+            + ": older pins ignore the signed-version and downgrade keys"
+        )
+
+    # The counterpart of the plugin floor: `requireSignedVersion` is admitted in
+    # `tauri.conf.json`, but a CLI that signs without a version field makes every
+    # produced artifact end `MissingSignedVersion`. The pin is therefore load-bearing
+    # trust, not build convenience, and a downgrade must fail here.
+    cli_pin = package.get("devDependencies", {}).get("@tauri-apps/cli")
+    resolved_cli_pin = cli_pin or "ABSENT"
+    cli_parts = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", cli_pin or "")
+    if cli_parts is None:
+        failures.append(
+            f"@tauri-apps/cli must be an exact x.y.z pin, got {cli_pin!r}"
+        )
+    elif tuple(int(part) for part in cli_parts.groups()) < MIN_TAURI_CLI_VERSION:
+        failures.append(
+            "@tauri-apps/cli must be at least "
+            + ".".join(str(part) for part in MIN_TAURI_CLI_VERSION)
+            + ": older CLIs sign updater artifacts without a version field,"
+            " which makes the admitted requireSignedVersion posture unsatisfiable"
+        )
 
     if package_lock.is_file():
         lock = json.loads(package_lock.read_text(encoding="utf-8"))
@@ -236,6 +463,14 @@ def main() -> int:
             failures.append("package-lock runtime dependencies differ from package.json")
         if root_package.get("devDependencies") != package.get("devDependencies"):
             failures.append("package-lock dev dependencies differ from package.json")
+        locked_cli = (
+            lock.get("packages", {}).get("node_modules/@tauri-apps/cli", {}).get("version")
+        )
+        if locked_cli != cli_pin:
+            failures.append(
+                "package-lock must resolve @tauri-apps/cli to the manifest pin"
+                f" {cli_pin!r}, got {locked_cli!r}"
+            )
 
     if cargo_lock.is_file():
         cargo_text = cargo_lock.read_text(encoding="utf-8")
@@ -245,6 +480,11 @@ def main() -> int:
             failures.append("Cargo.lock must use lockfile version 4")
         if 'name = "rfd"' not in cargo_text or 'version = "0.17.2"' not in cargo_text:
             failures.append("Cargo.lock must contain exact rfd 0.17.2 resolution")
+        resolved_updater = locked_version(cargo_text, "tauri-plugin-updater")
+        if pin is not None and resolved_updater != resolved_plugin_pin:
+            failures.append(
+                f"Cargo.lock must resolve tauri-plugin-updater to the manifest pin {resolved_plugin_pin}, got {resolved_updater!r}"
+            )
 
     if failures:
         print("DESKTOP_SECURITY_GATE=FAIL")
@@ -261,6 +501,13 @@ def main() -> int:
     print("WORKSPACE_SELECTION_ARGS=0")
     print("RUNTIME_STATUS_ARGS=0")
     print("RUNTIME_STATUS_RAW_DECODER=STRICT")
+    print("UPDATE_COMMAND_ARGS=0")
+    print("UPDATE_RAW_DECODER=STRICT")
+    print("GUEST_UPDATER_PERMISSIONS=0")
+    print("UPDATER_TRUST_CONFIG=DELTA_001_FAIL_CLOSED")
+    print(f"UPDATER_PLUGIN_PIN={resolved_plugin_pin}")
+    print(f"TAURI_CLI_PIN={resolved_cli_pin}")
+    print("INSTALL_RESTART_AUTHORITY=0")
     print("FILESYSTEM_MUTATION_PRIMITIVES=0")
     print("GENERIC_PROCESS_EXECUTION=0")
     print("FIXED_RUNTIME_SIDECAR_PROCESS=1")

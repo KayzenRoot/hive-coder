@@ -31,5 +31,16 @@
   },
   "bundle": {
     "active": false
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [],
+      "requireSignedVersion": true,
+      "allowDowngrades": false,
+      "dangerousInsecureTransportProtocol": false,
+      "dangerousAcceptInvalidCerts": false,
+      "dangerousAcceptInvalidHostnames": false
+    }
   }
 }
