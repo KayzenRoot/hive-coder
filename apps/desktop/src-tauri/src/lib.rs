@@ -812,8 +812,12 @@ async fn perform_update_check(app: &tauri::AppHandle) -> Result<WireStatus, Stri
     };
     match updater.check().await {
         Err(error) => report_refusal(app, check_refusal(&error)),
-        // No announcement is a lawful idle observation, never a failure claim.
-        Ok(None) => bounded_snapshot(app),
+        // No announcement is a successful observation; clear any stale refusal,
+        // while preserving a candidate another concurrent operation already owns.
+        Ok(None) => app
+            .state::<UpdateAdmissionBridge>()
+            .record_no_update()
+            .map_err(|_| "update state is unavailable".to_owned()),
         Ok(Some(update)) => {
             let announced = announced_of(&update);
             let bridge = app.state::<UpdateAdmissionBridge>();
