@@ -40,8 +40,8 @@
 - **Pending product review:** `HCODER-WO-0027` / Issue #89 / Draft PR #93 has an implementation candidate but remains unmerged and unpromoted until independent HEDS and required exact-head checks. Keep its release/security restrictions.
 - **Superseded, unmerged:** external-HIVE-context Draft PR #94 and the separate HIVE mount proposal PR #167 / Issue #166. Do not run those integrations.
 
-## Current governed product increment
-No new product Work Order is selected by CP-0020 closeout. First seal this documentation-only closeout with exact-head Governance + Desktop Shell + HEDS, squash merge and push validation. Then run a fresh source-check against the canonical Project Brain and select only the next objectively NECESSARY increment.
+## Historical CP-0020 closeout snapshot
+At CP-0020 closeout, no new product Work Order was selected by that earlier checkpoint. First seal this documentation-only closeout with exact-head Governance + Desktop Shell + HEDS, squash merge and push validation. Then run a fresh source-check against the canonical Project Brain and select only the next objectively NECESSARY increment.
 
 CP-0020 laws:
 - runtime status is presentation state, never authorization;
