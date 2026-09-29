@@ -23,6 +23,9 @@ Every review must also deliver the next executable Codex prompt as a generated P
 
 Final verdict waits for all mandatory exact-head gates. Evidence from another head is historical only.
 
+## Prospective owner-only review identity: DEC-033 / HCODER-OPS-0001
+After the owner-directed governance migration is accepted, the reviewer **role** remains mandatory but a separate reviewer **account/person** does not. `KayzenRoot` may execute a documented exact-head `OWNER_SELF_AUDIT / NOT_INDEPENDENT` and proceed without external approval only when the actual branch ruleset allows it, all applicable protected checks are SUCCESS, unresolved CRITICAL/HIGH = 0/0, all blocking review threads are resolved on evidence, and source/scope/security constraints are met. Never claim human independence from an owner self-review or optional reviewer agent/bot; do not request another account solely to satisfy a process label. Risk class HIGH_ASSURANCE additionally demands owner-recorded explicit risk acceptance, adversarial fail-closed/negative-test review and continued hard blocking of missing trust/credentials. Document exact current SHA, carried/invalidated proof, changed-file scope, findings, tests/gates, risk, STOP and post-merge check plan. Historical independent reviews stay immutable. A change of head invalidates current-head receipts. This section prospectively supersedes only incompatible *collaborator identity* expectations, not the severity/CI/evidence/preservation requirements. For reviews that can be completed safely via ChatGPT/GitHub, the chat-first routing in AGENTS takes precedence over the older unconditional Codex PDF sentence below; only issue a PDF when a real local executor is needed.
+
 ## Review deliverable law (canonical, detail)
 This expands the review output contract above; where the two overlap they agree.
 
