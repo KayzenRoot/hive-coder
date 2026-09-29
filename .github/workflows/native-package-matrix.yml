@@ -50,6 +50,25 @@ jobs:
           cache: true
           rust-src-dir: apps/desktop/src-tauri
           cache-shared-key: hive-native-package-windows-v1
+      - name: Adversarial offline glib patch provenance tests
+        run: python -m unittest tests.desktop.test_glib_patch_provenance
+      - name: Bootstrap exact authenticated glib 0.18.5 source
+        run: python tools/desktop/bootstrap_glib_patch.py
+      - name: Build exact-glib-only legacy lint wrapper
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:RUNNER_TEMP "hcoder-glib-rustc-wrapper.exe"
+          rustc --edition=2021 -D warnings -O tools/desktop/glib_rustc_wrapper.rs -o $exe
+          if ($LASTEXITCODE -ne 0) { throw "rustc wrapper compile failed" }
+          $tests = Join-Path $env:RUNNER_TEMP "hcoder-glib-wrapper-tests.exe"
+          rustc --edition=2021 -D warnings --test tools/desktop/glib_rustc_wrapper.rs -o $tests
+          if ($LASTEXITCODE -ne 0) { throw "rustc wrapper test compile failed" }
+          & $tests
+          if ($LASTEXITCODE -ne 0) { throw "rustc wrapper tests failed" }
+          $lib = (Resolve-Path apps/desktop/src-tauri/vendor/glib-0.18.5/src/lib.rs).Path
+          "RUSTC_WRAPPER=$exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "HCODER_GLIB_VENDOR_LIB=$lib" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          Write-Output "GLIB_LINT_ALLOWLIST_SCOPE=EXACT_PATCHED_CRATE_ONLY"
       - name: Generate deterministic Hive desktop icon
         run: python tools/desktop/generate_icon.py
       - name: Install exact npm graph
@@ -201,6 +220,21 @@ jobs:
           cache: true
           rust-src-dir: apps/desktop/src-tauri
           cache-shared-key: hive-native-package-linux-v1
+      - name: Adversarial offline glib patch provenance tests
+        run: python -m unittest tests.desktop.test_glib_patch_provenance
+      - name: Bootstrap exact authenticated glib 0.18.5 source
+        run: python tools/desktop/bootstrap_glib_patch.py
+      - name: Build exact-glib-only legacy lint wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          exe="$RUNNER_TEMP/hcoder-glib-rustc-wrapper"
+          rustc --edition=2021 -D warnings -O tools/desktop/glib_rustc_wrapper.rs -o "$exe"
+          rustc --edition=2021 -D warnings --test tools/desktop/glib_rustc_wrapper.rs -o "$RUNNER_TEMP/hcoder-glib-wrapper-tests"
+          "$RUNNER_TEMP/hcoder-glib-wrapper-tests"
+          echo "RUSTC_WRAPPER=$exe" >> "$GITHUB_ENV"
+          echo "HCODER_GLIB_VENDOR_LIB=$GITHUB_WORKSPACE/apps/desktop/src-tauri/vendor/glib-0.18.5/src/lib.rs" >> "$GITHUB_ENV"
+          echo "GLIB_LINT_ALLOWLIST_SCOPE=EXACT_PATCHED_CRATE_ONLY"
       - name: Generate deterministic Hive desktop icon
         run: python tools/desktop/generate_icon.py
       - name: Install exact npm graph
@@ -348,6 +382,21 @@ jobs:
           cache: true
           rust-src-dir: apps/desktop/src-tauri
           cache-shared-key: hive-native-package-macos-v1
+      - name: Adversarial offline glib patch provenance tests
+        run: python -m unittest tests.desktop.test_glib_patch_provenance
+      - name: Bootstrap exact authenticated glib 0.18.5 source
+        run: python tools/desktop/bootstrap_glib_patch.py
+      - name: Build exact-glib-only legacy lint wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          exe="$RUNNER_TEMP/hcoder-glib-rustc-wrapper"
+          rustc --edition=2021 -D warnings -O tools/desktop/glib_rustc_wrapper.rs -o "$exe"
+          rustc --edition=2021 -D warnings --test tools/desktop/glib_rustc_wrapper.rs -o "$RUNNER_TEMP/hcoder-glib-wrapper-tests"
+          "$RUNNER_TEMP/hcoder-glib-wrapper-tests"
+          echo "RUSTC_WRAPPER=$exe" >> "$GITHUB_ENV"
+          echo "HCODER_GLIB_VENDOR_LIB=$GITHUB_WORKSPACE/apps/desktop/src-tauri/vendor/glib-0.18.5/src/lib.rs" >> "$GITHUB_ENV"
+          echo "GLIB_LINT_ALLOWLIST_SCOPE=EXACT_PATCHED_CRATE_ONLY"
       - name: Generate deterministic Hive desktop icon
         run: python tools/desktop/generate_icon.py
       - name: Install exact npm graph
