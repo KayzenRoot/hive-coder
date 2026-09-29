@@ -184,6 +184,75 @@ jobs:
         run: npm ci --ignore-scripts --no-audit
       - name: Rust unit tests with locked graph and Linux dialog backend
         run: cargo test --locked --features rfd/gtk3 --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Release-optimized regression on exact bootstrapped product glib
+        shell: bash
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/hcoder-glib-product-release"
+          probe="$d/variant-regression"
+          mkdir -p "$probe/tests"
+          cat > "$probe/Cargo.toml" <<EOF
+          [package]
+          name = "hcoder-glib-variant-regression"
+          version = "0.0.0"
+          edition = "2024"
+          publish = false
+          [dependencies]
+          glib = { path = "$GITHUB_WORKSPACE/apps/desktop/src-tauri/vendor/glib-0.18.5" }
+          EOF
+          cat > "$probe/tests/variant.rs" <<'RS'
+          use glib::prelude::*;
+          use glib::Variant;
+          fn source() -> Variant {
+              Variant::array_from_iter::<String>(
+                  ["zero", "one", "two", "three", "four"]
+                    .iter()
+                    .map(|s| s.to_string().to_variant())
+              )
+          }
+          #[test]
+          fn combined_front_back_nth_and_nth_back() {
+              let value=source();
+              let mut it=value.array_iter_str().unwrap();
+              assert_eq!(it.next(),Some("zero"));
+              assert_eq!(it.next_back(),Some("four"));
+              assert_eq!(it.nth(1),Some("two"));
+              assert_eq!(it.nth_back(0),Some("three"));
+              assert_eq!(it.next(),None);
+              assert_eq!(it.next_back(),None);
+          }
+          #[test]
+          fn iterator_last_and_empty() {
+              let value=source();
+              assert_eq!(value.array_iter_str().unwrap().last(),Some("four"));
+              let empty=Variant::array_from_iter::<String>(Vec::<Variant>::new());
+              let mut it=empty.array_iter_str().unwrap();
+              assert_eq!(it.next(),None);
+              assert_eq!(it.last(),None);
+          }
+          #[test]
+          fn overflow_nth_and_nth_back_are_safe() {
+              let value=source();
+              let mut one=value.array_iter_str().unwrap();
+              assert_eq!(one.nth(usize::MAX),None);
+              assert_eq!(one.next(),None);
+              let mut two=value.array_iter_str().unwrap();
+              assert_eq!(two.nth_back(usize::MAX),None);
+              assert_eq!(two.next_back(),None);
+          }
+          #[test]
+          fn repeated_full_iteration() {
+              let value=source();
+              for _ in 0..100 {
+                  let found:Vec<_>=value.array_iter_str().unwrap().collect();
+                  assert_eq!(found,vec!["zero","one","two","three","four"]);
+              }
+          }
+          RS
+          cargo test --release --manifest-path "$probe/Cargo.toml" --test variant
+          echo "OPTIMIZED_PATCHED_PRODUCT_GLIB_TESTS=PASS"
+          git diff --quiet --exit-code
+          echo "ORIGINAL_TRACKED_SOURCE_UNCHANGED=PASS"
       - name: Rust check with locked graph and Linux dialog backend
         run: cargo check --locked --features rfd/gtk3 --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Tauri Linux build without bundle
