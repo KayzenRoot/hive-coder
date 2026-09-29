@@ -24,3 +24,6 @@ __pycache__/
 Thumbs.db
 .vscode/
 .idea/
+
+# Generated, hash-verified build-time-only security backport; never commit fetched crate.
+/apps/desktop/src-tauri/vendor/glib-0.18.5/

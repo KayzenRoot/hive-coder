@@ -76,6 +76,40 @@ jobs:
           fallback: none
       - name: Audit locked Rust dependency graph
         run: cargo audit --file apps/desktop/src-tauri/Cargo.lock
+      - name: Original registry-glib RustSec advisory carry-forward
+        shell: pwsh
+        run: |
+          # Local path packages drop out of cargo-audit's registry scan. Reconstruct
+          # the exact original registry identity IN RUNNER TEMP to keep that advisory
+          # visible; never ignore it, modify the checked-in lock or misreport a clean scan.
+          $lock = Join-Path $env:RUNNER_TEMP "hcoder-original-registry-glib.lock"
+          $report = Join-Path $env:RUNNER_TEMP "hcoder-original-registry-audit.json"
+          python tools/desktop/bootstrap_glib_patch.py --emit-original-audit-lock $lock
+          if ($LASTEXITCODE -ne 0) { throw "original registry lock provenance rejected" }
+          cargo audit --file $lock --json > $report
+          if ($LASTEXITCODE -ne 0) { throw "new or escalated registry vulnerability requires review" }
+          python tools/desktop/bootstrap_glib_patch.py --check-original-audit-json $report
+          if ($LASTEXITCODE -ne 0) { throw "original glib advisory was suppressed or missing" }
+          Write-Output "ORIGINAL_REGISTRY_AUDIT=WARNING_VISIBLE_NOT_WAIVED"
+      - name: Adversarial offline glib patch provenance tests
+        run: python -m unittest tests.desktop.test_glib_patch_provenance
+      - name: Bootstrap exact authenticated glib 0.18.5 source
+        run: python tools/desktop/bootstrap_glib_patch.py
+      - name: Build exact-glib-only legacy lint wrapper
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:RUNNER_TEMP "hcoder-glib-rustc-wrapper.exe"
+          rustc --edition=2021 -D warnings -O tools/desktop/glib_rustc_wrapper.rs -o $exe
+          if ($LASTEXITCODE -ne 0) { throw "rustc wrapper compile failed" }
+          $tests = Join-Path $env:RUNNER_TEMP "hcoder-glib-wrapper-tests.exe"
+          rustc --edition=2021 -D warnings --test tools/desktop/glib_rustc_wrapper.rs -o $tests
+          if ($LASTEXITCODE -ne 0) { throw "rustc wrapper test compile failed" }
+          & $tests
+          if ($LASTEXITCODE -ne 0) { throw "rustc wrapper tests failed" }
+          $lib = (Resolve-Path apps/desktop/src-tauri/vendor/glib-0.18.5/src/lib.rs).Path
+          "RUSTC_WRAPPER=$exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "HCODER_GLIB_VENDOR_LIB=$lib" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          Write-Output "GLIB_LINT_ALLOWLIST_SCOPE=EXACT_PATCHED_CRATE_ONLY"
       - name: Generate deterministic Hive desktop icon
         run: python tools/desktop/generate_icon.py
       - name: Install exact npm graph
@@ -143,6 +177,21 @@ jobs:
           node --version
           rustc --version
           cargo --version
+      - name: Adversarial offline glib patch provenance tests
+        run: python -m unittest tests.desktop.test_glib_patch_provenance
+      - name: Bootstrap exact authenticated glib 0.18.5 source
+        run: python tools/desktop/bootstrap_glib_patch.py
+      - name: Build exact-glib-only legacy lint wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          exe="$RUNNER_TEMP/hcoder-glib-rustc-wrapper"
+          rustc --edition=2021 -D warnings -O tools/desktop/glib_rustc_wrapper.rs -o "$exe"
+          rustc --edition=2021 -D warnings --test tools/desktop/glib_rustc_wrapper.rs -o "$RUNNER_TEMP/hcoder-glib-wrapper-tests"
+          "$RUNNER_TEMP/hcoder-glib-wrapper-tests"
+          echo "RUSTC_WRAPPER=$exe" >> "$GITHUB_ENV"
+          echo "HCODER_GLIB_VENDOR_LIB=$GITHUB_WORKSPACE/apps/desktop/src-tauri/vendor/glib-0.18.5/src/lib.rs" >> "$GITHUB_ENV"
+          echo "GLIB_LINT_ALLOWLIST_SCOPE=EXACT_PATCHED_CRATE_ONLY"
       - name: Generate deterministic Hive desktop icon
         run: python tools/desktop/generate_icon.py
       - name: Install exact npm graph
@@ -150,6 +199,75 @@ jobs:
         run: npm ci --ignore-scripts --no-audit
       - name: Rust unit tests with locked graph and Linux dialog backend
         run: cargo test --locked --features rfd/gtk3 --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Release-optimized regression on exact bootstrapped product glib
+        shell: bash
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/hcoder-glib-product-release"
+          probe="$d/variant-regression"
+          mkdir -p "$probe/tests"
+          cat > "$probe/Cargo.toml" <<EOF
+          [package]
+          name = "hcoder-glib-variant-regression"
+          version = "0.0.0"
+          edition = "2024"
+          publish = false
+          [dependencies]
+          glib = { path = "$GITHUB_WORKSPACE/apps/desktop/src-tauri/vendor/glib-0.18.5" }
+          EOF
+          cat > "$probe/tests/variant.rs" <<'RS'
+          use glib::prelude::*;
+          use glib::Variant;
+          fn source() -> Variant {
+              Variant::array_from_iter::<String>(
+                  ["zero", "one", "two", "three", "four"]
+                    .iter()
+                    .map(|s| s.to_string().to_variant())
+              )
+          }
+          #[test]
+          fn combined_front_back_nth_and_nth_back() {
+              let value=source();
+              let mut it=value.array_iter_str().unwrap();
+              assert_eq!(it.next(),Some("zero"));
+              assert_eq!(it.next_back(),Some("four"));
+              assert_eq!(it.nth(1),Some("two"));
+              assert_eq!(it.nth_back(0),Some("three"));
+              assert_eq!(it.next(),None);
+              assert_eq!(it.next_back(),None);
+          }
+          #[test]
+          fn iterator_last_and_empty() {
+              let value=source();
+              assert_eq!(value.array_iter_str().unwrap().last(),Some("four"));
+              let empty=Variant::array_from_iter::<String>(Vec::<Variant>::new());
+              let mut it=empty.array_iter_str().unwrap();
+              assert_eq!(it.next(),None);
+              assert_eq!(it.last(),None);
+          }
+          #[test]
+          fn overflow_nth_and_nth_back_are_safe() {
+              let value=source();
+              let mut one=value.array_iter_str().unwrap();
+              assert_eq!(one.nth(usize::MAX),None);
+              assert_eq!(one.next(),None);
+              let mut two=value.array_iter_str().unwrap();
+              assert_eq!(two.nth_back(usize::MAX),None);
+              assert_eq!(two.next_back(),None);
+          }
+          #[test]
+          fn repeated_full_iteration() {
+              let value=source();
+              for _ in 0..100 {
+                  let found:Vec<_>=value.array_iter_str().unwrap().collect();
+                  assert_eq!(found,vec!["zero","one","two","three","four"]);
+              }
+          }
+          RS
+          cargo test --release --manifest-path "$probe/Cargo.toml" --test variant
+          echo "OPTIMIZED_PATCHED_PRODUCT_GLIB_TESTS=PASS"
+          git diff --quiet --exit-code
+          echo "ORIGINAL_TRACKED_SOURCE_UNCHANGED=PASS"
       - name: Rust check with locked graph and Linux dialog backend
         run: cargo check --locked --features rfd/gtk3 --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Tauri Linux build without bundle
@@ -186,6 +304,21 @@ jobs:
           node --version
           rustc --version
           cargo --version
+      - name: Adversarial offline glib patch provenance tests
+        run: python -m unittest tests.desktop.test_glib_patch_provenance
+      - name: Bootstrap exact authenticated glib 0.18.5 source
+        run: python tools/desktop/bootstrap_glib_patch.py
+      - name: Build exact-glib-only legacy lint wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          exe="$RUNNER_TEMP/hcoder-glib-rustc-wrapper"
+          rustc --edition=2021 -D warnings -O tools/desktop/glib_rustc_wrapper.rs -o "$exe"
+          rustc --edition=2021 -D warnings --test tools/desktop/glib_rustc_wrapper.rs -o "$RUNNER_TEMP/hcoder-glib-wrapper-tests"
+          "$RUNNER_TEMP/hcoder-glib-wrapper-tests"
+          echo "RUSTC_WRAPPER=$exe" >> "$GITHUB_ENV"
+          echo "HCODER_GLIB_VENDOR_LIB=$GITHUB_WORKSPACE/apps/desktop/src-tauri/vendor/glib-0.18.5/src/lib.rs" >> "$GITHUB_ENV"
+          echo "GLIB_LINT_ALLOWLIST_SCOPE=EXACT_PATCHED_CRATE_ONLY"
       - name: Generate deterministic Hive desktop icon
         run: python tools/desktop/generate_icon.py
       - name: Install exact npm graph
