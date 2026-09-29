@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 from pathlib import Path
 import tarfile
 import tempfile
@@ -173,6 +174,47 @@ class GlibProvenanceTests(unittest.TestCase):
                     "file:///tmp/glib.crate"):
             with self.assertRaises(glib.ProvenanceError):
                 glib.fetch(url, 1)
+
+
+    def test_original_registry_shadow_restores_only_pinned_glib_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "original-glib-registry.lock"
+            glib.emit_original_registry_audit_lock(target)
+            original = target.read_text(encoding="utf-8")
+            patch = (glib.ROOT / "apps/desktop/src-tauri/Cargo.lock").read_text()
+            start = '[[package]]\nname = "glib"\nversion = "0.18.5"\n'
+            restored = (
+                start
+                + 'source = "registry+https://github.com/rust-lang/crates.io-index"\n'
+                + f'checksum = "{glib.CRATE_SHA256}"\n'
+            )
+            self.assertEqual(original, patch.replace(start, restored, 1))
+            with self.assertRaises(FileExistsError):
+                glib.emit_original_registry_audit_lock(target)
+
+    def test_original_registry_advisory_cannot_disappear_or_be_ignored(self) -> None:
+        report = {
+            "warnings": {
+                "unsound": [{
+                    "package": {"name": "glib", "version": "0.18.5"},
+                    "advisory": {"id": "RUSTSEC-2024-0429"},
+                }],
+            },
+            "settings": {"ignore": []},
+            "vulnerabilities": {"count": 0},
+        }
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "registry-audit.json"
+            target.write_text(json.dumps(report))
+            glib.check_unpatched_registry_advisory(target)
+            for bad in (
+                {**report, "warnings": {"unsound": []}},
+                {**report, "settings": {"ignore": ["RUSTSEC-2024-0429"]}},
+                {**report, "vulnerabilities": {"count": 1}},
+            ):
+                target.write_text(json.dumps(bad))
+                with self.assertRaises(glib.ProvenanceError):
+                    glib.check_unpatched_registry_advisory(target)
 
 
 if __name__ == "__main__":
