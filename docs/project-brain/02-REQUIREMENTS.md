@@ -7,6 +7,7 @@ Initial requirements:
 - Explicit permissions, emergency stop, action audit and safe handling of destructive/privileged actions.
 - Observable agent plan/actions/results and user takeover.
 - Git-aware governed execution using Work Orders, Context Locks, Evidence Bundles and exact-head reviews.
+- Standalone repository-first development, context assembly, tests and CI: no separately installed HIVE context service, Docker/Redis/PostgreSQL, HIVE MCP/REST, external corpus or project registry is required.
 - Replaceable adapters around external foundations rather than deep unbounded coupling.
 - Beautiful responsive desktop UI with original Hive identity.
 
