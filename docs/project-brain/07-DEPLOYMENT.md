@@ -2,6 +2,9 @@
 
 Initial deployment target is a user-installed desktop application, Windows-first during early validation while preserving cross-platform architecture where foundations support it.
 
+## Standalone development and desktop installation (HCODER-OPS-0001 proposed)
+Hive Coder's own source, Python runtime and Tauri desktop remain in this repository. Installing, running or retaining the **separate HIVE context/indexing server** (including Docker, HIVE MCP/REST, PostgreSQL/pgvector, Redis and mounted HIVE project paths) is not a prerequisite for local development, CI or user installation. Uninstalling that external service does not remove Hive Coder; retain its own existing dependencies and external Open Interpreter/Cua foundation pins. This policy does **not** prove a production-distributable installer or change the release/signing gates below.
+
 Packaging is no longer merely planned: it is proven as **evidence** under `HCODER-CP-0025` (see below). Signing, notarization, updater, crash telemetry, rollback and release-channel execution remain outside the approved state, and no production release is complete without reproducible build/package evidence plus a tested rollback/roll-forward path.
 
 ## Current release-trust status
