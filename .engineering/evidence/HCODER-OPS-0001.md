@@ -20,7 +20,7 @@ Evidence search using GitHub code search against **base main**:
 
 ## Scope / actual tracked changes
 
-Only the HCODER-OPS-0001 allowlist is admitted: new Work Order, Context Lock and DEC-032 candidate; current `AGENTS.md` and `README.md`; current Requirements, Scope, Architecture, Deployment, Backlog, Decisions Ledger and Integration Contracts; an append-only forward Context Lock Delta 003 for WO-0027; this Evidence Bundle. Approved checkpoint, old decisions/history/evidence, product Python/Rust/TypeScript, lockfiles, workflow YAML and release/security configuration are frozen. Obsolete PRs closed reversible/unmerged; no branch or repository deleted.
+The scope comprises 18 governance/documentation files: the Work Order, Context Lock and Evidence Bundle; DEC-032 and DEC-033 ADRs; AGENTS and README; Requirements, Scope, Architecture, Deployment, Backlog, Decisions Ledger and Integration Contracts; additional Scope Correction Delta 001 paths `.engineering/gef/GEF-REVIEW-PROTOCOL.md`, `.engineering/gef/GEF-EXECUTION-PROTOCOL.md` and `docs/project-brain/09-DEFINITION-OF-DONE.md`; plus append-only WO-0027 Context Lock Deltas 003 and 004. No other tracked paths are admitted. Approved checkpoint, old decisions/history/evidence, product Python/Rust/TypeScript, lockfiles, workflow YAML and release/security configuration are frozen. Obsolete PRs closed reversible/unmerged; no branch or repository deleted.
 
 ## Required exact-head tests and review
 
