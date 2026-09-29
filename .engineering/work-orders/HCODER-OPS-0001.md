@@ -53,16 +53,16 @@ No other tracked code/file changes unless a correction delta first proves a real
 - Keep canonical sources Git-first. Optional Codex/Cursor optimization uses focused repository files and local deterministic tooling; neither requires external HIVE.
 - Preserve existing internal Hive Coder capability/permission/credential barriers and unchanged contracts. Cua's own MCP server is unrelated to removed external HIVE.
 - Historical decisions, receipts and Context Locks remain immutable facts. Append explicit superseding direction rather than rewriting them as if they never existed.
-- A GitHub Draft PR is a proposal, not canonical admission. No automatic next product increment until exact-head required checks and independent audit.
+- A GitHub Draft PR is a proposal, not canonical admission. No next product increment until required exact-head checks and a substantive semantic audit. For this operational PR, that audit is the DEC-033 owner self-audit explicitly labeled NOT_INDEPENDENT; it does not need a second account.
 
 ## ACCEPTANCE CRITERIA
 
 1. An executor reading the current AGENTS/README/current canonical source pack will not be instructed to connect, mount, index or consult the separately installed HIVE.
 2. No live executable external-HIVE dependency in the checked repository/dependency manifests/workflows, with exact-path evidence and no false-positive deletion of product-owned code or Cua MCP.
-3. HCODER-WO-0027 can receive independent HEDS and proceed from repository sources without the local HIVE installation, while its updater-specific HIGH_ASSURANCE rules remain unchanged.
+3. HCODER-WO-0027 can undergo exact-head HEDS semantic audit, by KayzenRoot as an explicitly NOT_INDEPENDENT owner self-audit after DEC-033's acceptance, and proceed without local HIVE. All updater-specific HIGH_ASSURANCE tests, risk and release restrictions remain unchanged.
 4. Obsolete external-context and external-mount PRs are closed as superseded and their history retained; no branch is force-pushed or deleted.
 5. All four applicable Hive Coder hosted workflows pass on the exact review head. Skipped credential-bearing protected-release jobs remain SKIPPED. The full suite is NOT RUN locally unless independently demonstrated.
-6. Independent HEDS review reports no unresolved HIGH/CRITICAL; only then consider governed merge. Keep CP-0026 canonical until postmerge checks prove otherwise.
+6. A DEC-033 exact-head owner semantic self-audit (NOT_INDEPENDENT) reports no unresolved HIGH/CRITICAL, all required exact-head checks succeed and no blocking review threads remain; only then consider governed squash merge. Keep CP-0026 canonical until exact-main postmerge checks prove otherwise.
 
 ## TESTS / EVIDENCE
 
@@ -88,4 +88,4 @@ STOP if removal would delete internal product capabilities, break a frozen contr
 
 **Future application:** amend the existing HCODER-WO-0027 Context Lock **forward-only** to remove its prospective second-account HEDS acceptance prerequisite after this operational PR is governed-accepted, without changing its updater threat model, production trust prerequisites, held Draft PR #93 code, missing real signing/endpoint credentials, release publication state, or historical HEDS receipts. Other repositories require their own policy/source reconciliation: this Work Order does not silently amend 37 other repository histories or GitHub rules.
 
-**Acceptance update:** Criterion 6's earlier independent-HEDS requirement is superseded **prospectively for this same operational PR** by DEC-033's exact-head owner self-audit + unchanged objective CI and review-thread gates. Earlier closeout predicates/independent receipts remain historical and untouched. Any reviewer finding is handled as same-PR scoped correction with fresh exact-head CI. Postmerge exact-main gates remain mandatory before completion is claimed.
+**Acceptance update:** The original acceptance-criterion 3/6 and earlier requirements wording have been reconciled in this unmerged proposal. DEC-033's exact-head owner self-audit (NOT_INDEPENDENT) satisfies the semantic-review function for this same operational PR, with unchanged objective CI and review-thread gates. Earlier closeout predicates/independent receipts remain historical and untouched. Any reviewer finding is handled as same-PR scoped correction with fresh exact-head CI. Postmerge exact-main gates remain mandatory before completion is claimed.
