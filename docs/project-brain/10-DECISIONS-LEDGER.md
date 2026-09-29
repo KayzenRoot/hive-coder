@@ -264,7 +264,7 @@ This proposal admits no updater plugin, endpoint, HTTP request, download, instal
 **Promotion gate (durable) and conditional effectiveness.** `DEC-030` is CANONICAL / SEALED because `HCODER_CP_0026_EFFECTIVE` has been objectively satisfied for one promotion revision: exact promotion head `08ce8fe3a1bf189a8118c11b7454cd2fbf36a26d` received independent HEDS `5262643157` at CRITICAL/HIGH/MEDIUM/LOW `0/0/0/0`; PR #86 was squash-merged with expected-head protection as `3e209faaa96645555fe3ebcddfa6ea8fed13404b` while preserving reviewed tree `c4f2995c5492920f5f22d4c56550514c78b0d5c2`; and that exact resulting `main` SHA passed fresh Governance `35554327364`, Desktop Shell `35554327412`, Native Package Matrix `35554327449` and Protected Release `35554327398`. The predicate remains property-based and does not depend on these identifiers; the identifiers are lifecycle receipts proving that the already-declared conditions hold. Canonicalizing this Decision admits the release-trust substrate only and does not convert missing signing/notarization credentials, absent protected environments, skipped credential-bearing stages or unpublished artifacts into PASS.
 
 ## DEC-031 — Governed Tauri Updater Admission Bridge
-**Status:** PROPOSED / NOT CANONICAL — PREBUILT, IMPLEMENTATION NOT STARTED  
+**Status:** PROPOSED / NOT CANONICAL — Draft implementation candidate in PR #93; independent HEDS and governed promotion pending  
 **Work Order:** `HCODER-WO-0027`  
 **Issue:** `#89`  
 **Parent epic:** `HCODER-DIST-001` / Issue `#72`  
