@@ -27,6 +27,9 @@ Implementation starts only when repository identity/base, canonical sources, tar
 
 Existing real commands are authoritative. Never invent commands to satisfy the framework.
 
+## Prospective owner-only A4 semantics (DEC-033)
+A4 remains a separate semantic audit **activity**, not a requirement for a second GitHub identity. Once DEC-033 is accepted, `KayzenRoot` may perform A4 as an exact-head `OWNER_SELF_AUDIT / NOT_INDEPENDENT` after A0-A3 with unchanged protected checks, zero unresolved HIGH/CRITICAL and no open blocking review threads. HIGH_ASSURANCE adds explicit owner risk acceptance and negative-test/threat challenge. A separate challenge agent or paid bot may assist but is optional and may not generate fabricated independent-human approval. The prior A4 line records the historical independent practice; this paragraph prospectively supersedes its mandatory separate identity only. All prior checkpoint proof and exact SHA facts remain unchanged.
+
 ## Evidence
 Evidence binds Work Order, exact base/head, commands/workflows, results, corrections, security findings and unresolved risk. A failure is never hidden by documentation.
 

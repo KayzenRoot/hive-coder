@@ -13,6 +13,12 @@ Read canonical truth in this order before implementation or review:
 
 Material contradictions are recorded, not silently resolved. Git/code/tests/evidence beat conversation memory.
 
+## Standalone development: no separately installed HIVE
+The repository operates independently of the separately installed `KayzenRoot/hive` HIVE context/indexing service. It is **not** a source prerequisite, MCP/context provider, Docker dependency, execution gate or fallback for any Hive Coder Work Order. Do not require its localhost API, `HIVE_PROJECTS_ROOT`, project/task registry, corpus, checkpoint tool, mounts, database, Redis or any HIVE preflight. Compile small context directly from the accepted Project Brain/ADRs, active Work Order/Context Lock and exact Git/code/tests/CI evidence. If local HIVE is absent because it was uninstalled, that is expected, not BLOCKED or a failed check. Preserve the product's own `hive_runtime`, internal protocols and Cua Driver's unrelated MCP integration. This user-directed change is proposed in HCODER-OPS-0001 / DEC-032 and supersedes the unmerged external-HIVE-context proposal PR #94 when approved; historical records remain unchanged.
+
+## Owner-only GitHub workflow (DEC-033 proposed under HCODER-OPS-0001)
+No collaborator invitation, second GitHub account, mandatory independent human review or paid review bot may be a prerequisite for current or future Hive Coder development. `KayzenRoot` retains sole responsibility for PR review decisions, guarded merges and acceptance. Keep reviewer and implementer roles as separately documented tasks: when the same account performs them, label the review **OWNER_SELF_AUDIT / NOT_INDEPENDENT**, never manufacture an independent HEDS reviewer/APPROVE. Record an exact-head substantive scope/architecture/security/negative-test audit, applicable GitHub Actions and unresolved findings. For HIGH_ASSURANCE require extra explicit owner risk acceptance and fail-closed challenge evidence. GitHub rule #23768014 already requires 0 approvals but enforces 13 CI checks, base freshness, blocking-thread resolution and squash-only merge; do not weaken these. External bots/reviewers are optional diagnostic input, not acceptance authority. Once this operational PR is accepted, DEC-033 prospectively supersedes the second-account review dependency in living protocols and active WO-0027 Delta 004. Accepted historical independent reviews remain immutable.
+
 ## GEF V1 Universal mode
 Hive Coder is adopted as a BROWNFIELD repository under GEF Bootstrap V1.0.0. GEF wraps the existing project additively and must not rewrite historical work into fake GEF Work Orders/checkpoints/evidence.
 
@@ -29,7 +35,7 @@ This rule applies to **all Hive Coder chats, reviewers and agents** and supersed
 
 1. **Fix in chat first.** After a review, if a finding can be corrected safely and completely with the repository/GitHub tools available in the chat, the reviewer must apply the smallest bounded correction directly, stay in the same Work Order/PR when one is active, and then re-inspect the resulting exact head. A `CORRECTION_REQUIRED` verdict by itself is **not** a reason to hand the work to Codex.
 2. **Finish approved GitHub lifecycle actions in chat when possible.** If Ready/merge, issue updates, closeout, source-truth reconciliation or other authorized repository actions can be performed safely through connected tools, do them directly instead of adding an unnecessary executor hop.
-3. **Codex is the last-resort executor.** Send work back to Codex only when the task materially requires capabilities the chat does not have or cannot use safely, such as substantial local-workspace implementation, local build/toolchain/UI/desktop interaction, machine-specific HIVE/Codex state, execution that requires the user's local environment, or when a governed boundary explicitly requires a separate executor. The handoff must state the concrete reason chat-side correction is insufficient.
+3. **Codex is the last-resort executor.** Send work back to Codex only when the task materially requires capabilities the chat does not have or cannot use safely, such as substantial local-workspace implementation, local build/toolchain/UI/desktop interaction, machine-specific Codex/toolchain state, execution that requires the user's local environment, or when a governed boundary explicitly requires a separate executor. The handoff must state the concrete reason chat-side correction is insufficient.
 4. **PDF prompts are conditional, not universal.** When Codex is genuinely required, deliver the next executable Codex prompt as a generated PDF. `CORRECTION_REQUIRED` and `BLOCKED` remain in the same Work Order/PR until resolved. When the chat can complete the correction itself, no Codex prompt/PDF is required.
 5. **Any chat-side mutation creates a new evidence head.** Old exact-head receipts do not transfer. Re-run or re-inspect every required gate on the resulting exact SHA before approval or merge, and never self-declare a skipped/unknown lane as PASS.
 
@@ -54,6 +60,7 @@ If the user says `continue`, `continue do chat anterior`, or equivalent for Hive
 4. Continue autonomously from its NEXT EXACT ACTIONS.
 
 ## Current execution state
+**Operational prerequisite under review:** HCODER-OPS-0001 / Issue #95 proposes removing the *separate installed HIVE* from all current development prerequisites before resuming WO-0027; CP-0026 remains canonical. PR #93 is an existing implementation candidate under independent review, not evidence of a promoted updater. Do not merge the superseded external-HIVE preflight proposal PR #94.
 `HCODER-CP-0026 — Release trust substrate` is **CANONICAL / SEALED** because `HCODER_CP_0026_EFFECTIVE` has been objectively satisfied. `docs/project-brain/11-CHECKPOINT.md` selects the authoritative checkpoint by predicate and remains the source of truth; this section is a summary, not an independent authority.
 
 Canonical state:
@@ -72,10 +79,10 @@ GEF V1 universal is adopted; review mode is HEDS_DELTA_EXACT_HEAD and proof carr
 ### In-flight increments (not checkpoints, not canonical-complete)
 - `HCODER-PLATFORM-001` (Issue #63) native validation matrix is canonical on `main`; its ledger records **CANONICAL / PROVEN_CI MATRIX COMPLETE**. Launch smoke remains PROVEN_CI on Windows only. Release package evidence is now proven under `HCODER-CP-0025`; package **install** behaviour remains UNPROVEN on all platforms, and unsigned packages remain undistributable.
 - `HCODER-WO-0026` / Issue `#85` / `HCODER-DIST-001C` is **CLOSED / COMPLETE / CANONICAL / SEALED** under `HCODER-CP-0026`; PR `#86` is merged. Its credential-bearing signing/notarization and publication stages remain unexercised and outside the admitted authority.
-- `HCODER-WO-0027` / Issue `#89` / `HCODER-DIST-001D` is **PREBUILT / IMPLEMENTATION NOT STARTED**. It proposes DEC-031 and a Rust-only Hive Update Admission Bridge. No updater transport/install/restart authority exists until implementation is reviewed and promoted.
+- `HCODER-WO-0027` / Issue `#89` / `HCODER-DIST-001D` has an **unmerged Draft implementation candidate in PR #93**, not a canonical updater. DEC-031 remains PROPOSED. Candidate evidence does not grant updater transport/install/restart authority without independent HEDS and governed promotion.
 
 ### NEXT EXACT ACTIONS
-1. Treat `HCODER-CP-0026` / `DEC-030` as the canonical baseline and `HCODER-WO-0027` / Issue `#89` as the only active successor pointer.
+1. Complete the owner's NECESSARY no-external-HIVE operational prerequisite HCODER-OPS-0001 / Issue #95 under its own exact-head governance before resuming product work. Keep `HCODER-CP-0026` / `DEC-030` canonical and `HCODER-WO-0027` / Issue #89 / Draft PR #93 as the held product successor; no other product increment advances.
 2. Read WO-0027, its Context Lock, DEC-031 and prebuilt pack before implementation. Do not infer updater authority from the parent epic alone.
 3. Apply **CHAT FIRST, CODEX LAST**: keep planning/review/GitHub lifecycle work in chat; use Codex only when local dependency resolution, Rust/Tauri implementation and native toolchain execution materially require it.
 4. No updater private key, install/restart frontend command, release publication, UI, rollback/health or native update E2E is authorized by the prebuild.

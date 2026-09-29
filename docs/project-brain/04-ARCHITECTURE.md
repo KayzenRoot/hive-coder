@@ -16,6 +16,9 @@ Rules:
 - Durable logs/evidence must redact secrets and minimize user desktop data.
 - Architecture changes require T3 Work Order + ADR/Decisions Ledger update.
 
+## Independent development/context boundary — HCODER-OPS-0001 (PROPOSED)
+The “Hive” in this architecture denotes the **product-owned** `hive_runtime/`, not the separately installed `KayzenRoot/hive` service. Work Orders, source selection, code review and checks derive only from this repository's Git, approved checkpoint/decisions, focused source inspection, deterministic local tooling and GitHub Actions. There is no required HIVE context MCP/REST handshake, Docker Compose stack, external project registry, index/corpus, Postgres/pgvector or Redis. No automatic fallback to that service is retained. This is a development/integration separation, not a change to the product's permission model or internal runtime. The independent Cua Driver MCP and Open Interpreter ACP remain as approved foundation adapters. This policy is proposed under DEC-032 and becomes canonical only after its governed review/merge.
+
 ## Desktop shell foundation — WO-0015
 `apps/desktop/` is the first governed desktop substrate using Tauri 2 with React/TypeScript/Vite. The desktop framework does not own Hive authority.
 
