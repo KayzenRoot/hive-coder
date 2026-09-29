@@ -30,3 +30,7 @@ The owner is uninstalling the **separate `KayzenRoot/hive` HIVE context/indexing
 Git and deterministic repository-local source inspection become the only mandatory context substrate. The existing four hosted CI workflows stay required, and HEDS remains an independent gate. Static source search must distinguish product-owned Hive names and Cua MCP from the disallowed separate HIVE service. No new code capability, release/signing/updater privilege, checkpoint promotion or production-deployment claim arises from this decision.
 
 **Promotion:** This ADR becomes effective only after its implementing docs/source migration passes required exact-head validation, independent review and governed merge. `HCODER-CP-0026` stays canonical in the meantime.
+
+## Accepted lifecycle evidence — 2026-09-29
+
+The user-directed standalone-development policy in this original proposal was objectively accepted when HCODER-OPS-0001 PR #96 was owner-account security/scope audited (NOT INDEPENDENT), expected-head-protected squash merged as `5b0948d92701c2721ee8a9dc67d5c73c04d287d2` and passed its four fresh exact-main workflows: Governance `36576928475`, Desktop Shell `36576928541`, Native Package Matrix `36576928385`, Protected Release `36576928387` (13 required checks). This addendum is a forward lifecycle fact, not a rewrite of the ADR's initially proposed heading. The separate `KayzenRoot/hive` context server is not a development/MCP/index/Docker prerequisite. The product-owned `hive_runtime`, internal wire identifiers and independently pinned Cua MCP remain present.
