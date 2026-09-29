@@ -202,6 +202,25 @@ jobs:
           src="$d/patched/glib-0.18.5"
           app="$d/desktop-scratch/src-tauri/Cargo.toml"
           cfg="patch.crates-io.glib.path=\"$src\""
+          # Cargo normally caps lints on registry dependencies, but a local path glib
+          # inherits the runner global -D warnings. Do NOT relax app or other crates.
+          wrapper="$d/glib-rustc-wrapper.sh"
+          cat > "$wrapper" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          rustc="$1"; shift
+          if [[ " $* " == *" --crate-name glib "* ]] && [[ " $* " == *"$HCODER_PATCHED_GLIB_PATH/src/lib.rs"* ]]; then
+            echo "LEGACY_GLIB_ONLY_LINT_ALLOWLIST_APPLIED=1" >&2
+            exec "$rustc" "$@" -A unused_parens -A mismatched_lifetime_syntaxes
+          fi
+          exec "$rustc" "$@"
+          SH
+          chmod 0755 "$wrapper"
+          export HCODER_PATCHED_GLIB_PATH="$src"
+          export RUSTC_WRAPPER="$wrapper"
+          echo "HCODER_PATCHED_GLIB_PATH=$src" >> "$GITHUB_ENV"
+          echo "RUSTC_WRAPPER=$wrapper" >> "$GITHUB_ENV"
+          echo "LEGACY_GLIB_ONLY_ALLOWLIST=unused_parens,mismatched_lifetime_syntaxes"
           cargo --config "$cfg" metadata --manifest-path "$app" --format-version 1 > "$d/cargo-metadata.json"
           python3 - "$d" <<'PY'
           import json,sys
