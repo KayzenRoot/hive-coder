@@ -10,19 +10,19 @@ permissions:
 
 jobs:
   linux-glib-overlay-probe:
-    if: ${\{ github.head_ref == 'security/HCODER-SEC-0001-glib-overlay-probe' && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.head_ref == 'security/HCODER-SEC-0001-glib-overlay-probe' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - name: Checkout exact PR candidate, no persisted credentials
         uses: actions/checkout@v4
         with:
-          ref: ${\{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - name: Verify frozen product and source HEAD
         shell: bash
         env:
-          EXPECTED_HEAD: ${\{ github.event.pull_request.head.sha }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
