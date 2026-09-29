@@ -1,4 +1,5 @@
 mod runtime_status_supervisor;
+mod update_admission;
 
 use rfd::FileDialog;
 use serde::Serialize;
@@ -6,9 +7,19 @@ use std::fs::{self, File, Metadata};
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Mutex;
+use tauri::Manager;
 use tauri::State;
+use tauri_plugin_updater::UpdaterExt;
+use update_admission::{
+    announced_of, check_refusal, download_refusal, probe_from_config, resolve_trust, UpdateAdmissionBridge, WireStatus,
+};
 
 const DESKTOP_WINDOW_LABEL: &str = "main";
+/// The single canonical product version, mirrored from `tauri.conf.json` by the
+/// version-drift gate. The updater describes the installed build with this value
+/// and with nothing else, so the identity a candidate is compared against cannot
+/// be set independently of the build that reports it.
+pub(crate) const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 const MAX_ROOT_CHARS: usize = 1024;
 const MAX_TOP_LEVEL_ENTRIES: usize = 512;
 const MAX_HEAD_BYTES: u64 = 4096;
@@ -640,7 +651,7 @@ fn desktop_snapshot(state: &DesktopState) -> Result<DesktopSnapshot, String> {
         schema_version: 2,
         product: ProductIdentity {
             name: "Hive Coder",
-            version: env!("CARGO_PKG_VERSION"),
+            version: PACKAGE_VERSION,
             baseline_checkpoint: "HCODER-CP-0015",
         },
         shell: signal(
@@ -714,11 +725,151 @@ fn get_runtime_status_envelope(webview_window: tauri::WebviewWindow) -> Result<S
     runtime_status_supervisor::query_runtime_status_envelope()
 }
 
+/// Read what trusted update state currently holds. Performs no request; the only
+/// thing it consults is this build's own configuration.
+#[tauri::command]
+async fn get_update_status(
+    app: tauri::AppHandle,
+    webview_window: tauri::WebviewWindow,
+) -> Result<WireStatus, String> {
+    if !desktop_window_is_authorized(webview_window.label()) {
+        return Err("update status is unavailable for this window".to_owned());
+    }
+    bounded_snapshot(&app)
+}
+
+/// Ask the build's own trusted configuration once whether a newer release of the
+/// same channel exists. A refusal is reported as bounded state, not as an error,
+/// so the frontend never receives an updater message it has not been shown law
+/// for.
+#[tauri::command]
+async fn check_for_update(
+    app: tauri::AppHandle,
+    webview_window: tauri::WebviewWindow,
+) -> Result<WireStatus, String> {
+    if !desktop_window_is_authorized(webview_window.label()) {
+        return Err("update check is unavailable for this window".to_owned());
+    }
+    perform_update_check(&app).await
+}
+
+/// Download and signature-verify the one candidate this build already admitted.
+/// There is deliberately no install or restart command in this slice.
+#[tauri::command]
+async fn download_update_candidate(
+    app: tauri::AppHandle,
+    webview_window: tauri::WebviewWindow,
+) -> Result<WireStatus, String> {
+    if !desktop_window_is_authorized(webview_window.label()) {
+        return Err("update download is unavailable for this window".to_owned());
+    }
+    perform_update_download(&app).await
+}
+
+/// Read the bridge without performing a request, and without letting an absent
+/// trust root look like a configured updater that is merely waiting.
+///
+/// A slot that owns nothing would otherwise answer `idle`, which is the same
+/// observation a build with a real endpoint and no announcement produces. Only
+/// here does that matter: `idle` is the one state a frontend may read as "the
+/// updater is reachable and has nothing to show yet", so it has to be earned by
+/// the configuration resolving, not granted by nobody having asked yet.
+fn bounded_snapshot(app: &tauri::AppHandle) -> Result<WireStatus, String> {
+    let bridge = app.state::<UpdateAdmissionBridge>();
+    if bridge.holds_nothing().map_err(|_| "update state is unavailable".to_owned())? {
+        let probe = match probe_from_config(app.config()) {
+            Ok(probe) => probe,
+            Err(refusal) => return report_refusal(app, refusal),
+        };
+        if let Err(refusal) = resolve_trust(&probe, PACKAGE_VERSION) {
+            return report_refusal(app, refusal);
+        }
+    }
+    bridge
+        .snapshot()
+        .map_err(|_| "update state is unavailable".to_owned())
+}
+
+fn report_refusal(app: &tauri::AppHandle, refusal: update_admission::Refusal) -> Result<WireStatus, String> {
+    let bridge = app.state::<UpdateAdmissionBridge>();
+    bridge.record(refusal);
+    bridge.snapshot().map_err(|_| "update state is unavailable".to_owned())
+}
+
+async fn perform_update_check(app: &tauri::AppHandle) -> Result<WireStatus, String> {
+    let probe = match probe_from_config(app.config()) {
+        Ok(probe) => probe,
+        Err(refusal) => return report_refusal(app, refusal),
+    };
+    // Trust is admissible or the request is never built. An empty key or empty
+    // endpoint list is a missing trust root, not a placeholder to try.
+    if let Err(refusal) = resolve_trust(&probe, PACKAGE_VERSION) {
+        return report_refusal(app, refusal);
+    }
+    let updater = match app.updater_builder().build() {
+        Ok(updater) => updater,
+        Err(error) => return report_refusal(app, check_refusal(&error)),
+    };
+    match updater.check().await {
+        Err(error) => report_refusal(app, check_refusal(&error)),
+        // No announcement is a successful observation; clear any stale refusal,
+        // while preserving a candidate another concurrent operation already owns.
+        Ok(None) => app
+            .state::<UpdateAdmissionBridge>()
+            .record_no_update()
+            .map_err(|_| "update state is unavailable".to_owned()),
+        Ok(Some(update)) => {
+            let announced = announced_of(&update);
+            let bridge = app.state::<UpdateAdmissionBridge>();
+            match bridge.admit_check(&probe, &announced, &update, PACKAGE_VERSION) {
+                Ok(_) => bridge.snapshot().map_err(|_| "update state is unavailable".to_owned()),
+                Err(refusal) => report_refusal(app, refusal),
+            }
+        }
+    }
+}
+
+async fn perform_update_download(app: &tauri::AppHandle) -> Result<WireStatus, String> {
+    let (admitted, update) = match app.state::<UpdateAdmissionBridge>().take_for_download() {
+        Ok(pair) => pair,
+        Err(refusal) => return report_refusal(app, refusal),
+    };
+    // `download` returns bytes only after the updater has verified the minisign
+    // signature and, under `requireSignedVersion`, the release version the
+    // signature was made for. No chunk callback is forwarded to the frontend.
+    match update.download(|_chunk, _total| {}, || {}).await {
+        Err(error) => report_refusal(app, download_refusal(&error)),
+        Ok(bytes) => {
+            let bridge = app.state::<UpdateAdmissionBridge>();
+            match bridge.complete_download(&admitted, &bytes, verified_at_epoch_ms()) {
+                Ok(_) => bridge.snapshot().map_err(|_| "update state is unavailable".to_owned()),
+                Err(refusal) => report_refusal(app, refusal),
+            }
+        }
+    }
+}
+
+fn verified_at_epoch_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_millis().min(u128::from(u64::MAX)) as u64)
+        .unwrap_or_default()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(DesktopState::default())
-        .invoke_handler(tauri::generate_handler![get_desktop_snapshot, choose_workspace, get_runtime_status_envelope])
+        .manage(UpdateAdmissionBridge::default())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![
+            get_desktop_snapshot,
+            choose_workspace,
+            get_runtime_status_envelope,
+            get_update_status,
+            check_for_update,
+            download_update_candidate
+        ])
         .run(tauri::generate_context!())
         .expect("Hive Coder desktop runtime failed");
 }

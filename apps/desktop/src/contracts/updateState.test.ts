@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADMITTED_AUTHENTICITY_SCHEMES,
   AUTHENTICITY_DEPENDENT_STATES,
+  INSTALL_PROGRESS_STATES,
   LEGAL_TRANSITIONS,
   MAX_UPDATE_ERROR_DETAIL_CHARS,
   MAX_UPDATE_STATUS_EVENTS,
@@ -19,6 +20,7 @@ import {
   evaluateTransition,
   evaluateUpdateError,
   isAuthenticityDependentState,
+  isInstallProgressState,
   isInstallReadyReachable,
   isPersistedEventOutcome,
   isTransitionReason,
@@ -29,6 +31,21 @@ import {
 } from "./updateState";
 
 const VALID_HASH = "a".repeat(64);
+
+/**
+ * The strongest evidence this contract admits: the DEC-031 scheme, well formed.
+ * Anything install-progress stays refused even against this proof, so a test that
+ * passes here cannot be passing because the proof was weak.
+ */
+const ACCEPTED_PROOF = {
+  scheme: "tauri-minisign-signed-version-v1",
+  artifactSha256: VALID_HASH,
+  metadataSha256: VALID_HASH,
+  verifiedAtEpochMs: 1_700_000_000_000,
+};
+
+/** Structurally valid, but its scheme is not one this contract admits. */
+const UNADMITTED_PROOF = { ...ACCEPTED_PROOF, scheme: "invented-scheme-v1" };
 
 describe("update state contract", () => {
   it("defines the bounded state vocabulary", () => {
@@ -60,15 +77,16 @@ describe("update state contract", () => {
     expect(evaluateTransition("checking", "available")).toEqual({ ok: true, reason: "legal_transition" });
     expect(evaluateTransition("available", "downloading")).toEqual({ ok: true, reason: "legal_transition" });
     expect(evaluateTransition("downloading", "verifying")).toEqual({ ok: true, reason: "legal_transition" });
-    // Entering any authenticity-dependent state is gated: these edges are legal
-    // in shape but refused without an accepted proof.
+    // The two authenticity gates are different: entering `ready` is refused
+    // without an accepted proof, and entering install progress is refused by an
+    // authority this contract does not have.
     expect(evaluateTransition("verifying", "ready")).toEqual({
       ok: false,
       reason: "authenticity_proof_required",
     });
     expect(evaluateTransition("installing", "success")).toEqual({
       ok: false,
-      reason: "authenticity_proof_required",
+      reason: "install_authority_not_governed",
     });
   });
 
@@ -88,10 +106,23 @@ describe("update state contract", () => {
     }
   });
 
-  it("admits no cryptographic scheme in this slice", () => {
-    expect(ADMITTED_AUTHENTICITY_SCHEMES).toEqual([]);
-    expect(isInstallReadyReachable()).toBe(false);
+  it("admits exactly the scheme the Rust bridge produces", () => {
+    // DEC-031 admits one scheme, and its name is the producer's constant in
+    // `update_admission.rs`. A second name here would be a second cryptographic
+    // authority that nobody granted.
+    expect(ADMITTED_AUTHENTICITY_SCHEMES).toEqual(["tauri-minisign-signed-version-v1"]);
+    expect(new Set(ADMITTED_AUTHENTICITY_SCHEMES).size).toBe(ADMITTED_AUTHENTICITY_SCHEMES.length);
+    expect(evaluateAuthenticityProof(ACCEPTED_PROOF)).toEqual({ ok: true });
+    expect(evaluateAuthenticityProof(UNADMITTED_PROOF)).toEqual({ ok: false, reason: "no_admitted_scheme" });
+    expect(isInstallReadyReachable()).toBe(true);
+  });
+
+  it("separates install readiness from install progress", () => {
     expect(AUTHENTICITY_DEPENDENT_STATES).toEqual(["ready", "installing", "success"]);
+    expect(INSTALL_PROGRESS_STATES).toEqual(["installing", "success"]);
+    // The two vocabularies differ by exactly `ready`, the one authenticity claim
+    // this slice is able to produce.
+    expect(AUTHENTICITY_DEPENDENT_STATES.filter((state) => !isInstallProgressState(state))).toEqual(["ready"]);
     for (const state of ["ready", "installing", "success"] as const) {
       expect(requiresAuthenticityProof(state), state).toBe(true);
       expect(isAuthenticityDependentState(state), state).toBe(true);
@@ -103,90 +134,107 @@ describe("update state contract", () => {
     for (const value of ["", "ready ", "SUCCESS", "installed", null, undefined, 7, {}]) {
       expect(isAuthenticityDependentState(value)).toBe(false);
     }
+    for (const value of ["", "installing ", "SUCCESS", "ready", null, undefined, 7, {}]) {
+      expect(isInstallProgressState(value)).toBe(false);
+    }
   });
 
-  it("gates every edge that enters an authenticity-dependent state", () => {
-    const wellFormed = {
-      scheme: "invented-scheme-v1",
-      artifactSha256: VALID_HASH,
-      metadataSha256: VALID_HASH,
-      verifiedAtEpochMs: 1_700_000_000_000,
-    };
-    const gatedEdges: ReadonlyArray<readonly [UpdateState, UpdateState]> = [
-      ["verifying", "ready"],
-      ["ready", "installing"],
-      ["installing", "success"],
-    ];
-    // The gated set is exactly the legal edges whose destination is
-    // authenticity-dependent: no such destination is left ungated.
-    const legalAuthenticityDependentEdges: string[] = [];
+  it("covers every edge into an authenticity-dependent state with exactly one gate", () => {
+    const entering: string[] = [];
     for (const from of UPDATE_STATES) {
       for (const to of LEGAL_TRANSITIONS[from]) {
-        if (isAuthenticityDependentState(to)) legalAuthenticityDependentEdges.push(`${from}->${to}`);
+        if (isAuthenticityDependentState(to)) entering.push(`${from}->${to}`);
       }
     }
-    expect(legalAuthenticityDependentEdges.sort()).toEqual(gatedEdges.map(([from, to]) => `${from}->${to}`).sort());
+    // No authenticity-dependent destination is left ungated and no edge is gated
+    // twice: `ready` by proof, install progress by authority.
+    expect(entering.sort()).toEqual(["installing->success", "ready->installing", "verifying->ready"]);
 
-    for (const [from, to] of gatedEdges) {
+    for (const [from, to] of [
+      ["ready", "installing"],
+      ["installing", "success"],
+    ] as const) {
       const label = `${from}->${to}`;
-      expect(evaluateTransition(from, to), label).toEqual({ ok: false, reason: "authenticity_proof_required" });
+      // The authority gate runs before the proof gate. These edges are not
+      // refused for want of evidence, so no proof of any shape makes them legal.
+      expect(evaluateTransition(from, to), label).toEqual({ ok: false, reason: "install_authority_not_governed" });
       expect(evaluateTransition(from, to, null), label).toEqual({
         ok: false,
-        reason: "authenticity_proof_required",
+        reason: "install_authority_not_governed",
       });
-      expect(evaluateTransition(from, to, wellFormed), label).toEqual({
+      expect(evaluateTransition(from, to, ACCEPTED_PROOF), label).toEqual({
         ok: false,
-        reason: "authenticity_proof_required",
+        reason: "install_authority_not_governed",
       });
-      expect(evaluateTransition(from, to, {}), label).toEqual({
-        ok: false,
-        reason: "malformed_authenticity_proof",
-      });
+      expect(evaluateTransition(from, to, {}), label).toEqual({ ok: false, reason: "install_authority_not_governed" });
     }
+
+    const label = "verifying->ready";
+    expect(evaluateTransition("verifying", "ready"), label).toEqual({
+      ok: false,
+      reason: "authenticity_proof_required",
+    });
+    expect(evaluateTransition("verifying", "ready", null), label).toEqual({
+      ok: false,
+      reason: "authenticity_proof_required",
+    });
+    // A well-formed proof whose scheme is not admitted is still no evidence.
+    expect(evaluateTransition("verifying", "ready", UNADMITTED_PROOF), label).toEqual({
+      ok: false,
+      reason: "authenticity_proof_required",
+    });
+    expect(evaluateTransition("verifying", "ready", {}), label).toEqual({
+      ok: false,
+      reason: "malformed_authenticity_proof",
+    });
+    expect(evaluateTransition("verifying", "ready", ACCEPTED_PROOF), label).toEqual({
+      ok: true,
+      reason: "legal_transition",
+    });
+
     // Ungated edges of the same source states remain legal without any proof.
     expect(evaluateTransition("verifying", "failure")).toEqual({ ok: true, reason: "legal_transition" });
     expect(evaluateTransition("ready", "idle")).toEqual({ ok: true, reason: "legal_transition" });
     expect(evaluateTransition("installing", "failure")).toEqual({ ok: true, reason: "legal_transition" });
   });
 
-  it("makes the whole install path unreachable while no scheme is admitted", () => {
-    expect(isInstallReadyReachable()).toBe(false);
-    // Exhaustive over the whole state vocabulary: nothing reaches `ready`,
-    // `installing` or `success`, with or without a well-formed but unadmitted
-    // proof. This is the property the lifecycle claim rests on.
-    const wellFormed = {
-      scheme: "invented-scheme-v1",
-      artifactSha256: VALID_HASH,
-      metadataSha256: VALID_HASH,
-      verifiedAtEpochMs: 1,
-    };
+  it("admits no install-progress state from any source under any proof", () => {
+    // Exhaustive over the whole edge and proof surface: even the strongest proof
+    // this contract accepts never enters `installing` or `success`. `ready` is
+    // admitted on exactly one edge, `verifying -> ready`.
+    const proofs: readonly unknown[] = [undefined, null, {}, UNADMITTED_PROOF, ACCEPTED_PROOF];
     for (const from of UPDATE_STATES) {
       for (const to of AUTHENTICITY_DEPENDENT_STATES) {
-        const label = `${from}->${to}`;
-        expect(evaluateTransition(from, to).ok, label).toBe(false);
-        expect(evaluateTransition(from, to, wellFormed).ok, label).toBe(false);
-        expect(evaluateTransition(from, to, {}).ok, label).toBe(false);
+        for (const [index, proof] of proofs.entries()) {
+          const label = `${from}->${to}#${index}`;
+          const expected = to === "ready" && from === "verifying" && proof === ACCEPTED_PROOF;
+          expect(evaluateTransition(from, to, proof).ok, label).toBe(expected);
+        }
       }
     }
   });
 
-  it("refuses installation without an accepted authenticity proof", () => {
-    // No proof at all.
+  it("refuses installation whatever evidence a caller presents", () => {
+    // A proof describes what the Rust side already verified. It is never the
+    // authority for a mutation of the running product.
     expect(evaluateTransition("ready", "installing")).toEqual({
       ok: false,
-      reason: "authenticity_proof_required",
+      reason: "install_authority_not_governed",
     });
-    // A well-formed proof is still refused because no scheme is admitted.
-    const wellFormed = {
-      scheme: "invented-scheme-v1",
-      artifactSha256: VALID_HASH,
-      metadataSha256: VALID_HASH,
-      verifiedAtEpochMs: 1_700_000_000_000,
-    };
-    expect(evaluateAuthenticityProof(wellFormed)).toEqual({ ok: false, reason: "no_admitted_scheme" });
-    expect(evaluateTransition("ready", "installing", wellFormed)).toEqual({
+    expect(evaluateAuthenticityProof(UNADMITTED_PROOF)).toEqual({ ok: false, reason: "no_admitted_scheme" });
+    expect(evaluateTransition("ready", "installing", UNADMITTED_PROOF)).toEqual({
       ok: false,
-      reason: "authenticity_proof_required",
+      reason: "install_authority_not_governed",
+    });
+    expect(evaluateTransition("ready", "installing", ACCEPTED_PROOF)).toEqual({
+      ok: false,
+      reason: "install_authority_not_governed",
+    });
+    // The same accepted proof does admit the install-ready claim, so the refusals
+    // above are the authority gate working and not a broken proof check.
+    expect(evaluateTransition("verifying", "ready", ACCEPTED_PROOF)).toEqual({
+      ok: true,
+      reason: "legal_transition",
     });
   });
 
@@ -207,7 +255,7 @@ describe("update state contract", () => {
     for (const proof of malformed) {
       expect(evaluateAuthenticityProof(proof)).toMatchObject({ ok: false });
     }
-    expect(evaluateTransition("ready", "installing", {})).toEqual({
+    expect(evaluateTransition("verifying", "ready", {})).toEqual({
       ok: false,
       reason: "malformed_authenticity_proof",
     });
@@ -447,32 +495,38 @@ describe("update state contract", () => {
       expect(evaluateStatus(status()).ok).toBe(true);
     });
 
-    it("refuses a snapshot that claims an authenticity-dependent state", () => {
-      const proof = {
-        scheme: "invented-scheme-v1",
-        artifactSha256: VALID_HASH,
-        metadataSha256: VALID_HASH,
-        verifiedAtEpochMs: 1,
-      };
-      for (const state of AUTHENTICITY_DEPENDENT_STATES) {
+    it("admits the install-ready claim only with an accepted proof, and never install progress", () => {
+      const ready = { ...status(), state: "ready", candidateVersion: "0.2.0", error: null };
+      // `ready` is assertable now that DEC-031 admits a scheme, but only together
+      // with a proof under that scheme.
+      expect(evaluateStatus({ ...ready, authenticityProof: ACCEPTED_PROOF }).ok).toBe(true);
+      expect(evaluateStatus(ready)).toEqual(INVALID);
+      expect(evaluateStatus({ ...ready, authenticityProof: null })).toEqual(INVALID);
+      expect(evaluateStatus({ ...ready, authenticityProof: UNADMITTED_PROOF })).toEqual(INVALID);
+      expect(evaluateStatus({ ...ready, authenticityProof: {} })).toEqual(INVALID);
+      expect(evaluateStatus({ ...ready, authenticityProof: "proof" })).toEqual(INVALID);
+      // Material the contract never declared is refused rather than quietly
+      // dropped from a nominally valid proof.
+      expect(evaluateStatus({ ...ready, authenticityProof: { ...ACCEPTED_PROOF, payload: "x".repeat(64) } })).toEqual(
+        INVALID,
+      );
+
+      // Install progress is not assertable at all: admitting a proof scheme
+      // authorises verification evidence, never an install or a restart.
+      for (const state of INSTALL_PROGRESS_STATES) {
         const claim = { ...status(), state, candidateVersion: "0.2.0", error: null };
         expect(evaluateStatus(claim), state).toEqual(INVALID);
-        expect(evaluateStatus({ ...claim, authenticityProof: proof }), state).toEqual(INVALID);
+        expect(evaluateStatus({ ...claim, authenticityProof: ACCEPTED_PROOF }), state).toEqual(INVALID);
+        expect(evaluateStatus({ ...claim, authenticityProof: UNADMITTED_PROOF }), state).toEqual(INVALID);
         expect(evaluateStatus({ ...claim, authenticityProof: null }), state).toEqual(INVALID);
       }
-      // `success` specifically: it is reachable only from `installing`, so a
-      // direct install-completed snapshot asserts a proof-gated traversal.
-      expect(evaluateStatus({ ...status(), state: "success", candidateVersion: "0.2.0", error: null })).toEqual(INVALID);
-      expect(
-        evaluateStatus({ ...status(), state: "success", candidateVersion: "0.2.0", error: null, authenticityProof: proof }),
-      ).toEqual(INVALID);
       // Proof material is refused outside an authenticity-dependent state as
       // well, rather than being accepted and ignored.
-      expect(evaluateStatus({ ...status(), authenticityProof: proof })).toEqual(INVALID);
+      expect(evaluateStatus({ ...status(), authenticityProof: ACCEPTED_PROOF })).toEqual(INVALID);
       expect(evaluateStatus({ ...status(), authenticityProof: "proof" })).toEqual(INVALID);
-      // The refusal is a live-policy refusal, not a vacuous one: the same proof
-      // is structurally well formed and only refused for policy.
-      expect(evaluateAuthenticityProof(proof)).toEqual({ ok: false, reason: "no_admitted_scheme" });
+      // The refusal above is a live-policy refusal, not a vacuous one: the same
+      // unadmitted proof shape is structurally well formed.
+      expect(evaluateAuthenticityProof(UNADMITTED_PROOF)).toEqual({ ok: false, reason: "no_admitted_scheme" });
     });
 
     it("applies the persisted-event law to every recorded entry", () => {
@@ -480,6 +534,9 @@ describe("update state contract", () => {
       const accepted: ReadonlyArray<readonly [UpdateState, UpdateState, PersistedEventOutcome]> = [
         ["verifying", "ready", "authenticity_proof_required"],
         ["verifying", "ready", "malformed_authenticity_proof"],
+        ["verifying", "ready", "legal_transition"],
+        ["ready", "idle", "legal_transition"],
+        ["ready", "failure", "legal_transition"],
         ["idle", "checking", "legal_transition"],
         ["checking", "available", "legal_transition"],
         ["verifying", "failure", "legal_transition"],
@@ -491,26 +548,20 @@ describe("update state contract", () => {
         ).toMatchObject({ ok: true });
       }
 
-      // A recorded entry may not assert an authenticity-dependent source state:
-      // such a state cannot have been entered while no scheme is admitted.
+      // A recorded entry may not assert an install-progress source state: getting
+      // there needs an install authority this contract does not have, so no entry
+      // naming it is one this contract could have written.
       const unreachableSources = [
-        { from: "ready", to: "idle", reason: "legal_transition" },
-        { from: "ready", to: "failure", reason: "legal_transition" },
         { from: "installing", to: "failure", reason: "legal_transition" },
+        { from: "installing", to: "success", reason: "legal_transition" },
         { from: "success", to: "idle", reason: "legal_transition" },
       ];
       for (const event of unreachableSources) {
         expect(evaluateStatus({ ...status(), events: [event] }), JSON.stringify(event)).toEqual(INVALID);
       }
 
-      // A successful traversal of the proof-gated path cannot be recorded either,
-      // in any form, while no scheme is admitted.
-      expect(
-        evaluateStatus({ ...status(), events: [{ from: "verifying", to: "ready", reason: "legal_transition" }] }),
-      ).toEqual(INVALID);
-
       // Refusal outcomes are edge-specific: they are admissible only on the one
-      // reachable proof-gated attempt, never on an ordinary edge.
+      // proof-gated attempt, never on an ordinary edge.
       for (const event of [
         { from: "idle", to: "checking", reason: "authenticity_proof_required" },
         { from: "idle", to: "checking", reason: "malformed_authenticity_proof" },
@@ -528,13 +579,15 @@ describe("update state contract", () => {
         expect(evaluateStatus({ ...status(), events: [event] }), JSON.stringify(event)).toEqual(INVALID);
       }
 
-      // Even with the matching refusal reason, an authenticity-dependent source
-      // state stays impossible.
+      // No entry may name an install-progress destination, whatever its reason:
+      // the recording itself would assert that an install happened.
       for (const event of [
         { from: "ready", to: "installing", reason: "authenticity_proof_required" },
-        { from: "ready", to: "idle", reason: "authenticity_proof_required" },
-        { from: "installing", to: "success", reason: "malformed_authenticity_proof" },
+        { from: "ready", to: "installing", reason: "legal_transition" },
+        { from: "ready", to: "installing", reason: "malformed_authenticity_proof" },
+        { from: "installing", to: "success", reason: "authenticity_proof_required" },
         { from: "installing", to: "failure", reason: "authenticity_proof_required" },
+        { from: "ready", to: "idle", reason: "authenticity_proof_required" },
         { from: "success", to: "idle", reason: "legal_transition" },
       ]) {
         expect(evaluateStatus({ ...status(), events: [event] }), JSON.stringify(event)).toEqual(INVALID);
@@ -572,8 +625,8 @@ describe("update state contract", () => {
   });
 
   describe("persisted event law", () => {
-    it("rejects unreachable source states with a distinct reason", () => {
-      for (const state of AUTHENTICITY_DEPENDENT_STATES) {
+    it("rejects install-progress source states with a distinct reason", () => {
+      for (const state of INSTALL_PROGRESS_STATES) {
         for (const to of UPDATE_STATES) {
           for (const reason of [...PERSISTED_EVENT_OUTCOMES, "illegal_transition", "invented"]) {
             const verdict = evaluatePersistedEvent(state, to, reason);
@@ -581,6 +634,10 @@ describe("update state contract", () => {
           }
         }
       }
+      // `ready` is no longer one of them: DEC-031 admits the claim it carries, so
+      // a history entry leaving `ready` is recordable on its declared edges.
+      expect(evaluatePersistedEvent("ready", "idle", "legal_transition")).toMatchObject({ ok: true });
+      expect(evaluatePersistedEvent("ready", "failure", "legal_transition")).toMatchObject({ ok: true });
     });
 
     it("rejects undeclared edges, unknown states and inadmissible outcomes", () => {
@@ -608,14 +665,23 @@ describe("update state contract", () => {
         ok: false,
         reason: "inadmissible_outcome",
       });
+      // A completed admission is now recordable, so the outcome vocabulary is
+      // what refuses an impossible claim on this edge, not its reachability.
       expect(evaluatePersistedEvent("verifying", "ready", "legal_transition")).toEqual({
-        ok: false,
-        reason: "inadmissible_outcome",
+        ok: true,
+        event: { from: "verifying", to: "ready", reason: "legal_transition" },
       });
       expect(evaluatePersistedEvent("verifying", "ready", "illegal_transition")).toEqual({
         ok: false,
         reason: "inadmissible_outcome",
       });
+      // No outcome at all records an edge into install progress.
+      for (const reason of [...PERSISTED_EVENT_OUTCOMES, "install_authority_not_governed", "invented"]) {
+        expect(evaluatePersistedEvent("ready", "installing", reason)).toEqual({
+          ok: false,
+          reason: "inadmissible_outcome",
+        });
+      }
       expect(evaluatePersistedEvent("idle", "checking", "")).toEqual({
         ok: false,
         reason: "inadmissible_outcome",
@@ -654,25 +720,28 @@ describe("update state contract", () => {
       }
     });
 
-    it("admits only the reachable proof-gated attempt into an authenticity-dependent state", () => {
-      // Every legal edge whose destination is authenticity-dependent, checked
-      // against the reachable-source rule.
-      const gatedEdges: Array<[UpdateState, UpdateState]> = [
-        ["verifying", "ready"],
-        ["ready", "installing"],
-        ["installing", "success"],
-      ];
-      for (const [from, to] of gatedEdges) {
-        const refusal = evaluatePersistedEvent(from, to, "authenticity_proof_required");
-        if (from === "verifying") {
-          expect(refusal, `${from}->${to}`).toEqual({
-            ok: true,
-            event: { from, to, reason: "authenticity_proof_required" },
-          });
-        } else {
-          expect(refusal, `${from}->${to}`).toEqual({ ok: false, reason: "unreachable_source_state" });
-        }
-      }
+    it("records the proof-gated attempt and nothing that names install progress", () => {
+      // The proof refusal is recordable on the one edge that can produce it.
+      expect(evaluatePersistedEvent("verifying", "ready", "authenticity_proof_required")).toEqual({
+        ok: true,
+        event: { from: "verifying", to: "ready", reason: "authenticity_proof_required" },
+      });
+      // On an edge into install progress the same reason is not an outcome this
+      // contract could have written, and an `installing` source is impossible.
+      expect(evaluatePersistedEvent("ready", "installing", "authenticity_proof_required")).toEqual({
+        ok: false,
+        reason: "inadmissible_outcome",
+      });
+      expect(evaluatePersistedEvent("installing", "success", "authenticity_proof_required")).toEqual({
+        ok: false,
+        reason: "unreachable_source_state",
+      });
+      // `install_authority_not_governed` is a live verdict reason only. It cannot
+      // be persisted, because persisting it would mean naming an install-progress
+      // destination, which the rule above already refuses for every outcome.
+      expect(TRANSITION_REASONS).toContain("install_authority_not_governed");
+      expect(PERSISTED_EVENT_OUTCOMES).not.toContain("install_authority_not_governed");
+      expect(PROOF_REFUSAL_OUTCOMES).not.toContain("install_authority_not_governed");
     });
   });
 

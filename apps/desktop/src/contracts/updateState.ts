@@ -8,7 +8,8 @@
  *
  * No state here performs, schedules or authorises a network request, download,
  * install, restart, signature check, release call, process spawn or filesystem
- * mutation. The production `UpdateService` that consumes this law is inert.
+ * mutation. This module is law only; the transport that can produce these states
+ * lives behind the Rust admission bridge and the `UpdateService` adapter.
  */
 
 import { isReleaseChannel, versionMatchesChannel, type ReleaseChannel } from "./releaseChannel";
@@ -41,7 +42,8 @@ export function isUpdateState(value: unknown): value is UpdateState {
  *
  * The table states *structural* legality only. Transitions whose destination is
  * an authenticity-dependent state are additionally authenticity-gated in
- * `evaluateTransition`; see `AUTHENTICITY_DEPENDENT_STATES`.
+ * `evaluateTransition`; see `AUTHENTICITY_DEPENDENT_STATES`. Transitions into an
+ * install-progress state are refused there outright; see `INSTALL_PROGRESS_STATES`.
  */
 export const LEGAL_TRANSITIONS: Readonly<Record<UpdateState, readonly UpdateState[]>> = {
   idle: ["checking"],
@@ -63,6 +65,7 @@ export const TRANSITION_REASONS = [
   "illegal_transition",
   "authenticity_proof_required",
   "malformed_authenticity_proof",
+  "install_authority_not_governed",
 ] as const;
 
 export type TransitionReason = (typeof TRANSITION_REASONS)[number];
@@ -123,16 +126,49 @@ export function isAuthenticityDependentState(value: unknown): value is Authentic
   return typeof value === "string" && (AUTHENTICITY_DEPENDENT_STATES as readonly string[]).includes(value);
 }
 
+/**
+ * States that assert install progress rather than install readiness.
+ *
+ * Admitting an authenticity scheme makes `ready` producible, because `ready`
+ * claims only that a verified artifact was obtained. `installing` and `success`
+ * claim that a mutation of the running product happened, which needs the
+ * separately governed install/restart authority of HCODER-DIST-001E. They are
+ * therefore unreachable regardless of which scheme is admitted.
+ */
+export const INSTALL_PROGRESS_STATES = ["installing", "success"] as const;
+
+export type InstallProgressState = (typeof INSTALL_PROGRESS_STATES)[number];
+
+export function isInstallProgressState(value: unknown): value is InstallProgressState {
+  return typeof value === "string" && (INSTALL_PROGRESS_STATES as readonly string[]).includes(value);
+}
+
 export const MAX_AUTHENTICITY_HASH_CHARS = 64;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
 /**
- * Cryptographic schemes admissible in this slice. The set is deliberately empty:
- * HCODER-WO-0024 defines the *structure* of an authenticity proof without
- * inventing, faking or bypassing a real verification scheme. Consequently no
- * proof can be accepted yet, and `ready` is structurally unreachable.
+ * Exact admissible key set for a proof. Unreviewed material must not ride along
+ * with a nominally valid proof, so a record carrying any other key is refused.
  */
-export const ADMITTED_AUTHENTICITY_SCHEMES: readonly string[] = [];
+export const AUTHENTICITY_PROOF_KEYS = ["scheme", "artifactSha256", "metadataSha256", "verifiedAtEpochMs"] as const;
+
+/**
+ * Cryptographic schemes admissible as evidence of artifact authenticity.
+ *
+ * `tauri-minisign-signed-version-v1` is the scheme admitted by HCODER-WO-0027 /
+ * DEC-031. Its meaning is fixed by the producer in `update_admission.rs`: a
+ * minisign signature verified by the official Tauri updater over the artifact
+ * bytes, where the signature's trusted comment also carries the release version
+ * and that version equals the version the endpoint announced. The two hashes a
+ * proof carries are therefore over bytes that were only returned *after* that
+ * verification succeeded.
+ *
+ * Admitting a scheme makes `ready` reachable in this law. It does not make
+ * `installing` or `success` reachable: no install or restart authority exists in
+ * this slice, so an event or snapshot asserting install progress is still an
+ * assertion this contract could not have produced.
+ */
+export const ADMITTED_AUTHENTICITY_SCHEMES: readonly string[] = ["tauri-minisign-signed-version-v1"];
 
 export interface AuthenticityProof {
   /** Verification scheme identifier. Must be admitted to be acceptable. */
@@ -151,16 +187,13 @@ export type ProofVerdict =
 
 /**
  * Structural + policy validation of an authenticity proof. A proof is acceptable
- * only when it is well formed *and* its scheme is admitted. Because no scheme is
- * admitted in this slice, this always refuses — which is the intended behaviour.
+ * only when it is well formed *and* its scheme is one of
+ * `ADMITTED_AUTHENTICITY_SCHEMES`.
  *
- * The proof must be a plain own-data record: a class instance, an
- * `Object.create(...)` object or an accessor-backed object is refused without any
- * getter being invoked.
+ * This reads a record the caller has already proved to be plain own data.
  */
-export function evaluateAuthenticityProof(proof: unknown): ProofVerdict {
-  const candidate = asPlainRecord(proof);
-  if (candidate === null) {
+function evaluateProofRecord(candidate: PlainRecord): ProofVerdict {
+  if (!hasOnlyKeys(candidate, AUTHENTICITY_PROOF_KEYS)) {
     return { ok: false, reason: "malformed_authenticity_proof" };
   }
   const scheme = candidate.data("scheme");
@@ -194,21 +227,38 @@ export function evaluateAuthenticityProof(proof: unknown): ProofVerdict {
 }
 
 /**
+ * Public entry point: structural + policy validation of an untrusted proof value.
+ *
+ * The proof must be a plain own-data record: a class instance, an
+ * `Object.create(...)` object or an accessor-backed object is refused without any
+ * getter being invoked.
+ */
+export function evaluateAuthenticityProof(proof: unknown): ProofVerdict {
+  const candidate = asPlainRecord(proof);
+  if (candidate === null) {
+    return { ok: false, reason: "malformed_authenticity_proof" };
+  }
+  return evaluateProofRecord(candidate);
+}
+
+/**
  * The authenticity gate sits on every edge that *enters an authenticity-dependent
- * state*, not merely on the edge that starts installing.
+ * state that this slice can produce*, not merely on the edge that starts installing.
  *
  * `ready` is install-ready by definition: once a client is `ready`, the artifact
  * is present, verified enough to install and awaiting only the install call.
  * Admitting `verifying -> ready` without a proof would make install-ready
- * reachable from untrusted input. `ready -> installing` and `installing -> success`
- * are gated for the same reason: a completed install is as much an
- * authenticity claim as an install-ready one.
+ * reachable from untrusted input.
+ *
+ * `ready -> installing` and `installing -> success` are not listed here because
+ * they are refused by a stronger gate: `evaluateTransition` rejects every edge
+ * whose destination asserts install progress, whatever proof accompanies it. A
+ * completed install is therefore still never asserted on the strength of a proof
+ * alone. When HCODER-DIST-001E governs the install/restart authority, those two
+ * edges must re-enter this set, because at that point a proof becomes the only
+ * thing standing between `ready` and a mutation of the running product.
  */
-const PROOF_GATED_TRANSITIONS: readonly (readonly [UpdateState, UpdateState])[] = [
-  ["verifying", "ready"],
-  ["ready", "installing"],
-  ["installing", "success"],
-];
+const PROOF_GATED_TRANSITIONS: readonly (readonly [UpdateState, UpdateState])[] = [["verifying", "ready"]];
 
 function isProofGatedTransition(from: UpdateState, to: UpdateState): boolean {
   return PROOF_GATED_TRANSITIONS.some(([gatedFrom, gatedTo]) => gatedFrom === from && gatedTo === to);
@@ -216,8 +266,8 @@ function isProofGatedTransition(from: UpdateState, to: UpdateState): boolean {
 
 /**
  * Deterministic transition law. Unknown states fail closed; illegal transitions
- * fail closed; entering any authenticity-dependent state is refused without an
- * accepted authenticity proof.
+ * fail closed; an install-progress destination is refused while no install
+ * authority is governed; entering `ready` is refused without an accepted proof.
  */
 export function evaluateTransition(from: unknown, to: unknown, proof?: unknown): TransitionVerdict {
   if (!isUpdateState(from) || !isUpdateState(to)) {
@@ -225,6 +275,11 @@ export function evaluateTransition(from: unknown, to: unknown, proof?: unknown):
   }
   if (!LEGAL_TRANSITIONS[from].includes(to)) {
     return { ok: false, reason: "illegal_transition" };
+  }
+  // Checked before the proof gate: an install-progress claim is not produced by a
+  // missing proof, it is produced by an authority this contract does not have.
+  if (isInstallProgressState(to)) {
+    return { ok: false, reason: "install_authority_not_governed" };
   }
   if (isProofGatedTransition(from, to)) {
     // An absent proof is "required"; a present-but-malformed proof is malformed;
@@ -255,9 +310,10 @@ export function requiresAuthenticityProof(state: UpdateState): boolean {
 }
 
 /**
- * True only when an authenticity-dependent state can be reached at all. No scheme
- * is admitted in this slice, so with the gate on every entering edge the whole
- * install path is unreachable by construction rather than by convention.
+ * True only when an authenticity-dependent state can be reached at all. With the
+ * gate on every entering edge, `ready` needs an accepted proof, so it becomes
+ * reachable exactly when a verification scheme is admitted. Install progress is
+ * governed separately — see `INSTALL_PROGRESS_STATES`.
  */
 export function isInstallReadyReachable(): boolean {
   return ADMITTED_AUTHENTICITY_SCHEMES.length > 0;
@@ -279,6 +335,8 @@ export const UPDATE_ERROR_CODES = [
   "install_failed",
   "service_unavailable",
   "service_inert",
+  "candidate_already_admitted",
+  "no_admitted_candidate",
 ] as const;
 
 export type UpdateErrorCode = (typeof UPDATE_ERROR_CODES)[number];
@@ -477,40 +535,45 @@ export type PersistedEventVerdict =
   | { readonly ok: false; readonly reason: PersistedEventRejection };
 
 /**
- * Persisted-event law for current contract v1.
+ * Persisted-event law.
  *
  * A recorded history entry is evidence, so it must be an assertion this contract
  * could actually have produced. Four rules, in order:
  *
  * 1. `from` and `to` must be declared states.
- * 2. `from` must not be an authenticity-dependent state. Entering one requires an
- *    accepted authenticity proof, and no scheme is admitted in this slice, so
- *    such a state cannot have been entered and cannot be the source of a recorded
- *    event — in either direction, and for any reason. (Admitting a scheme would
- *    change that, and therefore requires a governed change to this law.)
+ * 2. `from` must not be a state the client cannot have been in. `installing` and
+ *    `success` never qualify, because asserting them asserts that an install
+ *    happened and this contract admits no install authority. An
+ *    authenticity-dependent source additionally requires that the install-ready
+ *    path be reachable at all, i.e. that a scheme is admitted.
  * 3. `from -> to` must be a declared legal edge.
- * 4. The outcome must be possible for that edge. On an ordinary reachable edge
- *    whose destination is not authenticity-dependent, the only possible outcome
- *    is `legal_transition`. On the one reachable proof-gated attempt,
- *    `verifying -> ready`, `legal_transition` is impossible while no scheme is
- *    admitted and only the bounded proof-refusal outcomes may be recorded.
+ * 4. The outcome must be possible for that edge. An edge entering install
+ *    progress can never be recorded. On an edge entering `ready`,
+ *    `legal_transition` is possible only while a scheme is admitted, and the
+ *    bounded proof-refusal outcomes are possible whether or not one is. On any
+ *    other edge the only possible outcome is `legal_transition`.
  *
- * Because `from` may not be authenticity-dependent, `verifying -> ready` is the
- * only edge that can reach rule 4 in the gated branch: `ready -> installing` and
- * `installing -> success` both start from a state rule 2 already rejects.
+ * So `verifying -> ready` may now be recorded as a completed admission, while
+ * `ready -> installing` and `installing -> success` remain unrecordable.
  */
 export function evaluatePersistedEvent(from: unknown, to: unknown, reason: unknown): PersistedEventVerdict {
   if (!isUpdateState(from) || !isUpdateState(to)) {
     return { ok: false, reason: "unknown_state" };
   }
-  if (isAuthenticityDependentState(from)) {
+  if (isInstallProgressState(from) || (isAuthenticityDependentState(from) && !isInstallReadyReachable())) {
     return { ok: false, reason: "unreachable_source_state" };
   }
   if (!LEGAL_TRANSITIONS[from].includes(to)) {
     return { ok: false, reason: "undeclared_edge" };
   }
+  if (isInstallProgressState(to)) {
+    return { ok: false, reason: "inadmissible_outcome" };
+  }
   if (isAuthenticityDependentState(to)) {
-    if (!isPersistedEventOutcome(reason) || reason === "legal_transition") {
+    if (!isPersistedEventOutcome(reason)) {
+      return { ok: false, reason: "inadmissible_outcome" };
+    }
+    if (reason === "legal_transition" && !isInstallReadyReachable()) {
       return { ok: false, reason: "inadmissible_outcome" };
     }
   } else if (reason !== "legal_transition") {
@@ -575,16 +638,21 @@ export function evaluateStatus(input: unknown): StatusVerdict {
     if (!isStrictlyNewer(candidateVersion, currentVersion)) return { ok: false, reason: "invalid_status" };
   }
 
-  // A status snapshot asserts reachability. Any authenticity-dependent state
-  // requires a proof accepted under current policy, and no scheme is admitted in
-  // this slice, so such a snapshot is always invalid here.
+  // A status snapshot asserts reachability. `ready` is assertable now that a
+  // scheme is admitted, but only together with an accepted proof. Install
+  // progress is not assertable at all in this slice: admitting a proof scheme
+  // authorises verification evidence, never an install or restart, so a
+  // snapshot claiming `installing` or `success` is refused on its face.
+  if (isInstallProgressState(state)) {
+    return { ok: false, reason: "invalid_status" };
+  }
   const authenticityDependent = isAuthenticityDependentState(state);
   const rawProof = value.data("authenticityProof");
   let authenticityProof: AuthenticityProof | null = null;
   if (authenticityDependent) {
     const proofRecord = asPlainRecord(rawProof);
     if (proofRecord === null) return { ok: false, reason: "invalid_status" };
-    if (!evaluateAuthenticityProof(proofRecord).ok) return { ok: false, reason: "invalid_status" };
+    if (!evaluateProofRecord(proofRecord).ok) return { ok: false, reason: "invalid_status" };
     authenticityProof = {
       scheme: proofRecord.data("scheme") as string,
       artifactSha256: proofRecord.data("artifactSha256") as string,
