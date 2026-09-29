@@ -135,7 +135,7 @@ def validate_security_patch(patch: bytes) -> None:
         raise ProvenanceError("patch includes unknown file or missing upstream function")
     # Only actual diff additions/deletions; exclude +++/--- headers.
     changed = [
-        line.strip() for line in text.splitlines()
+        line[0] + line[1:].strip() for line in text.splitlines()
         if (line.startswith("+") and not line.startswith("+++"))
         or (line.startswith("-") and not line.startswith("---"))
     ]
