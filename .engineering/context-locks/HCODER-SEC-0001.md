@@ -51,3 +51,29 @@ If actual `main`, advisory/upstream fix, dependency graph, ruleset, package sema
 All other tracked files are FROZEN. No source archive download/execution, `[patch.crates-io]`, glib vendoring, Cargo update, CI workflow, GTK transition, unconfigured trust or credential/provisioning mutation is permitted by this DOCS-ONLY Delta. Public upstream Debian metadata and upstream gtk-rs patch are research inputs, not approvals. Require a second separately bounded executable correction amendment before any local Cargo/security branch.
 
 **STALE predicate:** compare actual `main` SHA and critical fingerprints before review/merge; if they drift, STOP and recompile. Never reuse exact-head protected CI, owner audit or postmerge evidence from prior candidate or PR #100 as this PR's proof. Linux production distribution remains blocked; real `VariantStrIter` transitive reachability remains UNKNOWN; six credential-bearing protected-release lanes remain SKIPPED. No new canonical checkpoint.
+
+
+## Correction Delta 003 Context Lock — temporary Debian provenance runner (2026-09-29)
+
+**Accepted predecessor proof:** existing HCODER-SEC-0001 Delta 002 PR #101 candidate `cc9663986e8e6ad194667389aaa9bbf0b84fd6e3` merged as `main f4f000ec03c3fd96f73b1c6370c57c286557cee5` with equal reviewed/merge tree `1b5b383b5e501ac56ae534e8b315de800c6c2314`; all four FRESH PUSH workflows SUCCESS on exactly that main, 13/13 required jobs SUCCESS, six credential jobs SKIPPED. CP-0027/DEC-031 canonical, no successor checkpoint. Same HCODER-SEC-0001 Issue #97 OPEN.
+
+**New isolated branch/base:** `security/HCODER-SEC-0001-patch-provenance-diagnostic`, parent exact `f4f000ec03c3fd96f73b1c6370c57c286557cee5`. The original static product fingerprints retained unchanged by docs-only PR #101:
+- `apps/desktop/src-tauri/Cargo.lock` `517f181e3c0e1e281e12e270ae2b5e23922c5f35`;
+- `apps/desktop/src-tauri/Cargo.toml` `2ab3c506dff4ff9c546a523941536678632fb2f9`;
+- `docs/project-brain/11-CHECKPOINT.md` `1f7f8323ae08687ab727fdbb84ae9849c3b889d1`;
+- `docs/project-brain/10-DECISIONS-LEDGER.md` `399dd2278ec9439a2d2ace466bd6b61cd91a76b2`;
+- `docs/project-brain/03-SCOPE.md` `5413f15135fc19ddebf9aa86e4be722cd9aa83df`;
+- `docs/project-brain/09-DEFINITION-OF-DONE.md` `ab4f81b4c1fdc70b0ab4c69e2026f14bd46e11d1`;
+- `docs/project-brain/04-ARCHITECTURE.md` `10ac18d2d187e8f13ca2a4071499a667fe13cc35`;
+- `docs/project-brain/05-SECURITY.md` `1cede4091b2f27523eccca4e3febe1eb3c1bc248`.
+**Delta 002 doc fingerprints at new base**: WO `298acad6fbefd50731e02c0d890e883900515d7b`, Context Lock `3746641337e6ebc2b812ab43c94f112f68bd2846`, Evidence `faa212ccda55baf3044984aa178f7602b1b604a6`.
+
+**One-off mutation allowlist, all four exact paths only:**
+1. append `.engineering/work-orders/HCODER-SEC-0001.md`,
+2. append `.engineering/context-locks/HCODER-SEC-0001.md`,
+3. append `.engineering/evidence/HCODER-SEC-0001-PREBUILD.md`,
+4. new `.github/workflows/hcoder-glib-provenance-diagnostic.yml` (PR-only read-only, not to be merged).
+
+**External provenance anchors (not yet independently signature-verified here):** Debian 2026-08-13 signed upload metadata https://www.mail-archive.com/debian-bugs-closed@lists.debian.org/msg848790.html lists `rust-glib-0.18_0.18.5-7.dsc` SHA256 `a5079dd1f0cdcdb82b512feab81fe9afab6d79918fe70523015224afa8de0221` size 3181 and `rust-glib-0.18_0.18.5-7.debian.tar.xz` SHA256 `9895cf4df3525224ee825477dc76c730566591528b9af9fc05c310706b61db5b` size 27712. Require a trusted verified .dsc for original tar SHA and signer identity. Original upstream gtk-rs exact verified commit: `b5a4071e439bef2b5eea76c3aa25e5ae84839e34`.
+
+**Frozen/STOP:** Whole product tree and pinned Cargo graph, all protected CI and release workflows, trust settings, permissions, signing, updater, GitHub branch rules, OS packages on user PC, external HIVE. No production dependency mutation or release. This diagnostic PR must stay unmerged, collected evidence goes only to Issue #97. Source/branch drift, archive checksum or signature failure and unforeseen patch changes force STOP and honest UNPROVEN. No successor product Work Order before actual security disposition.
