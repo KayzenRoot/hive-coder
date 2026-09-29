@@ -27,3 +27,11 @@ Entire product tree, manifests/lock, source/checkpoint historical receipts, appr
 
 ## STALE / RECOMPILE
 If actual `main`, advisory/upstream fix, dependency graph, ruleset, package semantics or accepted CP changes materially, refresh the fingerprints and re-evaluate the bounded Work Order before any edit. Only current proof on exact HEAD carries. The issue remains OPEN until the actual security risk is remediated or a separately governed bounded disposition is proven. GitHub automation or signed artifact credentials must never be enabled to make this prebuild pass.
+
+## Context Lock Delta 001 — PR-only diagnostic evidence (accepted main 93f0cc3)
+
+**Source refresh:** analysis-only prebuild PR #99 reviewed at `2f682855ab003757f6220e8d822bd670bf5dd46d`, protected-squash-merged to exact `main 93f0cc314699788e7e405d46de62f8d8bab3c759` with matching tree `f083a587fa5964b5437100eb9af5a81c2070c1db`, then exact-main 13 required contexts SUCCESS: Governance `36584730342`, Desktop Shell `36584730312`, Native Package Matrix `36584730464`, Protected Release `36584730326`. Six release credential stages SKIPPED. CP-0027 remains canonical; issue #97's actual security risk remains OPEN.
+
+**Temporary diagnostic-only allowed paths:** this locked Context Lock (append only), the Work Order (append only), evidence `.engineering/evidence/HCODER-SEC-0001-PREBUILD.md` (append only), and NEW PR-only `.github/workflows/hcoder-glib-diagnostic.yml`. No other files. The workflow must NOT be merged to main and must never change existing workflows or turn a diagnostic observation into approval to ship Linux. No collaborator, external HIVE, production signing credentials, release permissions or local Docker used. Review source against actual default branch again before running.
+
+**STOP:** if current `main` or product Cargo.lock blob changes, a new workflow requires privileged permissions to run, the diagnostic cannot execute in PR without admin actions, or actual Linux tree contradicts the static lock graph, STOP and document the discrepancy. Source snapshots, signed/trust updater and all runtime code remain frozen. Audit this diagnostic PR as owner SELF_AUDIT / NOT_INDEPENDENT; no extra GitHub reviewer is needed.
