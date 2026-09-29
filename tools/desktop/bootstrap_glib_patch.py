@@ -260,13 +260,67 @@ def prepare(crate_bytes: bytes, debian_bytes: bytes, *, vendor: Path = VENDOR,
         shutil.rmtree(temporary)
 
 
+def emit_original_registry_audit_lock(destination: Path) -> None:
+    """Reconstruct exact original registry glib identity in runner TEMP ONLY.
+
+    The canonical committed patch lock intentionally uses local source. Cargo-audit
+    skips path packages in its ordinary scan, so retain a separate, fail-closed
+    original-registry advisory scan rather than misreport a clean dependency set.
+    """
+    lock = ROOT / "apps/desktop/src-tauri/Cargo.lock"
+    text = lock.read_text(encoding="utf-8")
+    prefix = '[[package]]\nname = "glib"\nversion = "0.18.5"\n'
+    original = (
+        prefix
+        + 'source = "registry+https://github.com/rust-lang/crates.io-index"\n'
+        + f'checksum = "{CRATE_SHA256}"\n'
+    )
+    if text.count(prefix) != 1 or original in text:
+        raise ProvenanceError("cannot reconstruct uniquely from exact local glib lock")
+    target = destination.resolve()
+    if target.is_relative_to(ROOT.resolve()):
+        raise ProvenanceError("original advisory lock must be runner temp, not tracked source")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # No open-ended registry resolution: restore exactly two original lock lines.
+    restored = text.replace(prefix, original, 1)
+    with target.open("x", encoding="utf-8") as out:
+        out.write(restored)
+    print("UNPATCHED_GLIB_SHADOW_AUDIT_LOCK=EXACT_REGISTRY_SOURCE_ONLY")
+
+
+def check_unpatched_registry_advisory(path: Path) -> None:
+    """Require RustSec to report the known registry advisory, never silently hide it."""
+    report = json.loads(path.read_text(encoding="utf-8"))
+    unsound = report.get("warnings", {}).get("unsound", [])
+    matched = [
+        warning for warning in unsound
+        if warning.get("advisory", {}).get("id") == "RUSTSEC-2024-0429"
+        and warning.get("package", {}).get("name") == "glib"
+        and warning.get("package", {}).get("version") == "0.18.5"
+    ]
+    if len(matched) != 1 or report.get("settings", {}).get("ignore") != []:
+        raise ProvenanceError("original registry RustSec unsoundness warning not visible")
+    if report.get("vulnerabilities", {}).get("count", 0) != 0:
+        raise ProvenanceError("new registry graph vulnerability requires security review")
+    print("REGISTRY_GLIB_ADVISORY_VISIBILITY=RUSTSEC-2024-0429")
+    print("PATCHED_GLIB_ADVISORY_STATUS=VERSION_ONLY_BACKPORT_REVIEW_REQUIRED")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--crate-archive", type=Path, help="offline, SHA-checked archive")
     parser.add_argument("--debian-archive", type=Path, help="offline, SHA-checked archive")
     parser.add_argument("--verify-only", action="store_true")
+    parser.add_argument("--emit-original-audit-lock", type=Path)
+    parser.add_argument("--check-original-audit-json", type=Path)
     args = parser.parse_args(argv)
     try:
+        if args.emit_original_audit_lock:
+            emit_original_registry_audit_lock(args.emit_original_audit_lock)
+            return 0
+        if args.check_original_audit_json:
+            check_unpatched_registry_advisory(args.check_original_audit_json)
+            return 0
         crate = args.crate_archive.read_bytes() if args.crate_archive else fetch(CRATE_URL, MAX_CRATE)
         debian = (
             args.debian_archive.read_bytes() if args.debian_archive
