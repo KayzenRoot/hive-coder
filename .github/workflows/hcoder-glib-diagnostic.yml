@@ -1,0 +1,81 @@
+# Ephemeral, same-repo pull-request-only evidence runner for HCODER-SEC-0001.
+# Do NOT merge this workflow to default branch. No release/security PASS claim.
+name: HCODER glib diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/hcoder-glib-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  linux-glib-diagnostic:
+    if: ${{ github.head_ref == 'security/HCODER-SEC-0001-linux-diagnostic' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out and verify exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify source and lock identities
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "SOURCE_SHA=$EXPECTED_SHA"
+          sha256sum apps/desktop/src-tauri/Cargo.lock
+          grep -A2 '^name = "glib"$' apps/desktop/src-tauri/Cargo.lock | head -n 3
+      - name: Install exact existing Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.98.1
+      - name: Install existing pinned cargo-audit
+        uses: taiki-e/install-action@26e9283f268b880168bdbd2c545dfcd60ec2c6ab
+        with:
+          tool: cargo-audit@0.22.2
+          fallback: none
+      - name: Produce target-feature-resolved locked reverse dependency graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustc --version
+          cargo --version
+          cargo tree --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --target x86_64-unknown-linux-gnu --features rfd/gtk3 -i glib@0.18.5 > "$RUNNER_TEMP/glib-tree.txt"
+          echo "CARGO_TREE_EXIT=0"
+          echo "GLIB_TREE_BEGIN"
+          head -n 180 "$RUNNER_TEMP/glib-tree.txt"
+          echo "GLIB_TREE_END"
+      - name: Record locked RustSec advisory output without suppressing findings
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          cargo audit --file apps/desktop/src-tauri/Cargo.lock --json > "$RUNNER_TEMP/cargo-audit.json" 2> "$RUNNER_TEMP/cargo-audit-stderr.txt"
+          code=$?
+          set -e
+          echo "CARGO_AUDIT_EXIT=$code"
+          echo "RUSTSEC_OUTPUT_BEGIN"
+          head -c 22000 "$RUNNER_TEMP/cargo-audit.json" || true
+          echo
+          echo "RUSTSEC_OUTPUT_END"
+          echo "RUSTSEC_STDERR_BEGIN"
+          head -n 70 "$RUNNER_TEMP/cargo-audit-stderr.txt" || true
+          echo "RUSTSEC_STDERR_END"
+          # A vulnerability-reporting nonzero exit is evidence, not a clean-security pass.
+          test -s "$RUNNER_TEMP/cargo-audit.json" || { echo "AUDIT_OUTPUT_MISSING"; exit 1; }
+      - name: Bound indexed transitive source-reference observation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fetch --locked --target x86_64-unknown-linux-gnu --manifest-path apps/desktop/src-tauri/Cargo.toml
+          echo "TRANSITIVE_VARIANT_STR_ITER_REFERENCES_BEGIN"
+          (rg -n --glob '*.rs' --max-count 1 'VariantStrIter|variant_str_iter' "$HOME/.cargo/registry/src" | head -n 65) || true
+          echo "TRANSITIVE_VARIANT_STR_ITER_REFERENCES_END"
+          echo "OBSERVABILITY_REPORT_COMPLETE=1"
