@@ -76,10 +76,10 @@ GEF V1 universal is adopted; review mode is HEDS_DELTA_EXACT_HEAD and proof carr
 ### In-flight increments (not checkpoints, not canonical-complete)
 - `HCODER-PLATFORM-001` (Issue #63) native validation matrix is canonical on `main`; its ledger records **CANONICAL / PROVEN_CI MATRIX COMPLETE**. Launch smoke remains PROVEN_CI on Windows only. Release package evidence is now proven under `HCODER-CP-0025`; package **install** behaviour remains UNPROVEN on all platforms, and unsigned packages remain undistributable.
 - `HCODER-WO-0026` / Issue `#85` / `HCODER-DIST-001C` is **CLOSED / COMPLETE / CANONICAL / SEALED** under `HCODER-CP-0026`; PR `#86` is merged. Its credential-bearing signing/notarization and publication stages remain unexercised and outside the admitted authority.
-- `HCODER-WO-0027` / Issue `#89` / `HCODER-DIST-001D` is **PREBUILT / IMPLEMENTATION NOT STARTED**. It proposes DEC-031 and a Rust-only Hive Update Admission Bridge. No updater transport/install/restart authority exists until implementation is reviewed and promoted.
+- `HCODER-WO-0027` / Issue `#89` / `HCODER-DIST-001D` has an **unmerged Draft implementation candidate in PR #93**, not a canonical updater. DEC-031 remains PROPOSED. Candidate evidence does not grant updater transport/install/restart authority without independent HEDS and governed promotion.
 
 ### NEXT EXACT ACTIONS
-1. Treat `HCODER-CP-0026` / `DEC-030` as the canonical baseline and `HCODER-WO-0027` / Issue `#89` as the only active successor pointer.
+1. Complete the owner's NECESSARY no-external-HIVE operational prerequisite HCODER-OPS-0001 / Issue #95 under its own exact-head governance before resuming product work. Keep `HCODER-CP-0026` / `DEC-030` canonical and `HCODER-WO-0027` / Issue #89 / Draft PR #93 as the held product successor; no other product increment advances.
 2. Read WO-0027, its Context Lock, DEC-031 and prebuilt pack before implementation. Do not infer updater authority from the parent epic alone.
 3. Apply **CHAT FIRST, CODEX LAST**: keep planning/review/GitHub lifecycle work in chat; use Codex only when local dependency resolution, Rust/Tauri implementation and native toolchain execution materially require it.
 4. No updater private key, install/restart frontend command, release publication, UI, rollback/health or native update E2E is authorized by the prebuild.
