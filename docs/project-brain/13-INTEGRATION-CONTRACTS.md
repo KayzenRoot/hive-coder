@@ -2,6 +2,9 @@
 
 External foundations are dependencies, not the Hive-facing architecture.
 
+## No separately installed HIVE context integration (DEC-032 proposed)
+The separate `KayzenRoot/hive` context/memory/indexing platform is **not** a foundation or runtime/developer dependency of Hive Coder. Do not make a HIVE MCP/REST project registry, context build/search, external corpus/index, `HIVE_PROJECTS_ROOT`, Docker Compose, PostgreSQL/pgvector or Redis part of any required preflight or test. Source/context authority comes directly from canonical Git and this repository's own files, checks and evidence. The `hive_runtime/` package and internal `hive-*` wire/contracts belong to this product and are retained. **Cua Driver's modern MCP transport below is an independent third-party foundation** and must not be mistaken for the removable HIVE context MCP.
+
 ## Shared runtime/process boundary
 Hive owns child-process and wire-protocol lifecycle. Foundation processes launch without a shell, receive a least-privilege environment, have bounded request/shutdown behavior and fail closed on unknown/malformed state. Production constructors resolve expected versions from `foundations/foundations.lock.json` and perform exact-version preflight before protocol launch.
 
