@@ -109,3 +109,11 @@ DEC-031 remains PROPOSED until:
 - governed merge/closeout creates a separately reviewed checkpoint predicate.
 
 No text in this ADR self-promotes it.
+
+## Lifecycle addendum — postproduct conditional CP-0027 promotion (2026-09-29)
+
+The original heading `PROPOSED / NOT CANONICAL` records the initial ADR candidate and remains historically accurate at that stage. Implementation subsequently completed under the exact same HCODER-WO-0027 / product PR #93: reviewed owner-only candidate `281b719ab715eb94eeb9e193580c09adadced882` with a high-assurance semantic `OWNER_SELF_AUDIT / NOT_INDEPENDENT`, 13 exact-head required checks SUCCESS, guarded product squash `c25103bdfdfb74e12891fcdc13b0495d3fcf786d`, identical reviewed/merged tree `39b8f665a4e46341d10b378fb13f867a1a0ae209`, and fresh product-main Governance `36579684792`, Desktop Shell `36579684754`, Native Package Matrix `36579684765`, Protected Release `36579684818` all SUCCESS.
+
+DEC-031 becomes canonical if and only if the separate property-based `HCODER_CP_0027_EFFECTIVE` in `.engineering/checkpoint-deltas/HCODER-WO-0027.md` is objectively proven for one exact docs-only promotion revision: owner-account source/security HEDS-style audit clearly NOT_INDEPENDENT under now-effective DEC-033, zero unresolved CRITICAL/HIGH and bounded high-assurance risk decision; 13 same-head CI contexts SUCCESS; protected expected-head squash preserving the reviewed promotion tree; four **fresh** exact-promotion-main workflows SUCCESS. Prior independent-review wording in this original ADR is prospectively superseded in reviewer *identity* only by DEC-033; its material security, tests and evidence gates are not reduced. Until effective, CP-0026/DEC-030 stays canonical.
+
+The shipped bridge remains `pubkey:""`/`endpoints:[]`, signed version mandatory, downgrade/unsafe flags disabled, no guest updater permissions, no install/restart or live update. Six signing/attestation/notarization/publication jobs are SKIPPED, no real N-to-N+1 update is proven. Existing Linux `glib 0.18.5` advisory is Issue #97, requiring a separately governed supported dependency migration/reachability assessment before clean Linux production distribution. This promotion grants neither credentials nor operational activation.
