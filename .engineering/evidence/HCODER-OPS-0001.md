@@ -28,16 +28,16 @@ The scope comprises 18 governance/documentation files: the Work Order, Context L
 - Desktop Shell Windows/Linux/macOS/web, including desktop security and governed build: required PASS on final head.
 - Native Package Matrix Windows/Linux/macOS: required PASS on final head.
 - Protected Release preflight and protection probe: required PASS on final head. Credential-bearing build-attest/sign/notarize/publish jobs may be legitimately SKIPPED, but do not count as PASS.
-- Independent HEDS exact-head review: REQUIRED, NOT YET RECORDED here. Owner self-audit alone is NOT INDEPENDENT.
+- DEC-033 exact-head OWNER_SELF_AUDIT / NOT_INDEPENDENT: required semantic HEDS-role audit for this operational PR, with zero unresolved HIGH/CRITICAL. The originally proposed second-human HEDS requirement is superseded by Scope Correction Delta 001.
 - No local HIVE uninstall, local test suite, real physical Cua mutation, signing/notarization or production deployment is claimed.
 
-**Final evidence references:** publish exact-final-head workflow run links, check IDs and independent review in the PR/Issue review record once those events exist. Never copy earlier-head PASS to a changed head.
+**Final evidence references:** publish exact-final-head workflow run links, check IDs and owner self-audit labeled NOT_INDEPENDENT in durable PR/Issue comments after the final evidence commit. Earlier-head audits and CI cannot carry across a new head. Never copy earlier-head PASS to a changed head.
 
 ## Residual risk / rollback
 
 Current documentation changes are prospective and only become canonical after governed approval/merge. Older historical documents may continue to mention HIVE; never treat them as current operational instructions. To revert this proposal before merge, close PR #96 without altering main; leave the external-HIVE PRs closed and reopen only on a new explicit user decision. User-controlled uninstall is outside this repository. Do not delete container data, other repositories or product-owned modules.
 
-**Provisional reviewer verdict:** AWAITING_EXACT_HEAD_CI_AND_INDEPENDENT_HEDS. **Checkpoint Delta:** NONE. **STOP:** do not resume feature development or claim the no-HIVE migration canonical before these gates.
+**Provisional reviewer verdict (superseded original snapshot):** AWAITING_EXACT_HEAD_CI_AND_OWNER_SELF_AUDIT / NOT_INDEPENDENT. **Checkpoint Delta:** NONE. **STOP:** do not resume feature development or claim the no-HIVE migration canonical before these gates.
 
 ## Correction evidence — CodeRabbit finding at PR #96/a33f30c (2026-09-29)
 
@@ -63,4 +63,4 @@ The 2026-09-29 user directive removes the requirement for any collaborator or in
 
 Proposed DEC-033 replaces the prospective second-human reviewer identity gate with a substantive owner-recorded exact-head semantic audit, always labeled `OWNER_SELF_AUDIT / NOT_INDEPENDENT`, and preserves all objective gates. HIGH_ASSURANCE retains explicit owner risk acceptance and negative/challenge proof. The prior independently reviewed CP-0020..CP-0026 records remain historically intact. **This evidence file cannot embed its own final Git SHA or its subsequent CI execution IDs without changing its own SHA**; therefore the exact-final-head CI and owner review receipts must be published as durable linked comments on PR #96 and Issue #95 after the final docs commit and checked again immediately before merge. A new head invalidates previous CI and review receipts.
 
-**Provisional STOP state:** CORRECTION_APPLIED / AWAITING_NEW_EXACT_HEAD_CI_AND_OWNER_SELF_AUDIT. Checkpoint Delta NONE until governed merge and fresh exact-main postvalidation.
+**Provisional STOP state after same-PR corrections:** CORRECTION_APPLIED / AWAITING_NEW_EXACT_HEAD_CI_AND_OWNER_SELF_AUDIT (NOT_INDEPENDENT). Checkpoint Delta NONE until governed merge and fresh exact-main postvalidation.
