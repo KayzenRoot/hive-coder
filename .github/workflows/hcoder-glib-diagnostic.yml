@@ -76,6 +76,13 @@ jobs:
           set -euo pipefail
           cargo fetch --locked --target x86_64-unknown-linux-gnu --manifest-path apps/desktop/src-tauri/Cargo.toml
           echo "TRANSITIVE_VARIANT_STR_ITER_REFERENCES_BEGIN"
-          (rg -n --glob '*.rs' --max-count 1 'VariantStrIter|variant_str_iter' "$HOME/.cargo/registry/src" | head -n 65) || true
+          set +e
+          grep -R -nE --include='*.rs' 'VariantStrIter|variant_str_iter' "$HOME/.cargo/registry/src" > "$RUNNER_TEMP/variant-refs.txt"
+          grep_code=$?
+          set -e
+          test "$grep_code" -eq 0 -o "$grep_code" -eq 1
+          echo "SOURCE_GREP_EXIT=$grep_code"
+          echo "SOURCE_GREP_MATCHES=$(wc -l < "$RUNNER_TEMP/variant-refs.txt")"
+          head -n 65 "$RUNNER_TEMP/variant-refs.txt"
           echo "TRANSITIVE_VARIANT_STR_ITER_REFERENCES_END"
           echo "OBSERVABILITY_REPORT_COMPLETE=1"
