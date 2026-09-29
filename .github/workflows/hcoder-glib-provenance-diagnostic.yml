@@ -1,0 +1,159 @@
+# HCODER-SEC-0001 / Correction Delta 003: never-merge PR-only source provenance evidence.
+# Do not copy this workflow to main. No Cargo or application source mutation or release.
+name: HCODER glib provenance diagnostic
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/hcoder-glib-provenance-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  debian-patch-provenance:
+    if: ${{ github.head_ref == 'security/HCODER-SEC-0001-patch-provenance-diagnostic' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout immutable same-repo PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify exact HEAD and unchanged manifest/lock
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          echo "SOURCE_SHA=$EXPECTED_HEAD"
+          test "$(git hash-object apps/desktop/src-tauri/Cargo.lock)" = "517f181e3c0e1e281e12e270ae2b5e23922c5f35"
+          test "$(git hash-object apps/desktop/src-tauri/Cargo.toml)" = "2ab3c506dff4ff9c546a523941536678632fb2f9"
+          echo "SOURCE_FINGERPRINTS_MATCH=1"
+      - name: Fetch officially published, digest-pinned Debian source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/hcoder-debian-glib-source"
+          mkdir -p "$dir"
+          cd "$dir"
+          base="https://deb.debian.org/debian/pool/main/r/rust-glib-0.18"
+          for f in rust-glib-0.18_0.18.5-7.dsc rust-glib-0.18_0.18.5-7.debian.tar.xz rust-glib-0.18_0.18.5.orig.tar.gz; do
+            curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 2 --max-time 120 --output "$f" "$base/$f"
+            test -s "$f"
+          done
+          echo 'a5079dd1f0cdcdb82b512feab81fe9afab6d79918fe70523015224afa8de0221  rust-glib-0.18_0.18.5-7.dsc' | sha256sum -c -
+          echo '9895cf4df3525224ee825477dc76c730566591528b9af9fc05c310706b61db5b  rust-glib-0.18_0.18.5-7.debian.tar.xz' | sha256sum -c -
+          test "$(wc -c < rust-glib-0.18_0.18.5-7.dsc)" -eq 3181
+          test "$(wc -c < rust-glib-0.18_0.18.5-7.debian.tar.xz)" -eq 27712
+          echo 'DEBIAN_DSC_SHA256=a5079dd1f0cdcdb82b512feab81fe9afab6d79918fe70523015224afa8de0221'
+          echo 'DEBIAN_ARCHIVE_SHA256=9895cf4df3525224ee825477dc76c730566591528b9af9fc05c310706b61db5b'
+      - name: Authenticate exact DSC with distro-installed Debian keyring
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends debian-keyring
+          dsc="$RUNNER_TEMP/hcoder-debian-glib-source/rust-glib-0.18_0.18.5-7.dsc"
+          command -v gpgv
+          rings=()
+          for path in /usr/share/keyrings/debian-keyring.gpg /usr/share/keyrings/debian-maintainers.gpg; do
+            if test -s "$path"; then rings+=(--keyring "$path"); fi
+          done
+          test "${#rings[@]\}" -ge 2 || { echo 'DEBIAN_SOURCE_SIGNATURE_UNPROVEN=missing_distro_keyring'; exit 1; }
+          gpgv --status-fd 1 "$\{rings[@]\}" "$dsc" > "$RUNNER_TEMP/debian-gpg-status.txt" 2>&1 || {
+            echo 'DEBIAN_SOURCE_SIGNATURE_UNPROVEN=gpgv_rejected'
+            head -n 30 "$RUNNER_TEMP/debian-gpg-status.txt"
+            exit 1
+          }
+          grep '^\[GNUPG:\] VALIDSIG ' "$RUNNER_TEMP/debian-gpg-status.txt"
+          echo 'DSC_SIGNATURE_VERIFIED=1'
+      - name: Inspect authenticated source archive and exact upstream safety hunk without executing code
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/hcoder-debian-glib-source" <<'PY'
+          from pathlib import Path, PurePosixPath
+          import hashlib, re, sys, tarfile
+
+          folder = Path(sys.argv[1])
+          dsc = (folder / "rust-glib-0.18_0.18.5-7.dsc").read_text(encoding="utf-8")
+          stanza = re.search(r"(?m)^Checksums-Sha256:\n((?:[ \t]+[^\n]+\n)+)", dsc)
+          if stanza is None:
+              raise SystemExit("FAIL: missing DSC SHA256 stanza")
+          entries = {}
+          for entry in stanza.group(1).splitlines():
+              digest, size, name = entry.split()
+              if name in entries or not re.fullmatch(r"[0-9a-f]{64}", digest):
+                  raise SystemExit("FAIL: duplicate or malformed DSC checksum")
+              entries[name] = (digest, int(size))
+          expected = {
+              "rust-glib-0.18_0.18.5.orig.tar.gz",
+              "rust-glib-0.18_0.18.5-7.debian.tar.xz",
+          }
+          if set(entries) != expected:
+              raise SystemExit(f"FAIL: unexpected signed DSC members {sorted(entries)}")
+          for name, (digest, size) in entries.items():
+              data = (folder / name).read_bytes()
+              if len(data) != size or hashlib.sha256(data).hexdigest() != digest:
+                  raise SystemExit(f"FAIL: signed DSC file mismatch {name}")
+              print(f"VERIFIED_ARCHIVE={name} SIZE={size} SHA256={digest}")
+          if entries["rust-glib-0.18_0.18.5-7.debian.tar.xz"][0] != "9895cf4df3525224ee825477dc76c730566591528b9af9fc05c310706b61db5b":
+              raise SystemExit("FAIL: signed DSC digest differs from independently pinned Debian upload")
+          print("ORIG_VERIFIED=1")
+          archive = folder / "rust-glib-0.18_0.18.5-7.debian.tar.xz"
+          contents = {}
+          with tarfile.open(archive, "r:xz") as tf:
+              for item in tf.getmembers():
+                  name = item.name.removeprefix("./")
+                  parts = PurePosixPath(name)
+                  if parts.is_absolute() or ".." in parts.parts or name.startswith("/") or "\\" in name:
+                      raise SystemExit("FAIL: unexpected archive path")
+                  if item.issym() or item.islnk() or item.isdev() or item.isfifo():
+                      raise SystemExit("FAIL: archive contains nonregular link/device")
+                  if item.isdir():
+                      continue
+                  if not item.isfile() or item.size > 1024*1024 or name in contents:
+                      raise SystemExit("FAIL: unexpected archive member or duplicate")
+                  if name.startswith("debian/patches/"):
+                      contents[name] = tf.extractfile(item).read()
+          print("DEBIAN_PATCH_MEMBERS=" + ",".join(sorted(contents)))
+          series = contents.get("debian/patches/series")
+          if not series:
+              raise SystemExit("FAIL: missing Debian quilt patch series")
+          names = [line.split()[0] for line in series.decode("utf-8").splitlines() if line.strip() and not line.lstrip().startswith("#")]
+          if len(names) != len(set(names)):
+              raise SystemExit("FAIL: duplicate patch in series")
+          candidate = []
+          for patchname in names:
+              full = "debian/patches/" + patchname
+              raw = contents.get(full)
+              if raw is None or len(raw) > 500_000:
+                  raise SystemExit(f"FAIL: missing or oversized series-listed patch {patchname}")
+              text = raw.decode("utf-8")
+              if "VariantStrIter" in text and "impl_get" in text:
+                  candidate.append((patchname, raw, text))
+          print("SECURITY_PATCH_CANDIDATE_COUNT=" + str(len(candidate)))
+          if len(candidate) != 1:
+              raise SystemExit("FAIL: expected precisely one series-listed glib VariantStrIter patch")
+          patchname, raw, text = candidate[0]
+          print("SECURITY_PATCH_NAME=" + patchname)
+          print("SECURITY_PATCH_SHA256=" + hashlib.sha256(raw).hexdigest())
+          print("SECURITY_PATCH_BODY_BEGIN")
+          print(text[:9000])
+          print("SECURITY_PATCH_BODY_END")
+          replacements = (
+              r"(?m)^-\s*let p: \*mut libc::c_char = std::ptr::null_mut\(\);\s*$",
+              r"(?m)^\+\s*let mut p: \*mut libc::c_char = std::ptr::null_mut\(\);\s*$",
+              r"(?m)^-\s*&p,\s*$",
+              r"(?m)^\+\s*&mut p,\s*$",
+          )
+          if not all(re.search(pattern, text) for pattern in replacements):
+              raise SystemExit("FAIL: patch does not contain all four independently verified upstream hunk lines")
+          if "src/variant_iter.rs" not in text or "ffi::g_variant_get_child(" not in text:
+              raise SystemExit("FAIL: security patch missing upstream source/function context")
+          print("UPSTREAM_HUNK_MATCH=1")
+          print("PROVENANCE_OBSERVATION_COMPLETE=1")
+          PY
