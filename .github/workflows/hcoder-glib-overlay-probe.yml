@@ -230,6 +230,7 @@ jobs:
                   q=dict(p)
                   if q["name"]=="glib" and q["version"]=="0.18.5":
                       q.pop("checksum",None)
+                      q.pop("source",None)  # expected registry-to-local-source identity change
                   res.append(q)
               return sorted(res,key=lambda p:(p["name"],p["version"],p.get("source","")))
           if norm(original)!=norm(scratch):
