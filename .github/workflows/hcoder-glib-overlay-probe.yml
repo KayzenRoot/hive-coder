@@ -192,6 +192,13 @@ jobs:
           mkdir -p "$temp"
           cp -a apps/desktop/src-tauri "$temp/src-tauri"
           cp -a apps/desktop/dist "$temp/dist"
+          # Rust updater tests include original frontend parity vectors at ../../src/contracts.
+          # Preserve the exact tracked fixture identity in the throwaway desktop copy.
+          test "$(git hash-object apps/desktop/src/contracts/semverParityVectors.json)" = "ff3454b34788042e8e9827a58d059f81c23f9548"
+          mkdir -p "$temp/src/contracts"
+          cp -a apps/desktop/src/contracts/. "$temp/src/contracts/"
+          cmp apps/desktop/src/contracts/semverParityVectors.json "$temp/src/contracts/semverParityVectors.json"
+          echo "SCRATCH_UPDATER_CONTRACT_FIXTURE=EXACT_ORIGINAL"
           git diff --quiet --exit-code
           echo "TRACKED_PRODUCT_UNCHANGED=1"
       - name: Resolve exact patched scratch Cargo graph; run Rust checks and tests
