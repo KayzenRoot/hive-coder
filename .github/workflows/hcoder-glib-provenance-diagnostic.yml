@@ -63,7 +63,7 @@ jobs:
             if test -s "$path"; then rings+=(--keyring "$path"); fi
           done
           test "${#rings[@]\}" -ge 2 || { echo 'DEBIAN_SOURCE_SIGNATURE_UNPROVEN=missing_distro_keyring'; exit 1; }
-          gpgv --status-fd 1 "$\{rings[@]\}" "$dsc" > "$RUNNER_TEMP/debian-gpg-status.txt" 2>&1 || {
+          gpgv --status-fd 1 "${rings[@]\}" "$dsc" > "$RUNNER_TEMP/debian-gpg-status.txt" 2>&1 || {
             echo 'DEBIAN_SOURCE_SIGNATURE_UNPROVEN=gpgv_rejected'
             head -n 30 "$RUNNER_TEMP/debian-gpg-status.txt"
             exit 1
