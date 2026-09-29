@@ -13,6 +13,9 @@ Read canonical truth in this order before implementation or review:
 
 Material contradictions are recorded, not silently resolved. Git/code/tests/evidence beat conversation memory.
 
+## Standalone development: no separately installed HIVE
+The repository operates independently of the separately installed `KayzenRoot/hive` HIVE context/indexing service. It is **not** a source prerequisite, MCP/context provider, Docker dependency, execution gate or fallback for any Hive Coder Work Order. Do not require its localhost API, `HIVE_PROJECTS_ROOT`, project/task registry, corpus, checkpoint tool, mounts, database, Redis or any HIVE preflight. Compile small context directly from the accepted Project Brain/ADRs, active Work Order/Context Lock and exact Git/code/tests/CI evidence. If local HIVE is absent because it was uninstalled, that is expected, not BLOCKED or a failed check. Preserve the product's own `hive_runtime`, internal protocols and Cua Driver's unrelated MCP integration. This user-directed change is proposed in HCODER-OPS-0001 / DEC-032 and supersedes the unmerged external-HIVE-context proposal PR #94 when approved; historical records remain unchanged.
+
 ## GEF V1 Universal mode
 Hive Coder is adopted as a BROWNFIELD repository under GEF Bootstrap V1.0.0. GEF wraps the existing project additively and must not rewrite historical work into fake GEF Work Orders/checkpoints/evidence.
 
@@ -29,7 +32,7 @@ This rule applies to **all Hive Coder chats, reviewers and agents** and supersed
 
 1. **Fix in chat first.** After a review, if a finding can be corrected safely and completely with the repository/GitHub tools available in the chat, the reviewer must apply the smallest bounded correction directly, stay in the same Work Order/PR when one is active, and then re-inspect the resulting exact head. A `CORRECTION_REQUIRED` verdict by itself is **not** a reason to hand the work to Codex.
 2. **Finish approved GitHub lifecycle actions in chat when possible.** If Ready/merge, issue updates, closeout, source-truth reconciliation or other authorized repository actions can be performed safely through connected tools, do them directly instead of adding an unnecessary executor hop.
-3. **Codex is the last-resort executor.** Send work back to Codex only when the task materially requires capabilities the chat does not have or cannot use safely, such as substantial local-workspace implementation, local build/toolchain/UI/desktop interaction, machine-specific HIVE/Codex state, execution that requires the user's local environment, or when a governed boundary explicitly requires a separate executor. The handoff must state the concrete reason chat-side correction is insufficient.
+3. **Codex is the last-resort executor.** Send work back to Codex only when the task materially requires capabilities the chat does not have or cannot use safely, such as substantial local-workspace implementation, local build/toolchain/UI/desktop interaction, machine-specific Codex/toolchain state, execution that requires the user's local environment, or when a governed boundary explicitly requires a separate executor. The handoff must state the concrete reason chat-side correction is insufficient.
 4. **PDF prompts are conditional, not universal.** When Codex is genuinely required, deliver the next executable Codex prompt as a generated PDF. `CORRECTION_REQUIRED` and `BLOCKED` remain in the same Work Order/PR until resolved. When the chat can complete the correction itself, no Codex prompt/PDF is required.
 5. **Any chat-side mutation creates a new evidence head.** Old exact-head receipts do not transfer. Re-run or re-inspect every required gate on the resulting exact SHA before approval or merge, and never self-declare a skipped/unknown lane as PASS.
 
@@ -54,6 +57,7 @@ If the user says `continue`, `continue do chat anterior`, or equivalent for Hive
 4. Continue autonomously from its NEXT EXACT ACTIONS.
 
 ## Current execution state
+**Operational prerequisite under review:** HCODER-OPS-0001 / Issue #95 proposes removing the *separate installed HIVE* from all current development prerequisites before resuming WO-0027; CP-0026 remains canonical. PR #93 is an existing implementation candidate under independent review, not evidence of a promoted updater. Do not merge the superseded external-HIVE preflight proposal PR #94.
 `HCODER-CP-0026 — Release trust substrate` is **CANONICAL / SEALED** because `HCODER_CP_0026_EFFECTIVE` has been objectively satisfied. `docs/project-brain/11-CHECKPOINT.md` selects the authoritative checkpoint by predicate and remains the source of truth; this section is a summary, not an independent authority.
 
 Canonical state:
