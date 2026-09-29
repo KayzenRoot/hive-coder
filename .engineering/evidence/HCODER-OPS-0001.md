@@ -1,10 +1,10 @@
 # HCODER-OPS-0001 — Evidence Bundle (governance candidate)
 
-**Status:** CANDIDATE / exact-head audit and independent HEDS required; no standalone policy promotion yet.  
-**Issue:** #95; **PR:** #96 (Draft); **base:** `a9b48bce43fcc2c1a14b70036ed4555f52ba3537`.  
+**Status:** CANDIDATE / exact-head DEC-033 owner semantic self-audit (NOT_INDEPENDENT) and same-head CI required; no canonical promotion until governed merge/postvalidation.  
+**Issue:** #95; **PR:** #96 (Ready for review); **base:** `a9b48bce43fcc2c1a14b70036ed4555f52ba3537`.  
 **Pre-evidence source candidate:** `6c117af5027efc53629d125d6ce643925d8aae8b`; this evidence-file addition changes the branch HEAD and invalidates promotion based only on pre-evidence workflow runs. Exact-final-head run IDs must be linked in PR #96/Issue #95 after this file is committed.  
 **Risk:** ELEVATED; **Checkpoint Delta:** NONE until acceptance.  
-**Decision:** DEC-032 PROPOSED; **accepted checkpoint:** HCODER-CP-0026.
+**Decisions:** DEC-032 and DEC-033 PROPOSED; **accepted checkpoint:** HCODER-CP-0026.
 
 ## Exact-source investigation and boundary
 
@@ -16,7 +16,7 @@ Evidence search using GitHub code search against **base main**:
 - Read live `.github/workflows/governance.yml`, `desktop-shell.yml`, `native-package-matrix.yml` and `protected-release.yml`: their required jobs use this repository's own source/tests/foundation locks, Node/Rust toolchains and GitHub workflows; no separate HIVE service mount/REST/MCP preflight was observed.
 - Read `foundations/foundations.lock.json`: `HIVE_INTERPRETER_BIN` and `HIVE_CUA_BIN` are **Hive Coder-owned** environment variable names for independent Open Interpreter and Cua executables. These are retained, not dependencies on the external HIVE platform.
 - Read `apps/desktop/package.json` and `apps/desktop/src-tauri/Cargo.toml`: `hive-coder` names are product-owned. Stable `hive-*` contract/provenance names and `hive_runtime/` are kept.
-- `HCODER-WO-0027` / Draft PR #93 is a separate already-implemented updater candidate requiring independent HEDS. Its product bytes are unchanged by this migration, and it gains no signing/installation/restart authority.
+- `HCODER-WO-0027` / Draft PR #93 is a separate unmerged updater candidate requiring exact-head semantic HEDS; after DEC-033, the owner may perform this as NOT_INDEPENDENT with extra HIGH_ASSURANCE risk/negative-test evidence. Its product bytes are unchanged by this migration, and it gains no signing/installation/restart authority.
 
 ## Scope / actual tracked changes
 
