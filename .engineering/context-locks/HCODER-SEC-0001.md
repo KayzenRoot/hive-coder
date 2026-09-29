@@ -51,3 +51,22 @@ If actual `main`, advisory/upstream fix, dependency graph, ruleset, package sema
 All other tracked files are FROZEN. No source archive download/execution, `[patch.crates-io]`, glib vendoring, Cargo update, CI workflow, GTK transition, unconfigured trust or credential/provisioning mutation is permitted by this DOCS-ONLY Delta. Public upstream Debian metadata and upstream gtk-rs patch are research inputs, not approvals. Require a second separately bounded executable correction amendment before any local Cargo/security branch.
 
 **STALE predicate:** compare actual `main` SHA and critical fingerprints before review/merge; if they drift, STOP and recompile. Never reuse exact-head protected CI, owner audit or postmerge evidence from prior candidate or PR #100 as this PR's proof. Linux production distribution remains blocked; real `VariantStrIter` transitive reachability remains UNKNOWN; six credential-bearing protected-release lanes remain SKIPPED. No new canonical checkpoint.
+
+
+## Correction Delta 004 Context Lock — patched Cargo overlay isolated diagnostic
+
+**Exact base:** `main f4f000ec03c3fd96f73b1c6370c57c286557cee5`, CP-0027/DEC-031 canonical, underlying HCODER-SEC-0001 / Issue #97 OPEN. **Branch:** `security/HCODER-SEC-0001-glib-overlay-probe`; temporary SAME-REPO PR, NEVER merge runner workflow. Previous docs PR #101 POSTVALIDATED exact-base 13/13 main checks. Previous A0 provenance temporary PR #102 CLOSED UNMERGED (run 36591726532 exact source 146214f22687db3fe8d2220a989c35387a5554ec), signed .dsc and single actual patch verified; logs Issue #97 comment 5893528964.
+
+**Locked source Git blobs unchanged from protected main:**
+- `apps/desktop/src-tauri/Cargo.lock`: `517f181e3c0e1e281e12e270ae2b5e23922c5f35`;
+- `apps/desktop/src-tauri/Cargo.toml`: `2ab3c506dff4ff9c546a523941536678632fb2f9`;
+- `apps/desktop/src-tauri/src/update_admission.rs`: `234e40fdd5d805e30d44f824a3cea416d348b7c9`;
+- `docs/project-brain/11-CHECKPOINT.md`: `1f7f8323ae08687ab727fdbb84ae9849c3b889d1`;
+- `docs/project-brain/10-DECISIONS-LEDGER.md`: `399dd2278ec9439a2d2ace466bd6b61cd91a76b2`;
+- this Work Order on main prior to Delta 004: `298acad6fbefd50731e02c0d890e883900515d7b`;
+- this lock before Delta 004: `3746641337e6ebc2b812ab43c94f112f68bd2846`;
+- evidence on main before Delta 004: `faa212ccda55baf3044984aa178f7602b1b604a6`.
+
+**Proven immutable public patch anchor:** Debian `rust-glib-0.18_0.18.5-7.debian.tar.xz` SHA256 `9895cf4df3525224ee825477dc76c730566591528b9af9fc05c310706b61db5b`; ONE security patch file `debian/patches/0007-glib-fix-UB-in-VariantStrIter-impl_get.patch` SHA256 `9a3b06ad9a7d5d459d44ee5ab05557720992b8d214bfea14c5e9b4ae4f5702eb`; authenticated original Debian tar `rust-glib-0.18_0.18.5.orig.tar.gz` SHA256 `faddac41a88c061d4dd577b465ed24ef2b5173c2b0602fc97ae039bbe0079e5c`, signer `796DB393DC3FF40222B6EA22D3EBB5966BB99196`; upstream exact hunk original `b5a4071e439bef2b5eea76c3aa25e5ae84839e34`.
+
+**Four-path allowlist on this TEMP branch only:** append `.engineering/work-orders/HCODER-SEC-0001.md`, append `.engineering/context-locks/HCODER-SEC-0001.md`, append `.engineering/evidence/HCODER-SEC-0001-PREBUILD.md`, add `.github/workflows/hcoder-glib-overlay-probe.yml` with PR-only permission-minimal diagnostic. No main/product/Cargo/updater/required-workflow/security/trust/release edits. No Linux release. If branch or source fingerprints differ, STOP; no reusing old exact-head CI from PR #102 for new overlay proof. Report all evidence to Issue #97, close PR UNMERGED, no new CP.
