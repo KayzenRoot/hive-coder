@@ -35,10 +35,12 @@
 - **Integrated Build Loop:** code -> test -> launch -> observe -> computer-use validate -> repair -> evidence -> PR/review.
 - **Packaging/Updates:** signed Windows packaging, controlled acquisition, update channels, rollback and health diagnostics.
 
-## Current operational prerequisite (2026-09-28)
-- **NECESSARY / PROPOSED:** `HCODER-OPS-0001` / Issue #95 removes all developer/executor dependence on the separately installed HIVE service. It adds no product capability, changes no historical checkpoint, and must finish review/merge before new work on the Draft updater candidate.
-- **Pending product review:** `HCODER-WO-0027` / Issue #89 / Draft PR #93 has an implementation candidate but remains unmerged and unpromoted until independent HEDS and required exact-head checks. Keep its release/security restrictions.
-- **Superseded, unmerged:** external-HIVE-context Draft PR #94 and the separate HIVE mount proposal PR #167 / Issue #166. Do not run those integrations.
+## Current product/promotion status (2026-09-29)
+- **ACCEPTED:** `HCODER-OPS-0001` / Issue #95 / merged PR #96 made development fully independent of the separately installed HIVE service and adopted DEC-032/033 owner-only review. No external HIVE context MCP/mount, collaborator or paid bot is a prerequisite; keep all thirteen protected CI checks.
+- **PRODUCT MERGED / POSTVALIDATED:** `HCODER-WO-0027` / Issue #89 / merged PR #93, exact new main `c25103bdfdfb74e12891fcdc13b0495d3fcf786d`, identical reviewed product tree; owner HIGH_ASSURANCE audit NOT_INDEPENDENT and all 13 product-head plus 13 exact-product-main contexts SUCCESS. Only the fail-closed Rust status/check/download+verify adapter is implemented; no real keys/endpoints/install/restart or release.
+- **CURRENT NECESSARY STAGE:** docs-only conditional `HCODER-CP-0027` / `DEC-031` promotion under existing WO-0027. Prepare owner exact-head audit, 13 required candidate checks, guarded squash and *new fresh* postpromotion main validation before declaring canonical. Until then CP-0026/DEC-030 remains canonical; no next product increment begins.
+- **Security debt:** preexisting Linux `glib 0.18.5` advisory and unresolvable Dependabot patch in current GTK3 graph (Issue #97). Production Linux distribution requires separately governed supported fix/reachability analysis.
+- **Superseded, unmerged:** external-HIVE-context PR #94 and separate HIVE mount PR #167 / Issue #166 remain closed; do not revive those integrations.
 
 ## Historical CP-0020 closeout snapshot
 At CP-0020 closeout, no new product Work Order was selected by that earlier checkpoint. First seal this documentation-only closeout with exact-head Governance + Desktop Shell + HEDS, squash merge and push validation. Then run a fresh source-check against the canonical Project Brain and select only the next objectively NECESSARY increment.
