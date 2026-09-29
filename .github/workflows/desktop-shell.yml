@@ -76,6 +76,21 @@ jobs:
           fallback: none
       - name: Audit locked Rust dependency graph
         run: cargo audit --file apps/desktop/src-tauri/Cargo.lock
+      - name: Original registry-glib RustSec advisory carry-forward
+        shell: pwsh
+        run: |
+          # Local path packages drop out of cargo-audit's registry scan. Reconstruct
+          # the exact original registry identity IN RUNNER TEMP to keep that advisory
+          # visible; never ignore it, modify the checked-in lock or misreport a clean scan.
+          $lock = Join-Path $env:RUNNER_TEMP "hcoder-original-registry-glib.lock"
+          $report = Join-Path $env:RUNNER_TEMP "hcoder-original-registry-audit.json"
+          python tools/desktop/bootstrap_glib_patch.py --emit-original-audit-lock $lock
+          if ($LASTEXITCODE -ne 0) { throw "original registry lock provenance rejected" }
+          cargo audit --file $lock --json > $report
+          if ($LASTEXITCODE -ne 0) { throw "new or escalated registry vulnerability requires review" }
+          python tools/desktop/bootstrap_glib_patch.py --check-original-audit-json $report
+          if ($LASTEXITCODE -ne 0) { throw "original glib advisory was suppressed or missing" }
+          Write-Output "ORIGINAL_REGISTRY_AUDIT=WARNING_VISIBLE_NOT_WAIVED"
       - name: Adversarial offline glib patch provenance tests
         run: python -m unittest tests.desktop.test_glib_patch_provenance
       - name: Bootstrap exact authenticated glib 0.18.5 source
