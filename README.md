@@ -8,6 +8,9 @@ A running external HIVE server is **not required or used** for this repository's
 
 Start from `AGENTS.md` and the accepted `docs/project-brain/11-CHECKPOINT.md`, then approved decisions, Scope/DoD/Architecture and the active Work Order/Context Lock. Use Git, focused repository-local inspection, existing exact-head GitHub Actions and independent HEDS reviews for evidence. The unmerged external-HIVE-context PR #94 is obsolete under HCODER-OPS-0001 / proposed DEC-032.
 
+## Repository governance without collaborators
+The `KayzenRoot` owner may handle Work Orders, author/read PRs, review, commit and merge on its own. Current protected `main` requires applicable exact-head CI, an up-to-date base, resolved blocking threads and permitted squash merge, but requires **zero human approvals**. The owner records an exact-head semantic review clearly labeled `OWNER_SELF_AUDIT / NOT_INDEPENDENT` and explicit HIGH_ASSURANCE risk acceptance when applicable. No second account or paid code-review bot is needed. This policy is proposed as DEC-033 under Issue #95/PR #96 and is canonical only after governed merge/postvalidation.
+
 ## Current verified product state
 
 Canonical checkpoint: `HCODER-CP-0026` (release-trust substrate). The Tauri updater implementation is an **unmerged, Draft** candidate under HCODER-WO-0027 / PR #93 and still requires independent review and governed promotion. Production signing, notarization, publication and live install/update remain unproven or unauthorised.
