@@ -35,6 +35,11 @@
 - **Integrated Build Loop:** code -> test -> launch -> observe -> computer-use validate -> repair -> evidence -> PR/review.
 - **Packaging/Updates:** signed Windows packaging, controlled acquisition, update channels, rollback and health diagnostics.
 
+## Current operational prerequisite (2026-09-28)
+- **NECESSARY / PROPOSED:** `HCODER-OPS-0001` / Issue #95 removes all developer/executor dependence on the separately installed HIVE service. It adds no product capability, changes no historical checkpoint, and must finish review/merge before new work on the Draft updater candidate.
+- **Pending product review:** `HCODER-WO-0027` / Issue #89 / Draft PR #93 has an implementation candidate but remains unmerged and unpromoted until independent HEDS and required exact-head checks. Keep its release/security restrictions.
+- **Superseded, unmerged:** external-HIVE-context Draft PR #94 and the separate HIVE mount proposal PR #167 / Issue #166. Do not run those integrations.
+
 ## Current governed product increment
 No new product Work Order is selected by CP-0020 closeout. First seal this documentation-only closeout with exact-head Governance + Desktop Shell + HEDS, squash merge and push validation. Then run a fresh source-check against the canonical Project Brain and select only the next objectively NECESSARY increment.
 
