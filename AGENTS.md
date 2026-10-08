@@ -86,3 +86,23 @@ GEF V1 universal is adopted; review mode is HEDS_DELTA_EXACT_HEAD and proof carr
 2. Capture the promotion PR's current exact-head source/diff/tree, update only approved docs, obtain all 13 applicable GitHub contexts/four workflows and a substantive high-assurance OWNER_SELF_AUDIT / NOT_INDEPENDENT, with explicit risk acceptance, zero HIGH/CRITICAL and zero blocking threads. Use expected-head-protected squash; then obtain **fresh** exact-promotion-main four-workflow SUCCESS before recording CP-0027 effectiveness. Product-stage receipts do not transfer to promotion.
 3. Apply CHAT FIRST, CODEX LAST. No external HIVE server or additional GitHub collaborator is needed. Do not introduce private keys, live endpoints, installer/restart, signing, updater artifact generation, publication or real native update E2E. Treat Issue #97 glib debt as a separate pre-existing production-Linux-distribution blocker.
 4. Only after the conditional checkpoint is objectively effective should a successor product increment be considered from a new exact source check.
+
+## Agent skills
+
+### Matt Pocock skill invocation
+
+When the `mattpocock-skills` plugin is available, automatically use a model-invoked skill whose description matches the current task; these skills do not require the user to type a slash command. Use `/ask-matt` when skill routing is unclear. User-invoked workflows remain user-led. Do not force-fit a skill or let it override the user's request, this repository's governance/security rules, or deterministic evidence.
+
+Prefer deterministic Git, text search, AST, hashes, tests, lint, typecheck, and build checks whenever they are sufficient. Use Jev only when available and useful for bounded context relevance, triage, classification, reranking, claim verification, comparison, or explicit-gate decisions. Jev output is advisory; never send it secrets or credentials.
+
+### Issue tracker
+
+Issues and specs for this repository live in GitHub Issues. Use the `gh` CLI and follow `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix` for the five canonical triage roles. Follow `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This repository uses a single-context domain layout. Read relevant glossary and ADR material before domain changes; follow the actual paths recorded in `docs/agents/domain.md`.
